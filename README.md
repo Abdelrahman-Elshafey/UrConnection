@@ -1,4 +1,4 @@
-UrConnection - Full-Stack Social & Study Platform
+UrConnection - Full-Stack Social  Platform
 UrConnection is a dynamic web application designed to connect users through shared interests and professional profiles. Built with a focus on real-time data management and secure file handling, this project demonstrates a robust integration of the MERN stack (focusing on React) with Supabase for backend services.
 
 Main Features
