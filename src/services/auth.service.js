@@ -35,6 +35,9 @@ export const signInWithOAuth = async (provider) => {
     provider,
     options: {
       redirectTo: getRedirectUrl(),
+      queryParams: {
+        prompt: 'select_account',
+      },
     },
   });
   if (error) throw error;

@@ -125,9 +125,6 @@ export default function GroupList() {
     return (
       <div className="flex justify-center p-20 bg-white dark:bg-[#000000]">
         <div className="w-full max-w-2xl bg-[#f5f5f7] dark:bg-[#1d1d1f] p-12 rounded-[40px] text-center border border-gray-100 dark:border-[#1d1d1f]">
-          <h2 className="text-3xl font-black text-black dark:text-white mb-4 tracking-tighter">
-            Hardware Error
-          </h2>
           <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">
             {error.message}
           </p>
@@ -234,7 +231,7 @@ export default function GroupList() {
           ))}
 
           {filteredGroups?.length === 0 && (
-            <div className="col-span-full py-44 bg-[#f5f5f7] dark:bg-[#1d1d1f] rounded-[48px] text-center border border-gray-100 dark:border-[#1d1d1f]">
+            <div className="col-span-full py-30 text-center">
               <h3 className="text-4xl md:text-6xl font-black text-black dark:text-white mb-6 tracking-tighter">
                 No groups found.
               </h3>
