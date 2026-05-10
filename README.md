@@ -1,16 +1,26 @@
-# React + Vite
+UrConnection - Full-Stack Social  Platform
+UrConnection is a dynamic web application designed to connect users through shared interests and professional profiles. Built with a focus on real-time data management and secure file handling, this project demonstrates a robust integration of the MERN stack (focusing on React) with Supabase for backend services.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Main Features
+Dynamic Profile Management: Users can create and customize their professional profiles, including personal details and location data.
 
-Currently, two official plugins are available:
+Secure Avatar Uploads: Integrated Supabase Storage with custom Row-Level Security (RLS) policies to allow users to securely upload, update, and delete their profile pictures.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Image Optimization: Implemented client-side compression using browser-image-compression to ensure fast load times and reduced storage costs (WebP format).
 
-## React Compiler
+State Management: Utilized TanStack Query (React Query) for efficient data fetching, caching, and optimistic UI updates.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Data Persistence: Real-time synchronization with a PostgreSQL database via Supabase, ensuring user metadata follows the session seamlessly.
 
-## Expanding the ESLint configuration
+Responsive UI: A modern, mobile-first design built with Tailwind CSS, featuring custom truncation logic for clean layout management.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Tools Used
+React.js & Vite for the frontend architecture.
+
+Tailwind CSS for advanced responsive styling and layout.
+
+Supabase (Auth, Storage, and PostgreSQL) for the backend infrastructure.
+
+TanStack Query for server-state management.
+
+Lucide React for consistent, scalable iconography.
