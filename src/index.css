@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -6,11 +7,28 @@
   }
 
   html, body {
-    @apply transition-colors duration-300;
+    font-family: 'Inter', sans-serif;
+    @apply bg-white text-black dark:bg-[#000000] dark:text-white transition-colors duration-200 ease-in-out;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Ensure smooth transitions for all elements when theme changes */
   * {
-    @apply border-gray-100 dark:border-gray-800;
+    @apply border-gray-100 dark:border-[#1d1d1f] transition-colors duration-300;
+  }
+
+  /* Universal interactive cursor */
+  button, select, a, [role="button"], .cursor-pointer {
+    @apply cursor-pointer;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

@@ -1,96 +1,118 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useGroup } from '../hooks/useGroup';
+import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useGroup } from "../hooks/useGroup";
+import { getPlatform } from "../../../lib/platforms";
 
 export default function GroupDetail() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { data: group, isLoading, error } = useGroup(groupId);
 
-  if (isLoading) return (
-    <div className="flex justify-center p-20">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-screen bg-white dark:bg-[#000000]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-12 h-12 border-[3px] border-[#0071e3]/20 border-t-[#0071e3] rounded-full animate-spin" />
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Loading Detail</p>
+        </div>
+      </div>
+    );
 
-  if (error) return (
-    <div className="bg-red-50 p-4 rounded-lg text-red-700 text-center">
-      Error loading group: {error.message}
-    </div>
-  );
+  if (error || !group)
+    return (
+      <div className="flex justify-center p-20 bg-white dark:bg-[#000000] h-screen">
+        <div className="text-center">
+          <h2 className="text-4xl font-black text-black dark:text-white mb-4 tracking-tighter">Not Found</h2>
+          <button onClick={() => navigate("/")} className="text-[#0071e3] font-bold uppercase tracking-widest text-xs cursor-pointer">Return Home</button>
+        </div>
+      </div>
+    );
 
-  if (!group) return <div className="text-center p-10 text-gray-500">Group not found.</div>;
-
-  const { title, topic, description, date, meeting_link } = group;
+  const {
+    title,
+    topic,
+    description,
+    meeting_link,
+    platform,
+    country,
+    city,
+  } = group;
+  const platformInfo = getPlatform(platform);
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-        {/* Header - Indigo background */}
-        <div className="bg-indigo-600 dark:bg-indigo-950 p-8 md:p-12 text-white">
-          <button 
-            onClick={() => navigate('/')}
-            className="mb-8 flex items-center cursor-pointer text-indigo-100 hover:text-white hover:scale-105 transition-all font-medium"
+    <div className="w-full bg-white dark:bg-[#000000] transition-colors duration-200">
+      {/* Immersive Hero Band */}
+      <section className="w-full bg-[#f5f5f7] dark:bg-[#0a0a0a] pt-10 pb-10 px-6 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto relative z-10">
+          <button
+            onClick={() => navigate("/")}
+            className="mb-8 flex items-center gap-2 group text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
           >
-            ← Back to Groups
+            <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Back to Explore</span>
           </button>
-          
-          <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest border border-white/20">
-            {topic}
-          </span>
-          
-          <h1 className="text-4xl md:text-5xl font-black mt-6 leading-tight">
+
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className="bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">
+              {topic}
+            </span>
+            {platform && (
+              <span className={`flex items-center text-[10px] font-bold px-4 py-1.5 rounded-full bg-white dark:bg-black border border-gray-100 dark:border-[#333336] ${platformInfo.color}`}>
+                {React.createElement(platformInfo.icon, { className: "mr-2 text-sm" })}
+                {platformInfo.label}
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-2xl md:text-4xl lg:text-[5rem] font-black text-black dark:text-white leading-[0.85] tracking-[-0.05em] max-w-5xl">
             {title}
           </h1>
-          
-          <div className="mt-8 flex flex-wrap gap-4 text-indigo-100">
-            <div className="flex items-center bg-white/10 px-4 py-2 rounded-xl">
-              <span className="mr-2">📅</span>
-              {new Date(date).toLocaleDateString(undefined, { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </div>
-          </div>
         </div>
         
-        {/* Content */}
-        <div className="p-8 md:p-12">
-          <div className="mb-10">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <span className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center mr-3 text-sm">📝</span>
-              Description
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-lg bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
+        {/* Abstract Glow */}
+        <div className="absolute -bottom-44 -right-44 w-[600px] h-[600px] bg-[#0071e3] rounded-full blur-[150px] opacity-10 dark:opacity-5 pointer-events-none" />
+      </section>
+
+      {/* Feature Split Band */}
+      <section className="w-full bg-white dark:bg-[#000000] py-12 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 lg:gap-44">
+          <div className="space-y-10">
+            <h3 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Description</h3>
+            <p className="text-2xl md:text-3xl font-medium text-black break-all dark:text-white leading-relaxed tracking-tight whitespace-pre-wrap">
               {description}
             </p>
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <span className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center mr-3 text-sm">🚀</span>
-              Ready to connect?
-            </h3>
-            
-            <a
-              href={meeting_link}
-              target="_blank"
-              rel="noreferrer"
-              className="group block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl transition-all shadow-xl shadow-indigo-100 dark:shadow-none transform hover:-translate-y-1"
-            >
-              <span className="flex items-center justify-center gap-2">
-                Join This Group
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </span>
-            </a>
-            
-            <p className="text-center text-sm text-gray-400">
-              Make sure you have the meeting app installed.
-            </p>
+          <div className="flex flex-col justify-between py-2 border-l border-gray-100 dark:border-[#1d1d1f] pl-12 lg:pl-20">
+            <div>
+              <div className="space-y-6">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</span>
+                  <span className="text-xl font-bold text-black dark:text-white">{[city, country].filter(Boolean).join(", ") || "Global Network"}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Access Platform</span>
+                  <span className="text-xl font-bold text-black dark:text-white">{platformInfo.label || "Direct Link"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-20">
+              <a
+                href={meeting_link}
+                target="_blank"
+                rel="noreferrer"
+                className="group inline-flex items-center gap-6 bg-[#0071e3] text-white px-12 py-6 rounded-full font-bold text-lg hover:brightness-110 transition-all shadow-2xl shadow-[#0071e3]/30 cursor-pointer"
+              >
+                Connect now
+                <svg className="w-6 h-6 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+
     </div>
   );
 }

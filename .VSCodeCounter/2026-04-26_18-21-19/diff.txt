@@ -1,0 +1,74 @@
+Date : 2026-04-26 18:21:19
+Directory : d:\Find_Study
+Total : 27 files,  1135 codes, 12 comments, 172 blanks, all 1319 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| JavaScript JSX |         12 |        766 |          4 |         62 |        832 |
+| JavaScript     |          8 |        237 |          8 |         46 |        291 |
+| Markdown       |          3 |        100 |          0 |         63 |        163 |
+| JSON           |          2 |         17 |          0 |          0 |         17 |
+| CSS            |          1 |         14 |          0 |          2 |         16 |
+| Dotenv         |          1 |          1 |          0 |         -1 |          0 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                             | files      | code       | comment    | blank      | total      |
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                |         27 |      1,135 |         12 |        172 |      1,319 |
+| . (Files)                                                        |          3 |         18 |          0 |         -1 |         17 |
+| .agents                                                          |          3 |        100 |          0 |         63 |        163 |
+| .agents\rules                                                    |          3 |        100 |          0 |         63 |        163 |
+| src                                                              |         21 |      1,017 |         12 |        110 |      1,139 |
+| src (Files)                                                      |          2 |         59 |         -3 |          6 |         62 |
+| src\GenealComponents                                             |          3 |        139 |          2 |         11 |        152 |
+| src\features                                                     |         14 |        696 |          7 |         66 |        769 |
+| src\features\auth                                                |          2 |        319 |          0 |         30 |        349 |
+| src\features\auth\components                                     |          1 |        294 |          0 |         25 |        319 |
+| src\features\auth\hooks                                          |          1 |         25 |          0 |          5 |         30 |
+| src\features\groups                                              |          9 |        105 |         -3 |          6 |        108 |
+| src\features\groups\api                                          |          1 |          8 |          0 |          2 |         10 |
+| src\features\groups\components                                   |          5 |         44 |         -5 |         -3 |         36 |
+| src\features\groups\hooks                                        |          3 |         53 |          2 |          7 |         62 |
+| src\features\profile                                             |          3 |        272 |         10 |         30 |        312 |
+| src\features\profile\components                                  |          2 |        244 |         10 |         25 |        279 |
+| src\features\profile\hooks                                       |          1 |         28 |          0 |          5 |         33 |
+| src\services                                                     |          2 |        123 |          6 |         27 |        156 |
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                         | language       | code       | comment    | blank      | total      |
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| d:\Find_Study\.agents\rules\auth-implmentation.md                | Markdown       |         15 |          0 |         12 |         27 |
+| d:\Find_Study\.agents\rules\general-rules.md                     | Markdown       |         33 |          0 |         10 |         43 |
+| d:\Find_Study\.agents\rules\style-guide.md                       | Markdown       |         52 |          0 |         41 |         93 |
+| d:\Find_Study\.env                                               | Dotenv         |          1 |          0 |         -1 |          0 |
+| d:\Find_Study\package-lock.json                                  | JSON           |         16 |          0 |          0 |         16 |
+| d:\Find_Study\package.json                                       | JSON           |          1 |          0 |          0 |          1 |
+| d:\Find_Study\src\App.jsx                                        | JavaScript JSX |         45 |         -3 |          4 |         46 |
+| d:\Find_Study\src\GenealComponents\MainLayout.jsx                | JavaScript JSX |        120 |          2 |          7 |        129 |
+| d:\Find_Study\src\GenealComponents\RootLayout.jsx                | JavaScript JSX |         10 |          0 |          1 |         11 |
+| d:\Find_Study\src\GenealComponents\ScrollToTop.jsx               | JavaScript JSX |          9 |          0 |          3 |         12 |
+| d:\Find_Study\src\features\auth\components\AuthPage.jsx          | JavaScript JSX |        294 |          0 |         25 |        319 |
+| d:\Find_Study\src\features\auth\hooks\useUser.js                 | JavaScript     |         25 |          0 |          5 |         30 |
+| d:\Find_Study\src\features\groups\api\groupsApi.js               | JavaScript     |          8 |          0 |          2 |         10 |
+| d:\Find_Study\src\features\groups\components\CreateGroupForm.jsx | JavaScript JSX |        -31 |          2 |          2 |        -27 |
+| d:\Find_Study\src\features\groups\components\FilterBar.jsx       | JavaScript JSX |         -1 |         -4 |          1 |         -4 |
+| d:\Find_Study\src\features\groups\components\GroupCard.jsx       | JavaScript JSX |         19 |          1 |          0 |         20 |
+| d:\Find_Study\src\features\groups\components\GroupDetail.jsx     | JavaScript JSX |          1 |         -1 |          0 |          0 |
+| d:\Find_Study\src\features\groups\components\GroupList.jsx       | JavaScript JSX |         56 |         -3 |         -6 |         47 |
+| d:\Find_Study\src\features\groups\hooks\useFilterCache.js        | JavaScript     |         42 |          2 |          5 |         49 |
+| d:\Find_Study\src\features\groups\hooks\useGetUserGroups.js      | JavaScript     |          9 |          0 |          2 |         11 |
+| d:\Find_Study\src\features\groups\hooks\useUserLocation.js       | JavaScript     |          2 |          0 |          0 |          2 |
+| d:\Find_Study\src\features\profile\components\ProfileAvatar.jsx  | JavaScript JSX |        123 |          7 |         15 |        145 |
+| d:\Find_Study\src\features\profile\components\ProfilePage.jsx    | JavaScript JSX |        121 |          3 |         10 |        134 |
+| d:\Find_Study\src\features\profile\hooks\useAvatar.js            | JavaScript     |         28 |          0 |          5 |         33 |
+| d:\Find_Study\src\index.css                                      | CSS            |         14 |          0 |          2 |         16 |
+| d:\Find_Study\src\services\auth.service.js                       | JavaScript     |         50 |          0 |          8 |         58 |
+| d:\Find_Study\src\services\storage.service.js                    | JavaScript     |         73 |          6 |         19 |         98 |
+| Total                                                            |                |      1,135 |         12 |        172 |      1,319 |
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+

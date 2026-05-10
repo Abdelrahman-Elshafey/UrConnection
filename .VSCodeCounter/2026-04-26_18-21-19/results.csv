@@ -1,0 +1,46 @@
+"filename", "language", "JavaScript", "JavaScript JSX", "Markdown", "JSON", "HTML", "XML", "Dotenv", "CSS", "comment", "blank", "total"
+"d:\Find_Study\.agents\rules\auth-implmentation.md", "Markdown", 0, 0, 15, 0, 0, 0, 0, 0, 0, 12, 27
+"d:\Find_Study\.agents\rules\general-rules.md", "Markdown", 0, 0, 33, 0, 0, 0, 0, 0, 0, 10, 43
+"d:\Find_Study\.agents\rules\style-guide.md", "Markdown", 0, 0, 52, 0, 0, 0, 0, 0, 0, 41, 93
+"d:\Find_Study\.env", "Dotenv", 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 3
+"d:\Find_Study\README.md", "Markdown", 0, 0, 9, 0, 0, 0, 0, 0, 0, 8, 17
+"d:\Find_Study\eslint.config.js", "JavaScript", 28, 0, 0, 0, 0, 0, 0, 0, 0, 2, 30
+"d:\Find_Study\index.html", "HTML", 0, 0, 0, 0, 14, 0, 0, 0, 0, 1, 15
+"d:\Find_Study\package-lock.json", "JSON", 0, 0, 0, 3242, 0, 0, 0, 0, 0, 1, 3243
+"d:\Find_Study\package.json", "JSON", 0, 0, 0, 41, 0, 0, 0, 0, 0, 1, 42
+"d:\Find_Study\public\favicon.svg", "XML", 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
+"d:\Find_Study\public\icons.svg", "XML", 0, 0, 0, 0, 0, 24, 0, 0, 0, 1, 25
+"d:\Find_Study\src\App.jsx", "JavaScript JSX", 0, 67, 0, 0, 0, 0, 0, 0, 0, 7, 74
+"d:\Find_Study\src\GenealComponents\MainLayout.jsx", "JavaScript JSX", 0, 197, 0, 0, 0, 0, 0, 0, 2, 13, 212
+"d:\Find_Study\src\GenealComponents\RootLayout.jsx", "JavaScript JSX", 0, 10, 0, 0, 0, 0, 0, 0, 0, 1, 11
+"d:\Find_Study\src\GenealComponents\ScrollToTop.jsx", "JavaScript JSX", 0, 9, 0, 0, 0, 0, 0, 0, 0, 3, 12
+"d:\Find_Study\src\assets\react.svg", "XML", 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
+"d:\Find_Study\src\assets\vite.svg", "XML", 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 2
+"d:\Find_Study\src\features\auth\components\AuthPage.jsx", "JavaScript JSX", 0, 294, 0, 0, 0, 0, 0, 0, 0, 25, 319
+"d:\Find_Study\src\features\auth\hooks\useUser.js", "JavaScript", 25, 0, 0, 0, 0, 0, 0, 0, 0, 5, 30
+"d:\Find_Study\src\features\groups\api\groupsApi.js", "JavaScript", 32, 0, 0, 0, 0, 0, 0, 0, 0, 13, 45
+"d:\Find_Study\src\features\groups\components\CreateGroupForm.jsx", "JavaScript JSX", 0, 219, 0, 0, 0, 0, 0, 0, 2, 20, 241
+"d:\Find_Study\src\features\groups\components\FilterBar.jsx", "JavaScript JSX", 0, 137, 0, 0, 0, 0, 0, 0, 3, 16, 156
+"d:\Find_Study\src\features\groups\components\GroupCard.jsx", "JavaScript JSX", 0, 107, 0, 0, 0, 0, 0, 0, 1, 7, 115
+"d:\Find_Study\src\features\groups\components\GroupDetail.jsx", "JavaScript JSX", 0, 102, 0, 0, 0, 0, 0, 0, 3, 14, 119
+"d:\Find_Study\src\features\groups\components\GroupList.jsx", "JavaScript JSX", 0, 239, 0, 0, 0, 0, 0, 0, 2, 17, 258
+"d:\Find_Study\src\features\groups\hooks\useCreateGroup.js", "JavaScript", 12, 0, 0, 0, 0, 0, 0, 0, 1, 2, 15
+"d:\Find_Study\src\features\groups\hooks\useDeleteGroup.js", "JavaScript", 12, 0, 0, 0, 0, 0, 0, 0, 1, 2, 15
+"d:\Find_Study\src\features\groups\hooks\useFilterCache.js", "JavaScript", 42, 0, 0, 0, 0, 0, 0, 0, 2, 5, 49
+"d:\Find_Study\src\features\groups\hooks\useGetGroups.js", "JavaScript", 8, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9
+"d:\Find_Study\src\features\groups\hooks\useGetUserGroups.js", "JavaScript", 9, 0, 0, 0, 0, 0, 0, 0, 0, 2, 11
+"d:\Find_Study\src\features\groups\hooks\useGroup.js", "JavaScript", 17, 0, 0, 0, 0, 0, 0, 0, 0, 3, 20
+"d:\Find_Study\src\features\groups\hooks\useUserLocation.js", "JavaScript", 98, 0, 0, 0, 0, 0, 0, 0, 10, 22, 130
+"d:\Find_Study\src\features\profile\components\ProfileAvatar.jsx", "JavaScript JSX", 0, 123, 0, 0, 0, 0, 0, 0, 7, 15, 145
+"d:\Find_Study\src\features\profile\components\ProfilePage.jsx", "JavaScript JSX", 0, 121, 0, 0, 0, 0, 0, 0, 3, 10, 134
+"d:\Find_Study\src\features\profile\hooks\useAvatar.js", "JavaScript", 28, 0, 0, 0, 0, 0, 0, 0, 0, 5, 33
+"d:\Find_Study\src\index.css", "CSS", 0, 0, 0, 0, 0, 0, 0, 29, 0, 6, 35
+"d:\Find_Study\src\lib\countries.js", "JavaScript", 681, 0, 0, 0, 0, 0, 0, 0, 1, 2, 684
+"d:\Find_Study\src\lib\groupSchema.js", "JavaScript", 37, 0, 0, 0, 0, 0, 0, 0, 1, 9, 47
+"d:\Find_Study\src\lib\platforms.js", "JavaScript", 216, 0, 0, 0, 0, 0, 0, 0, 0, 7, 223
+"d:\Find_Study\src\lib\supabase.js", "JavaScript", 4, 0, 0, 0, 0, 0, 0, 0, 0, 3, 7
+"d:\Find_Study\src\main.jsx", "JavaScript JSX", 0, 15, 0, 0, 0, 0, 0, 0, 1, 4, 20
+"d:\Find_Study\src\services\auth.service.js", "JavaScript", 50, 0, 0, 0, 0, 0, 0, 0, 0, 8, 58
+"d:\Find_Study\src\services\storage.service.js", "JavaScript", 73, 0, 0, 0, 0, 0, 0, 0, 6, 19, 98
+"d:\Find_Study\vite.config.js", "JavaScript", 6, 0, 0, 0, 0, 0, 0, 0, 1, 2, 9
+"Total", "-", 1378, 1640, 109, 3283, 14, 27, 3, 29, 47, 346, 6876

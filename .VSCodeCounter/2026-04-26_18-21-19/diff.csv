@@ -1,0 +1,29 @@
+"filename", "language", "JavaScript JSX", "JSON", "Dotenv", "JavaScript", "Markdown", "CSS", "comment", "blank", "total"
+"d:\Find_Study\.agents\rules\auth-implmentation.md", "Markdown", 0, 0, 0, 0, 15, 0, 0, 12, 27
+"d:\Find_Study\.agents\rules\general-rules.md", "Markdown", 0, 0, 0, 0, 33, 0, 0, 10, 43
+"d:\Find_Study\.agents\rules\style-guide.md", "Markdown", 0, 0, 0, 0, 52, 0, 0, 41, 93
+"d:\Find_Study\.env", "Dotenv", 0, 0, 1, 0, 0, 0, 0, -1, 0
+"d:\Find_Study\package-lock.json", "JSON", 0, 16, 0, 0, 0, 0, 0, 0, 16
+"d:\Find_Study\package.json", "JSON", 0, 1, 0, 0, 0, 0, 0, 0, 1
+"d:\Find_Study\src\App.jsx", "JavaScript JSX", 45, 0, 0, 0, 0, 0, -3, 4, 46
+"d:\Find_Study\src\GenealComponents\MainLayout.jsx", "JavaScript JSX", 120, 0, 0, 0, 0, 0, 2, 7, 129
+"d:\Find_Study\src\GenealComponents\RootLayout.jsx", "JavaScript JSX", 10, 0, 0, 0, 0, 0, 0, 1, 11
+"d:\Find_Study\src\GenealComponents\ScrollToTop.jsx", "JavaScript JSX", 9, 0, 0, 0, 0, 0, 0, 3, 12
+"d:\Find_Study\src\features\auth\components\AuthPage.jsx", "JavaScript JSX", 294, 0, 0, 0, 0, 0, 0, 25, 319
+"d:\Find_Study\src\features\auth\hooks\useUser.js", "JavaScript", 0, 0, 0, 25, 0, 0, 0, 5, 30
+"d:\Find_Study\src\features\groups\api\groupsApi.js", "JavaScript", 0, 0, 0, 8, 0, 0, 0, 2, 10
+"d:\Find_Study\src\features\groups\components\CreateGroupForm.jsx", "JavaScript JSX", -31, 0, 0, 0, 0, 0, 2, 2, -27
+"d:\Find_Study\src\features\groups\components\FilterBar.jsx", "JavaScript JSX", -1, 0, 0, 0, 0, 0, -4, 1, -4
+"d:\Find_Study\src\features\groups\components\GroupCard.jsx", "JavaScript JSX", 19, 0, 0, 0, 0, 0, 1, 0, 20
+"d:\Find_Study\src\features\groups\components\GroupDetail.jsx", "JavaScript JSX", 1, 0, 0, 0, 0, 0, -1, 0, 0
+"d:\Find_Study\src\features\groups\components\GroupList.jsx", "JavaScript JSX", 56, 0, 0, 0, 0, 0, -3, -6, 47
+"d:\Find_Study\src\features\groups\hooks\useFilterCache.js", "JavaScript", 0, 0, 0, 42, 0, 0, 2, 5, 49
+"d:\Find_Study\src\features\groups\hooks\useGetUserGroups.js", "JavaScript", 0, 0, 0, 9, 0, 0, 0, 2, 11
+"d:\Find_Study\src\features\groups\hooks\useUserLocation.js", "JavaScript", 0, 0, 0, 2, 0, 0, 0, 0, 2
+"d:\Find_Study\src\features\profile\components\ProfileAvatar.jsx", "JavaScript JSX", 123, 0, 0, 0, 0, 0, 7, 15, 145
+"d:\Find_Study\src\features\profile\components\ProfilePage.jsx", "JavaScript JSX", 121, 0, 0, 0, 0, 0, 3, 10, 134
+"d:\Find_Study\src\features\profile\hooks\useAvatar.js", "JavaScript", 0, 0, 0, 28, 0, 0, 0, 5, 33
+"d:\Find_Study\src\index.css", "CSS", 0, 0, 0, 0, 0, 14, 0, 2, 16
+"d:\Find_Study\src\services\auth.service.js", "JavaScript", 0, 0, 0, 50, 0, 0, 0, 8, 58
+"d:\Find_Study\src\services\storage.service.js", "JavaScript", 0, 0, 0, 73, 0, 0, 6, 19, 98
+"Total", "-", 766, 17, 1, 237, 100, 14, 12, 172, 1319

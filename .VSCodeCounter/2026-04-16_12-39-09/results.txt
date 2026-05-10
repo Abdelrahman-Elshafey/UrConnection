@@ -1,0 +1,73 @@
+Date : 2026-04-16 12:39:09
+Directory : d:\Find_Study
+Total : 30 files,  5348 codes, 35 comments, 174 blanks, all 5557 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| JSON           |          2 |      3,266 |          0 |          2 |      3,268 |
+| JavaScript     |         12 |      1,141 |         15 |         66 |      1,222 |
+| JavaScript JSX |          8 |        874 |         20 |         90 |        984 |
+| XML            |          4 |         27 |          0 |          2 |         29 |
+| CSS            |          1 |         15 |          0 |          4 |         19 |
+| HTML           |          1 |         14 |          0 |          1 |         15 |
+| Markdown       |          1 |          9 |          0 |          8 |         17 |
+| Dotenv         |          1 |          2 |          0 |          1 |          3 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                             | files      | code       | comment    | blank      | total      |
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                |         30 |      5,348 |         35 |        174 |      5,557 |
+| . (Files)                                                        |          7 |      3,325 |          1 |         16 |      3,342 |
+| public                                                           |          2 |         25 |          0 |          1 |         26 |
+| src                                                              |         21 |      1,998 |         34 |        157 |      2,189 |
+| src (Files)                                                      |          3 |         52 |          4 |         11 |         67 |
+| src\GenealComponents                                             |          1 |         77 |          0 |          6 |         83 |
+| src\assets                                                       |          2 |          2 |          0 |          1 |          3 |
+| src\features                                                     |         11 |        929 |         28 |        118 |      1,075 |
+| src\features\groups                                              |         11 |        929 |         28 |        118 |      1,075 |
+| src\features\groups\api                                          |          1 |         24 |          0 |         11 |         35 |
+| src\features\groups\components                                   |          5 |        760 |         16 |         77 |        853 |
+| src\features\groups\hooks                                        |          5 |        145 |         12 |         30 |        187 |
+| src\lib                                                          |          4 |        938 |          2 |         21 |        961 |
++------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                         | language       | code       | comment    | blank      | total      |
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| d:\Find_Study\.env                                               | Dotenv         |          2 |          0 |          1 |          3 |
+| d:\Find_Study\README.md                                          | Markdown       |          9 |          0 |          8 |         17 |
+| d:\Find_Study\eslint.config.js                                   | JavaScript     |         28 |          0 |          2 |         30 |
+| d:\Find_Study\index.html                                         | HTML           |         14 |          0 |          1 |         15 |
+| d:\Find_Study\package-lock.json                                  | JSON           |      3,226 |          0 |          1 |      3,227 |
+| d:\Find_Study\package.json                                       | JSON           |         40 |          0 |          1 |         41 |
+| d:\Find_Study\public\favicon.svg                                 | XML            |          1 |          0 |          0 |          1 |
+| d:\Find_Study\public\icons.svg                                   | XML            |         24 |          0 |          1 |         25 |
+| d:\Find_Study\src\App.jsx                                        | JavaScript JSX |         22 |          3 |          3 |         28 |
+| d:\Find_Study\src\GenealComponents\MainLayout.jsx                | JavaScript JSX |         77 |          0 |          6 |         83 |
+| d:\Find_Study\src\assets\react.svg                               | XML            |          1 |          0 |          0 |          1 |
+| d:\Find_Study\src\assets\vite.svg                                | XML            |          1 |          0 |          1 |          2 |
+| d:\Find_Study\src\features\groups\api\groupsApi.js               | JavaScript     |         24 |          0 |         11 |         35 |
+| d:\Find_Study\src\features\groups\components\CreateGroupForm.jsx | JavaScript JSX |        250 |          0 |         18 |        268 |
+| d:\Find_Study\src\features\groups\components\FilterBar.jsx       | JavaScript JSX |        138 |          7 |         15 |        160 |
+| d:\Find_Study\src\features\groups\components\GroupCard.jsx       | JavaScript JSX |         88 |          0 |          7 |         95 |
+| d:\Find_Study\src\features\groups\components\GroupDetail.jsx     | JavaScript JSX |        101 |          4 |         14 |        119 |
+| d:\Find_Study\src\features\groups\components\GroupList.jsx       | JavaScript JSX |        183 |          5 |         23 |        211 |
+| d:\Find_Study\src\features\groups\hooks\useCreateGroup.js        | JavaScript     |         12 |          1 |          2 |         15 |
+| d:\Find_Study\src\features\groups\hooks\useDeleteGroup.js        | JavaScript     |         12 |          1 |          2 |         15 |
+| d:\Find_Study\src\features\groups\hooks\useGetGroups.js          | JavaScript     |          8 |          0 |          1 |          9 |
+| d:\Find_Study\src\features\groups\hooks\useGroup.js              | JavaScript     |         17 |          0 |          3 |         20 |
+| d:\Find_Study\src\features\groups\hooks\useUserLocation.js       | JavaScript     |         96 |         10 |         22 |        128 |
+| d:\Find_Study\src\index.css                                      | CSS            |         15 |          0 |          4 |         19 |
+| d:\Find_Study\src\lib\countries.js                               | JavaScript     |        681 |          1 |          2 |        684 |
+| d:\Find_Study\src\lib\groupSchema.js                             | JavaScript     |         37 |          1 |          9 |         47 |
+| d:\Find_Study\src\lib\platforms.js                               | JavaScript     |        216 |          0 |          7 |        223 |
+| d:\Find_Study\src\lib\supabase.js                                | JavaScript     |          4 |          0 |          3 |          7 |
+| d:\Find_Study\src\main.jsx                                       | JavaScript JSX |         15 |          1 |          4 |         20 |
+| d:\Find_Study\vite.config.js                                     | JavaScript     |          6 |          1 |          2 |          9 |
+| Total                                                            |                |      5,348 |         35 |        174 |      5,557 |
++------------------------------------------------------------------+----------------+------------+------------+------------+------------+

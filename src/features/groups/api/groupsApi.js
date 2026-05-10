@@ -1,27 +1,45 @@
 import { supabase } from "../../../lib/supabase";
 
 export const getGroups = async () => {
-  const { data, error } = await supabase.from("groups").select("*"); // جلب كل شيء بدون ترتيب حالياً
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*")
+   
 
-  if (error) {
-    console.error("Supabase Error Details:", error); // هذا سيطبع لنا تفاصيل الخطأ بدقة
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
+
   return data;
 };
 
 export const createGroup = async (newGroup) => {
+
+
   const { data, error } = await supabase
     .from("groups")
-    .insert([newGroup]) // Supabase expects an array
-    .select();
+    .insert([newGroup])
+    .select()
+    .single();
 
   if (error) throw new Error(error.message);
+
   return data;
 };
 
 export const deleteGroup = async (id) => {
-  const { error } = await supabase.from("groups").delete().eq("id", id); // Match the ID of the group
+  const { error } = await supabase
+    .from("groups")
+    .delete()
+    .eq("id", id);
 
-  if (error) throw new Error(`coudn't delete the group` || error.message);
+  if (error) throw new Error(error.message);
+};
+
+export const getUserGroups = async (userId) => {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  return data;
 };
