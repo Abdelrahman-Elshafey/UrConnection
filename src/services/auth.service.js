@@ -58,3 +58,21 @@ export const getSession = async () => {
   return session;
 };
 
+/**
+ * Updates the currently authenticated user's profile metadata.
+ * Supabase scopes this call to the user's JWT — no other user
+ * can modify someone else's profile.
+ */
+export const updateProfile = async ({ displayName, phone, country, city }) => {
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      display_name: displayName,
+      phone: phone,
+      country: country,
+      city: city,
+    },
+  });
+  if (error) throw error;
+  return data;
+};
+
