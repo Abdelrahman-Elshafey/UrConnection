@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 
 const getRedirectUrl = () => {
-  return import.meta.env.VITE_AUTH_REDIRECT_URL || window.location.origin + "/";
+  return import.meta.env.VITE_AUTH_REDIRECT_URL
 };
 
 export const signUp = async (email, password, metadata = {}) => {
@@ -63,11 +63,11 @@ export const getSession = async () => {
  * Supabase scopes this call to the user's JWT — no other user
  * can modify someone else's profile.
  */
-export const updateProfile = async ({ displayName, phone, country, city }) => {
+export const updateProfile = async ({ displayName, phoneNumber, country, city }) => {
   const { data, error } = await supabase.auth.updateUser({
     data: {
       display_name: displayName,
-      phone: phone,
+      phone_number: phoneNumber,
       country: country,
       city: city,
     },

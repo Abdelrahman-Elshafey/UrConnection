@@ -43,6 +43,11 @@ const authSchema = z.object({
 });
 
 export default function AuthPage() {
+
+  //clear data temporarily
+  sessionStorage.clear();
+  localStorage.clear();
+
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -95,6 +100,8 @@ export default function AuthPage() {
     try {
       await signInWithOAuth(provider);
     } catch (error) {
+      console.log("couldn't fetch");
+      
       setAuthError(error.message || `Failed to sign in with ${provider}.`);
     }
   };
