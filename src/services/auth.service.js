@@ -45,7 +45,10 @@ export const signInWithOAuth = async (provider) => {
 };
 
 export const signOut = async () => {
+  
   const { error } = await supabase.auth.signOut();
+  sessionStorage.clear();
+  localStorage.clear();
   if (error) throw error;
 };
 

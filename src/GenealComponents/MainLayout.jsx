@@ -17,9 +17,7 @@ export default function MainLayout() {
     try {
       await signOut();
       navigate("/");
-      sessionStorage.removeItem("uc_filter_cache");
     } catch (e) {
-
       console.error(e);
     }
   };

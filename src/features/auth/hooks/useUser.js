@@ -12,7 +12,7 @@ export const useUser = () => {
       if (error) throw error;
       return session;
     },
-    staleTime: Infinity, 
+    staleTime: Infinity  
   });
 
   useEffect(() => {

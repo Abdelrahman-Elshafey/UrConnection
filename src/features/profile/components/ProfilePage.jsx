@@ -62,10 +62,10 @@ export default function ProfilePage() {
   const populateForm = useCallback(() => {
     if (!user) return;
     reset({
-      displayName: user.user_metadata?.display_name || "",
-      phoneNumber: user.user_metadata?.phone_number || "",
-      country: user.user_metadata?.country || "",
-      city: user.user_metadata?.city || "",
+      displayName: user?.user_metadata?.display_name || "",
+      phoneNumber: user?.user_metadata?.phone_number || "",
+      country: user?.user_metadata?.country || "",
+      city: user?.user_metadata?.city || "",
     });
   }, [user, reset]);
 

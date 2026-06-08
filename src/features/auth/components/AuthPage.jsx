@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { FaGoogle, FaApple, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaGoogle, FaEye } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import {
   signInWithPassword,
   signUp,
   signInWithOAuth,
 } from "../../../services/auth.service";
-
+import  {clearFilterCache}  from "../../groups/hooks/useFilterCache";
 
 
 
@@ -44,9 +44,7 @@ const authSchema = z.object({
 
 export default function AuthPage() {
 
-  //clear data temporarily
-  sessionStorage.clear();
-  localStorage.clear();
+
 
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState("");
@@ -58,7 +56,6 @@ export default function AuthPage() {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(authSchema),
@@ -78,7 +75,7 @@ export default function AuthPage() {
     setIsLoading(true);
     setAuthError("");
     try {
-      if (data.isLogin) {
+      if (isLogin) {
         await signInWithPassword(data.email, data.password);
       } else {
         await signUp(data.email, data.password, {
@@ -88,7 +85,8 @@ export default function AuthPage() {
           city: data.city,
         });
       }
-      navigate("/");
+      navigate("/")
+    
     } catch (error) {
       setAuthError(error.message || "An error occurred during authentication.");
     } finally {
@@ -106,6 +104,10 @@ export default function AuthPage() {
     }
   };
 
+
+  //clear all sessions to stop overwritting data
+clearFilterCache()
+  
   return (
 
     <div className="min-h-screen bg-white dark:bg-[#000000] flex flex-col justify-center py-20 px-6 transition-colors duration-200">
