@@ -31,3 +31,6 @@ dist-ssr
 *.sln
 *.sw?
 recovery-codes.txt
+
+
+.gitignore
