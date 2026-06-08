@@ -1,7 +1,7 @@
 import { supabase } from "../lib/supabase";
 
 const getRedirectUrl = () => {
-  return import.meta.env.VITE_AUTH_REDIRECT_URL || window.location.origin + "/";
+  return import.meta.env.VITE_AUTH_REDIRECT_URL
 };
 
 export const signUp = async (email, password, metadata = {}) => {
@@ -45,7 +45,10 @@ export const signInWithOAuth = async (provider) => {
 };
 
 export const signOut = async () => {
+  
   const { error } = await supabase.auth.signOut();
+  sessionStorage.clear();
+  localStorage.clear();
   if (error) throw error;
 };
 
@@ -56,5 +59,23 @@ export const getSession = async () => {
   } = await supabase.auth.getSession();
   if (error) throw error;
   return session;
+};
+
+/**
+ * Updates the currently authenticated user's profile metadata.
+ * Supabase scopes this call to the user's JWT — no other user
+ * can modify someone else's profile.
+ */
+export const updateProfile = async ({ displayName, phoneNumber, country, city }) => {
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      display_name: displayName,
+      phone_number: phoneNumber,
+      country: country,
+      city: city,
+    },
+  });
+  if (error) throw error;
+  return data;
 };
 
