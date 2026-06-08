@@ -11,7 +11,7 @@ import AuthPage from "./features/auth/components/AuthPage";
 import ProfilePage from "./features/profile/components/ProfilePage";
 import { getSession } from "./services/auth.service";
 import RootLayout from "./GenealComponents/RootLayout";
-
+import { Analytics } from "@vercel/analytics/react";
 
 const requireAuth = async () => {
   const session = await getSession();
@@ -67,7 +67,12 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Analytics />
+    </>
+  );
 }
 
 export default App;

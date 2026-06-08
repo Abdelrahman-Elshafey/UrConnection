@@ -15,6 +15,7 @@
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-query-devtools": "^5.96.2",
+    "@vercel/analytics": "^2.0.1",
     "browser-image-compression": "^2.0.2",
     "react": "^19.2.4",
     "react-country-state-city": "^1.1.12",
