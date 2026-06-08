@@ -29,7 +29,7 @@ export default function MainLayout() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link
             to="/"
-            className="text-3xl font-extrabold text-black dark:text-white hover:opacity-70 transition-opacity tracking-tighter cursor-pointer"
+            className="text-3xl mr-4 font-extrabold text-black dark:text-white hover:opacity-70 transition-opacity tracking-tighter cursor-pointer"
           >
             UrConnections
           </Link>
@@ -87,7 +87,7 @@ export default function MainLayout() {
             ) : (
               <Link
                 to="/create"
-                className="bg-[#0071e3] text-white px-5 py-2.5 rounded-full text-[13px] font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[#0071e3]/20 cursor-pointer"
+                className="bg-[#0071e3] text-white px-4  py-2 rounded-full lg:text-[13px] md:text-[12px] text-[8px]  font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[#0071e3]/20 cursor-pointer"
               >
                 Create Group
               </Link>
