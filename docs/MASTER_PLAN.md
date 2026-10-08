@@ -111,7 +111,13 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ## 3. Ground rules for every stage
 1. Branch `stage-XX-name` from `dev`. Keep the PR small. Merge only when `npm run lint && npm run typecheck && npm test` pass.
 2. **No secrets in git.** Every service reads env vars validated by `config.ts`. Commit a `.env.example`.
-3. Each stage updates the docs it touches (this file's progress table, ARCHITECTURE.md, CODE_AUDIT.md statuses).
+3. **Docs checklist: every stage, before its commit.** Each doc must describe the code *as it is after the stage*. Don't add notes on top of stale text; rewrite the outdated part.
+   - [ ] **MASTER_PLAN.md**: tick the stage in the progress table, plus a short note of what was done or changed from the plan
+   - [ ] **ARCHITECTURE.md**: folder map, routing, data flow, query keys (regenerate the map from `git ls-files`, not from memory)
+   - [ ] **CODE_AUDIT.md**: mark the items the stage fixed (`[x]` / `[~]`) and add stage notes
+   - [ ] **CLAUDE.md**: commands, layout, conventions, if any changed
+   - [ ] **README.md**: setup steps, commands, stack, if any changed
+   - [ ] **`.env.example`** files: every new env var is listed (no real values)
 4. Claude explains the *why* for each new concept as it's written, and flags security-critical code with `// SECURITY:` comments.
 5. Prefer boring, well-known libraries for anything cryptographic. **Never hand-roll crypto.**
 
