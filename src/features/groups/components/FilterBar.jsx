@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useRef } from "react";
 import { COUNTRY_LIST, COUNTRIES_CITIES } from "../../../lib/countries";
 import { PLATFORMS } from "../../../lib/platforms";
 
@@ -25,18 +25,12 @@ export default function FilterBar({
   currentPlatform,
   currentSearch,
 }) {
-  const [search, setSearch] = useState(currentSearch || "");
-
-  useEffect(() => {
-    setSearch(currentSearch || "");
-  }, [currentSearch]);
-
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-  };
+  // Uncontrolled: the input keeps its own draft text; `key` below resets it
+  // whenever the committed query in the URL changes (e.g. "Clear all").
+  const searchInputRef = useRef(null);
 
   const handleSearchSubmit = () => {
-    onSearch(search);
+    onSearch(searchInputRef.current?.value ?? "");
   };
 
   const handleKeyDown = (e) => {
@@ -72,8 +66,9 @@ export default function FilterBar({
                 type="text"
                 placeholder="Find your group by Interest"
                 className="w-full focus:placeholder:text-transparent bg-transparent text-xl font-bold outline-none text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-600"
-                value={search}
-                onChange={handleSearchChange}
+                key={currentSearch}
+                ref={searchInputRef}
+                defaultValue={currentSearch}
                 onKeyDown={handleKeyDown}
               />
             </div>
@@ -88,7 +83,7 @@ export default function FilterBar({
       </section>
 
       {/* Global Discovery Bar (Sticky) */}
-      <div className="sticky top-[61px] z-40 bg-white/70 dark:bg-[#000000]/70 backdrop-blur-2xl border-b border-gray-100 dark:border-[#1d1d1f] py-4 px-6 transition-colors duration-200">
+      <div className="sticky top-(--nav-height) z-40 bg-white/70 dark:bg-[#000000]/70 backdrop-blur-2xl border-b border-gray-100 dark:border-[#1d1d1f] py-4 px-6 transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex flex-wrap md:flex-nowrap items-center justify-between gap-6">
          
 

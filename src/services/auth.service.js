@@ -1,8 +1,7 @@
 import { supabase } from "../lib/supabase";
+import { clearFilterCache } from "../features/groups/hooks/useFilterCache";
 
-const getRedirectUrl = () => {
-  return import.meta.env.VITE_AUTH_REDIRECT_URL
-};
+const AUTH_REDIRECT_URL = import.meta.env.VITE_AUTH_REDIRECT_URL;
 
 export const signUp = async (email, password, metadata = {}) => {
   const { data, error } = await supabase.auth.signUp({
@@ -34,7 +33,7 @@ export const signInWithOAuth = async (provider) => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: getRedirectUrl(),
+      redirectTo: AUTH_REDIRECT_URL,
       queryParams: {
         prompt: 'select_account',
       },
@@ -45,11 +44,20 @@ export const signInWithOAuth = async (provider) => {
 };
 
 export const signOut = async () => {
-  
   const { error } = await supabase.auth.signOut();
-  sessionStorage.clear();
-  localStorage.clear();
   if (error) throw error;
+  // Supabase removes its own session key; only drop app state that is user-specific.
+  clearFilterCache();
+};
+
+/**
+ * Subscribes to auth events. Returns an unsubscribe function.
+ */
+export const onAuthStateChange = (callback) => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(callback);
+  return () => subscription.unsubscribe();
 };
 
 export const getSession = async () => {

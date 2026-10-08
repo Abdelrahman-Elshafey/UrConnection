@@ -24,7 +24,7 @@ export function useRemoveAvatar() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId) => removeAvatar(userId),
+    mutationFn: removeAvatar,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["session"] });
     },

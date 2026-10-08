@@ -1,4 +1,3 @@
-import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGroup } from "../hooks/useGroup";
 import { getPlatform } from "../../../lib/platforms";
@@ -38,6 +37,7 @@ export default function GroupDetail() {
     city,
   } = group;
   const platformInfo = getPlatform(platform);
+  const PlatformIcon = platformInfo.icon;
 
   return (
     <div className="w-full bg-white dark:bg-[#000000] transition-colors duration-200">
@@ -57,8 +57,8 @@ export default function GroupDetail() {
               {topic}
             </span>
             {platform && (
-              <span className={`flex items-center text-[10px] font-bold px-4 py-1.5 rounded-full bg-white dark:bg-black border border-gray-100 dark:border-[#333336] ${platformInfo.color}`}>
-                {React.createElement(platformInfo.icon, { className: "mr-2 text-sm" })}
+              <span className={`flex items-center text-[10px] font-bold px-4 py-1.5 rounded-full border ${platformInfo.color}`}>
+                <PlatformIcon className="mr-2 text-sm" />
                 {platformInfo.label}
               </span>
             )}
@@ -78,7 +78,7 @@ export default function GroupDetail() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 lg:gap-44">
           <div className="space-y-10">
             <h3 className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em]">Description</h3>
-            <p className="text-2xl md:text-3xl font-medium text-black break-all dark:text-white leading-relaxed tracking-tight whitespace-pre-wrap">
+            <p className="text-2xl md:text-3xl font-medium text-black wrap-break-word dark:text-white leading-relaxed tracking-tight whitespace-pre-wrap">
               {description}
             </p>
           </div>
@@ -92,7 +92,7 @@ export default function GroupDetail() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Access Platform</span>
-                  <span className="text-xl font-bold text-black dark:text-white">{platformInfo.label || "Direct Link"}</span>
+                  <span className="text-xl font-bold text-black dark:text-white">{platformInfo.label}</span>
                 </div>
               </div>
             </div>

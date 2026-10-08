@@ -9,12 +9,16 @@ import CreateGroupForm from "./features/groups/components/CreateGroupForm";
 import GroupDetail from "./features/groups/components/GroupDetail";
 import AuthPage from "./features/auth/components/AuthPage";
 import ProfilePage from "./features/profile/components/ProfilePage";
-import { getSession } from "./services/auth.service";
 import RootLayout from "./GenealComponents/RootLayout";
 import { Analytics } from "@vercel/analytics/react";
+import { queryClient } from "./lib/queryClient";
+import { sessionQueryOptions } from "./features/auth/hooks/useUser";
+
+// Read through the ['session'] cache so loaders and components agree on auth state.
+const getCachedSession = () => queryClient.ensureQueryData(sessionQueryOptions);
 
 const requireAuth = async () => {
-  const session = await getSession();
+  const session = await getCachedSession();
   if (!session) {
     return redirect("/login");
   }
@@ -22,7 +26,7 @@ const requireAuth = async () => {
 };
 
 const redirectIfAuth = async () => {
-  const session = await getSession();
+  const session = await getCachedSession();
   if (session) {
     return redirect("/");
   }

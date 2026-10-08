@@ -4,6 +4,8 @@
 @layer base {
   :root {
     color-scheme: light dark;
+    /* Shared by the sticky nav (MainLayout) and the sticky filter bar (FilterBar) */
+    --nav-height: 4rem;
   }
 
   html, body {
@@ -13,9 +15,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Ensure smooth transitions for all elements when theme changes */
+  /* Default border color. Transitions are opt-in per element (transition-* classes),
+     not global — a transition on every node costs style recalc and fades colors in on load. */
   * {
-    @apply border-gray-100 dark:border-[#1d1d1f] transition-colors duration-300;
+    @apply border-gray-100 dark:border-[#1d1d1f];
   }
 
   /* Universal interactive cursor */

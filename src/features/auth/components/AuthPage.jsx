@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -9,9 +10,9 @@ import {
   signUp,
   signInWithOAuth,
 } from "../../../services/auth.service";
-import  {clearFilterCache}  from "../../groups/hooks/useFilterCache";
-
-
+import { clearFilterCache } from "../../groups/hooks/useFilterCache";
+import { SESSION_QUERY_KEY } from "../hooks/useUser";
+import { COUNTRIES_CITIES, COUNTRY_LIST } from "../../../lib/countries";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -42,51 +43,67 @@ const authSchema = z.object({
   }
 });
 
+const EMPTY_FORM = { email: "", password: "", confirmPassword: "", displayName: "", phoneNumber: "", country: "", city: "" };
+
 export default function AuthPage() {
-
-
-
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState("");
+  const [authInfo, setAuthInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(authSchema),
-    defaultValues: { email: "", password: "", confirmPassword: "", displayName: "", phoneNumber: "", country: "", city: "", isLogin: true },
+    defaultValues: { ...EMPTY_FORM, isLogin: true },
   });
 
+  const selectedCountry = useWatch({ control, name: "country" });
+  const availableCities = COUNTRIES_CITIES[selectedCountry] || [];
+
   const toggleMode = () => {
-    setIsLogin((prev) => {
-      const newMode = !prev;
-      setAuthError("");
-      reset({ email: "", password: "", confirmPassword: "", displayName: "", phoneNumber: "", country: "", city: "", isLogin: newMode });
-      return newMode;
-    });
+    const newMode = !isLogin;
+    setIsLogin(newMode);
+    setAuthError("");
+    setAuthInfo("");
+    reset({ ...EMPTY_FORM, isLogin: newMode });
   };
 
   const onSubmit = async (data) => {
     setIsLoading(true);
     setAuthError("");
+    setAuthInfo("");
     try {
-      if (isLogin) {
-        await signInWithPassword(data.email, data.password);
-      } else {
-        await signUp(data.email, data.password, {
-          displayName: data.displayName,
-          phoneNumber: data.phoneNumber,
-          country: data.country,
-          city: data.city,
-        });
+      const result = isLogin
+        ? await signInWithPassword(data.email, data.password)
+        : await signUp(data.email, data.password, {
+            displayName: data.displayName,
+            phoneNumber: data.phoneNumber,
+            country: data.country,
+            city: data.city,
+          });
+
+      // Sign-up with email confirmation enabled returns no session yet.
+      if (!result.session) {
+        setAuthInfo("Account created. Check your email to confirm it, then sign in.");
+        setIsLogin(true);
+        reset({ ...EMPTY_FORM, email: data.email, isLogin: true });
+        return;
       }
-      navigate("/")
-    
+
+      // Prime the cache so the route loaders see the new session immediately.
+      queryClient.setQueryData(SESSION_QUERY_KEY, result.session);
+      // Drop filters cached by a previous visitor of this tab.
+      clearFilterCache();
+      navigate("/");
     } catch (error) {
       setAuthError(error.message || "An error occurred during authentication.");
     } finally {
@@ -96,18 +113,13 @@ export default function AuthPage() {
 
   const handleOAuth = async (provider) => {
     try {
+      clearFilterCache();
       await signInWithOAuth(provider);
     } catch (error) {
-      console.log("couldn't fetch");
-      
       setAuthError(error.message || `Failed to sign in with ${provider}.`);
     }
   };
 
-
-  //clear all sessions to stop overwritting data
-clearFilterCache()
-  
   return (
 
     <div className="min-h-screen bg-white dark:bg-[#000000] flex flex-col justify-center py-20 px-6 transition-colors duration-200">
@@ -151,6 +163,14 @@ clearFilterCache()
           <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl text-center">
             <p className="text-xs font-bold text-red-600 dark:text-red-400 tracking-wide">
               {authError}
+            </p>
+          </div>
+        )}
+
+        {authInfo && (
+          <div className="mb-8 p-4 bg-[#0071e3]/5 border border-[#0071e3]/20 rounded-2xl text-center">
+            <p className="text-xs font-bold text-[#0071e3] tracking-wide">
+              {authInfo}
             </p>
           </div>
         )}
@@ -204,23 +224,30 @@ clearFilterCache()
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
                     Country (Optional)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Country"
-                    {...register("country")}
-                    className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700"
-                  />
+                  <select
+                    {...register("country", { onChange: () => setValue("city", "") })}
+                    className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white appearance-none cursor-pointer"
+                  >
+                    <option value="">Country</option>
+                    {COUNTRY_LIST.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
                     City (Optional)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="City"
+                  <select
                     {...register("city")}
-                    className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700"
-                  />
+                    disabled={!selectedCountry}
+                    className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">City</option>
+                    {availableCities.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </>

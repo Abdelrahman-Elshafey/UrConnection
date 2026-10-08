@@ -6,8 +6,9 @@ export function useDeleteGroup() {
 
   return useMutation({
     mutationFn: deleteGroupApi,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.removeQueries({ queryKey: ['group', id] });
     },
     onError: (err) => alert(err.message),
   });
