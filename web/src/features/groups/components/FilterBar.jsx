@@ -1,17 +1,10 @@
 import { useRef } from "react";
 import { COUNTRY_LIST, COUNTRIES_CITIES } from "../../../lib/countries";
 import { PLATFORMS } from "../../../lib/platforms";
+import { TOPICS as GROUP_TOPICS } from "@urconnections/shared";
 
-const TOPICS = [
-  "All",
-  "Programming",
-  "Language",
-  "Math",
-  "Science",
-  "Design",
-  "Business",
-  "Art",
-];
+// "All" is a filter-only option, not a real topic.
+const TOPICS = ["All", ...GROUP_TOPICS];
 
 export default function FilterBar({
   onSearch,

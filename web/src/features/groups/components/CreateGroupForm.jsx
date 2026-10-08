@@ -6,16 +6,7 @@ import { useUser } from "../../auth/hooks/useUser";
 import { COUNTRIES_CITIES, COUNTRY_LIST } from "../../../lib/countries";
 import { groupSchema } from "../../../lib/groupSchema";
 import { PLATFORMS, getPlatform } from "../../../lib/platforms";
-
-const TOPICS = [
-  "Programming",
-  "Language",
-  "Math",
-  "Science",
-  "Design",
-  "Business",
-  "Art",
-];
+import { TOPICS } from "@urconnections/shared";
 
 function FieldError({ error }) {
   if (!error) return null;

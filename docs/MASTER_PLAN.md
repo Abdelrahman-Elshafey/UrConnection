@@ -269,8 +269,8 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 
 | Stage | Status | Notes |
 |---|---|---|
-| 0 Freeze v1 + Supabase hardening | ☐ | |
-| 1 Monorepo + TS foundation | ☐ | |
+| 0 Freeze v1 + Supabase hardening | 🟡 | Commits pushed, `main` merged, tag `v1-supabase` pushed (2026-10-08). **Owner: pause the Supabase project, or run the Phase 1 SQL.** |
+| 1 Monorepo + TS foundation | ✅ | `web/` + `packages/shared`, TS 6 strict, `tsc -b`, typescript-eslint, `TOPICS` shared (D5). Bundle unchanged at 237 KB. **Vercel: set Root Directory = `web` before the next deploy from a branch containing this layout.** |
 | 2 Shared schemas + typed data layer | ☐ | |
 | 3 Docker dev + API skeleton + CI | ☐ | |
 | 4 DB schema + migrations + seed | ☐ | |

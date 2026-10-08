@@ -1,6 +1,7 @@
 # Architecture — UrConnections
 
-> Snapshot as of commit `86180e9` plus the bug-fix pass (branch `dev`). Line numbers may drift, so search by symbol name.
+> Snapshot as of commit `86180e9` plus the bug-fix pass (branch `dev`).
+> **Since Stage 1 the frontend lives in `web/`**, so every `src/…` path below is `web/src/…`. Shared code is in `packages/shared/` (`@urconnections/shared`). See MASTER_PLAN.md §2 for the target layout. Line numbers may drift, so search by symbol name.
 
 ## 1. Folder map
 

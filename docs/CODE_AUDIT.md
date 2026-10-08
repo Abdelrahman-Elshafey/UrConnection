@@ -1,6 +1,7 @@
 # Code Audit — UrConnections
 
 > First pass: commit `86180e9`. Second pass (re-audit after the bug-fix pass): added B22–B30, S5–S11, and sections O (over-engineering), P (performance, measured), and A (accessibility).
+> **Paths:** since Stage 1 the frontend is under `web/`, so `src/…` here means `web/src/…`.
 > Each item has an ID so plans and commits can reference it ("fixes B4").
 > Status: `[ ]` open · `[~]` partly done (see note) · `[x]` done · `[—]` won't fix (owner decision). Update this file when you fix something.
 > Severity: **H** = user-visible bug or security/data risk · **M** = wrong behavior in edge cases or a rule violation · **L** = cleanliness.
@@ -64,7 +65,7 @@
 | D2 | [ ] | The back button with chevron SVG ("Return to Explore", "Back to Explore", "Cancel and Return") appears 3 times. | `components/ui/BackLink.jsx`. |
 | D3 | [ ] | Input/select/textarea class strings, about 20 copies across AuthPage, CreateGroupForm, and ProfilePage, plus label classes and error `<p>`s. | `components/ui/form/{TextField,SelectField,TextAreaField,FieldLabel,FieldError}.jsx` that work with `register`. |
 | D4 | [ ] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
-| D5 | [ ] | `TOPICS` is defined in both `CreateGroupForm` and `FilterBar` (with "All"). | `lib/topics.js` exporting `TOPICS`. FilterBar prepends "All". |
+| D5 | [x] | `TOPICS` is defined in both `CreateGroupForm` and `FilterBar` (with "All"). | `lib/topics.js` exporting `TOPICS`. FilterBar prepends "All". |
 | D6 | [ ] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
 | D7 | [ ] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
 | D8 | [ ] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |

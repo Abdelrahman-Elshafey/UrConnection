@@ -1,0 +1,6 @@
+// "Solution" file: no files of its own, just points at the two real configs.
+// Editors read this; `tsc -b` builds both references.
+{
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
+}
