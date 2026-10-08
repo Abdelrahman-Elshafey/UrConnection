@@ -6,7 +6,7 @@ import {
   readFilterCache,
   writeFilterCache,
   clearFilterCache,
-} from "../hooks/useFilterCache";
+} from "../utils/filterCache";
 import GroupCard from "./GroupCard";
 import FilterBar from "./FilterBar";
 

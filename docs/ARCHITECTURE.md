@@ -34,7 +34,8 @@ src/
       components/AuthPage.jsx     # login + signup in one page (toggle), zod schema inline, Google OAuth
       hooks/useUser.js            # useQuery(['session']) + onAuthStateChange subscription
     groups/
-      api/groupsApi.js            # getGroups, createGroup, deleteGroup, getUserGroups
+      api/groupsApi.ts            # getGroups, getGroupById, getUserGroups, createGroup, deleteGroup (explicit columns)
+      api/queryKeys.ts            # groupKeys factory: all / list / byUser / detail
       hooks/useGetGroups.js       # ['groups']
       hooks/useGetUserGroups.js   # ['groups','user',id]
       hooks/useGroup.js           # ['group',id] — calls supabase directly (not via groupsApi)
@@ -74,11 +75,11 @@ RootLayout (no path)
 ### TanStack Query keys
 | Key | Defined in | Fetches | Invalidated by |
 |---|---|---|---|
-| `['session']` | `useUser` | `supabase.auth.getSession()`, `staleTime: Infinity` | upload/remove avatar, update profile; also `setQueryData` from `onAuthStateChange` |
-| `['groups']` | `useGetGroups` | all groups `select('*')` | create/delete group |
-| `['groups','user',id]` | `useGetUserGroups` | groups where `user_id = id` | (prefix-matched by `['groups']`) |
-| `['group',id]` | `useGroup` | one group by id | **never** (see audit) |
-| `['userLocation']` | `useUserLocation` | ipapi.co (localStorage-cached) | never (staleTime ∞) |
+| `['session']` (`SESSION_QUERY_KEY`) | `useUser` (`sessionQueryOptions`) | `getSession()`, `staleTime: Infinity` | avatar upload/remove, profile update; kept in sync by `useAuthListener` (`setQueryData`) |
+| `['groups','list']` (`groupKeys.list()`) | `useGetGroups` | all groups, explicit columns | create/delete (`groupKeys.all`) |
+| `['groups','user',id]` (`groupKeys.byUser`) | `useGetUserGroups` | groups where `user_id = id` | create/delete; removed on sign-out |
+| `['groups','detail',id]` (`groupKeys.detail`) | `useGroup` | one group (`getGroupById`) | create/delete (removed on its own delete) |
+| `['userLocation']` | `useUserLocation` | ipapi.co (localStorage-cached, 7-day TTL) | never (staleTime ∞) |
 
 `QueryClient` (`src/lib/queryClient.js`) defaults: `staleTime: 60_000`, `refetchOnWindowFocus: false`, retry 3.
 

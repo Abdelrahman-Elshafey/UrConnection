@@ -14,7 +14,9 @@ npm run typecheck   # tsc -b over web + packages/shared (strict)
 npm run lint        # ESLint for the whole repo (flat config at root). Keep it at 0 problems
 npm run preview
 ```
-Layout: `web/` = React app (JS being converted to TS; `allowJs` during migration) · `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step) · `api/` arrives in Stage 3.
+Layout: `web/` = React app. Its data layer (`lib/`, `services/`, `features/*/hooks|api|utils`) is TS; components are still `.jsx` until Stage 11 (`allowJs`).
+`packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step): topics, platforms (no UI), countries, and **zod schemas + inferred types** (`createGroupSchema`/`Group`, `loginSchema`, `signupSchema`, `profileSchema`). Validation rules live there, not in components.
+`api/` arrives in Stage 3. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
 There are no tests yet (they arrive with the API in Stage 3+).
 
 ## Stack

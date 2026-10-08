@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -10,38 +9,16 @@ import {
   signUp,
   signInWithOAuth,
 } from "../../../services/auth.service";
-import { clearFilterCache } from "../../groups/hooks/useFilterCache";
+import { clearFilterCache } from "../../groups/utils/filterCache";
 import { SESSION_QUERY_KEY } from "../hooks/useUser";
-import { COUNTRIES_CITIES, COUNTRY_LIST } from "../../../lib/countries";
+import { COUNTRY_LIST, getCities, loginSchema, signupSchema } from "@urconnections/shared";
 
-const authSchema = z.object({
-  email: z.string().email("Please enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
-  confirmPassword: z.string().optional(),
-  displayName: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  country: z.string().optional(),
-  city: z.string().optional(),
-  isLogin: z.boolean().default(true),
-}).superRefine((data, ctx) => {
-  if (!data.isLogin) {
-    if (data.password.length < 8) {
-      ctx.addIssue({ path: ["password"], code: z.ZodIssueCode.custom, message: "Password must be at least 8 characters." });
-    } else if (!/[a-z]/.test(data.password)) {
-      ctx.addIssue({ path: ["password"], code: z.ZodIssueCode.custom, message: "Password must contain at least one lowercase (a-z)." });
-    } else if (!/[A-Z]/.test(data.password)) {
-      ctx.addIssue({ path: ["password"], code: z.ZodIssueCode.custom, message: "Password must contain at least one uppercase (A-Z)." });
-    } else if (!/[0-9]/.test(data.password)) {
-      ctx.addIssue({ path: ["password"], code: z.ZodIssueCode.custom, message: "Password must contain at least one number." });
-    } else if (!/[^a-zA-Z0-9]/.test(data.password)) {
-      ctx.addIssue({ path: ["password"], code: z.ZodIssueCode.custom, message: "Password must contain a special character." });
-    }
-    
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({ path: ["confirmPassword"], code: z.ZodIssueCode.custom, message: "Passwords do not match." });
-    }
-  }
-});
+// Login and signup have separate shared schemas (audit O3). The form keeps an
+// `isLogin` value, and this resolver validates with the matching schema each time.
+const loginResolver = zodResolver(loginSchema);
+const signupResolver = zodResolver(signupSchema);
+const authResolver = (values, context, options) =>
+  (values.isLogin ? loginResolver : signupResolver)(values, context, options);
 
 const EMPTY_FORM = { email: "", password: "", confirmPassword: "", displayName: "", phoneNumber: "", country: "", city: "" };
 
@@ -62,12 +39,12 @@ export default function AuthPage() {
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(authSchema),
+    resolver: authResolver,
     defaultValues: { ...EMPTY_FORM, isLogin: true },
   });
 
   const selectedCountry = useWatch({ control, name: "country" });
-  const availableCities = COUNTRIES_CITIES[selectedCountry] || [];
+  const availableCities = getCities(selectedCountry);
 
   const toggleMode = () => {
     const newMode = !isLogin;

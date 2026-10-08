@@ -1,7 +1,6 @@
 import { useRef } from "react";
-import { COUNTRY_LIST, COUNTRIES_CITIES } from "../../../lib/countries";
 import { PLATFORMS } from "../../../lib/platforms";
-import { TOPICS as GROUP_TOPICS } from "@urconnections/shared";
+import { COUNTRY_LIST, TOPICS as GROUP_TOPICS, getCities } from "@urconnections/shared";
 
 // "All" is a filter-only option, not a real topic.
 const TOPICS = ["All", ...GROUP_TOPICS];
@@ -32,9 +31,7 @@ export default function FilterBar({
     }
   };
 
-  const availableCities = currentCountry
-    ? COUNTRIES_CITIES[currentCountry]
-    : [];
+  const availableCities = getCities(currentCountry);
 
   return (
     <>
