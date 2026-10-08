@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateGroup } from "../hooks/useCreateGroup";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +17,11 @@ const TOPICS = [
   "Art",
 ];
 
+function FieldError({ error }) {
+  if (!error) return null;
+  return <p className="text-red-500 text-xs font-bold ml-3">{error.message}</p>;
+}
+
 export default function CreateGroupForm() {
   const navigate = useNavigate();
   const { mutate, isPending } = useCreateGroup();
@@ -27,7 +31,7 @@ export default function CreateGroupForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm({
@@ -43,21 +47,21 @@ export default function CreateGroupForm() {
     },
   });
 
-  const selectedCountry = watch("country");
-  const selectedPlatform = watch("platform");
-  const selectedTitle = watch("title") || "";
-  const selectedDescription = watch("description") || "";
+  const [selectedCountry, selectedPlatform] = useWatch({
+    control,
+    name: ["country", "platform"],
+  });
   const availableCities = selectedCountry ? COUNTRIES_CITIES[selectedCountry] : [];
 
   const platformConfig = selectedPlatform ? getPlatform(selectedPlatform) : null;
 
-  useEffect(() => {
-    setValue("city", "");
-  }, [selectedCountry, setValue]);
-
-  useEffect(() => {
-    setValue("meeting_link", "");
-  }, [selectedPlatform, setValue]);
+  // Dependent fields are cleared only when the user changes the parent field.
+  const countryField = register("country", {
+    onChange: () => setValue("city", ""),
+  });
+  const platformField = register("platform", {
+    onChange: () => setValue("meeting_link", ""),
+  });
 
   const onSubmit = (data) => {
     mutate(
@@ -106,7 +110,7 @@ export default function CreateGroupForm() {
             <div className="relative ">
               <select
                 {...register("topic")}
-                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
+                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
                   errors.topic ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
                 } text-black dark:text-white`}
               >
@@ -117,6 +121,7 @@ export default function CreateGroupForm() {
               </select>
               
             </div>
+            <FieldError error={errors.topic} />
           </div>
 
           {/* Title input */}
@@ -128,10 +133,11 @@ export default function CreateGroupForm() {
               type="text"
               placeholder="e.g. Design Collective"
               {...register("title")}
-              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none text-xl font-bold transition-all border-2 ${
+              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none text-xl font-bold transition-all border-2 ${
                 errors.title ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
               } text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700`}
             />
+            <FieldError error={errors.title} />
           </div>
 
           <div className="space-y-4">
@@ -140,8 +146,8 @@ export default function CreateGroupForm() {
             </label>
             <div className="relative">
               <select
-                {...register("platform")}
-                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
+                {...platformField}
+                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
                   errors.platform ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
                 } text-black dark:text-white`}
               >
@@ -151,6 +157,7 @@ export default function CreateGroupForm() {
                 ))}
               </select>
             </div>
+            <FieldError error={errors.platform} />
           </div>
 
           <div className="space-y-4">
@@ -162,10 +169,11 @@ export default function CreateGroupForm() {
               placeholder={platformConfig ? platformConfig.placeholder : "Select Platform First"}
               disabled={!selectedPlatform}
               {...register("meeting_link")}
-              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none text-xl font-bold transition-all border-2 ${
+              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none text-xl font-bold transition-all border-2 ${
                 errors.meeting_link ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
               } text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700 disabled:opacity-50`}
             />
+            <FieldError error={errors.meeting_link} />
           </div>
 
           <div className="space-y-4">
@@ -174,8 +182,8 @@ export default function CreateGroupForm() {
             </label>
             <div className="relative">
               <select
-                {...register("country")}
-                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
+                {...countryField}
+                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
                   errors.country ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
                 } text-black dark:text-white`}
               >
@@ -185,6 +193,7 @@ export default function CreateGroupForm() {
                 ))}
               </select>
             </div>
+            <FieldError error={errors.country} />
           </div>
 
           <div className="space-y-4">
@@ -195,7 +204,7 @@ export default function CreateGroupForm() {
               <select
                 disabled={!selectedCountry}
                 {...register("city")}
-                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-[32px] outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
+                className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-6 rounded-4xl outline-none appearance-none text-xl font-bold transition-all border-2 cursor-pointer ${
                   errors.city ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
                 } text-black dark:text-white disabled:opacity-50`}
               >
@@ -205,6 +214,7 @@ export default function CreateGroupForm() {
                 ))}
               </select>
             </div>
+            <FieldError error={errors.city} />
           </div>
 
           <div className="md:col-span-2 space-y-4">
@@ -214,10 +224,11 @@ export default function CreateGroupForm() {
             <textarea
               placeholder="What is the objective of this connection?"
               {...register("description")}
-              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-8 rounded-[40px] outline-none text-xl font-bold transition-all border-2 min-h-[240px] resize-none ${
+              className={`w-full mt-2 bg-[#f5f5f7] dark:bg-[#111111] px-8 py-8 rounded-[40px] outline-none text-xl font-bold transition-all border-2 min-h-60 resize-none ${
                 errors.description ? "border-red-500/50" : "border-transparent focus:border-[#0071e3]"
               } text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700`}
             />
+            <FieldError error={errors.description} />
           </div>
 
           <div className="md:col-span-2 pt-10">

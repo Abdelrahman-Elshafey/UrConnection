@@ -5,7 +5,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (profileData) => updateProfile(profileData),
+    mutationFn: updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["session"] });
     },

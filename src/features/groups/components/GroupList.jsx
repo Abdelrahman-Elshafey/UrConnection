@@ -11,7 +11,7 @@ import GroupCard from "./GroupCard";
 import FilterBar from "./FilterBar";
 
 export default function GroupList() {
-  const { data: groups, isLoading, error } = useGetGroups();
+  const { data: groups, isLoading, error, refetch } = useGetGroups();
   const {
     country: detectedCountry,
     city: detectedCity,
@@ -60,6 +60,11 @@ export default function GroupList() {
   };
 
   useEffect(() => {
+    // Explicit URL filters (e.g. a shared link) always win over the cache.
+    if (searchParams.toString() !== "") {
+      hasInitialized.current = true;
+      return;
+    }
     const cached = readFilterCache();
     if (!cached) return;
     hasInitialized.current = true;
@@ -96,11 +101,12 @@ export default function GroupList() {
         });
         setSearchParams(
           (prev) => {
-            prev.set("country", detectedCountry);
+            const next = new URLSearchParams(prev);
+            next.set("country", detectedCountry);
             if (detectedCity) {
-              prev.set("city", detectedCity);
+              next.set("city", detectedCity);
             }
-            return prev;
+            return next;
           },
           { replace: true },
         );
@@ -129,7 +135,7 @@ export default function GroupList() {
             {error.message}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="bg-[#0071e3] text-white px-8 py-3 rounded-full font-bold text-sm tracking-widest uppercase hover:brightness-110 transition-all cursor-pointer"
           >
             Retry Connection
@@ -138,13 +144,14 @@ export default function GroupList() {
       </div>
     );
 
+  const normalizedQuery = searchQuery.toLowerCase();
   const filteredGroups = groups?.filter((group) => {
     const matchesSearch =
-      group.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      group.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (group.title || "").toLowerCase().includes(normalizedQuery) ||
+      (group.description || "").toLowerCase().includes(normalizedQuery);
     const matchesTopic =
       selectedTopic === "All" ||
-      group.topic.toLowerCase() === selectedTopic.toLowerCase();
+      (group.topic || "").toLowerCase() === selectedTopic.toLowerCase();
     const matchesCountry =
       !selectedCountry ||
       (group.country || "").toLowerCase() === selectedCountry.toLowerCase();
@@ -193,7 +200,7 @@ export default function GroupList() {
         currentPlatform={selectedPlatform}
       />
 
-      <div ref={scrollRef} className="max-w-[1400px] mx-auto px-6 py-10 scroll-mt-24">
+      <div ref={scrollRef} className="max-w-350 mx-auto px-6 py-10 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 px-2">
           <div className="ml-4 ">
             <h2 className="text-4xl md:text-5xl font-black text-black dark:text-white tracking-tighter mb-4">

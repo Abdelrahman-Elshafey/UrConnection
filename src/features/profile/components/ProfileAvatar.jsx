@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useUploadAvatar, useRemoveAvatar } from "../hooks/useAvatar";
+import { AVATAR_MIME_TYPES } from "../../../services/storage.service";
 
 /**
  * ProfileAvatar — A premium, interactive avatar component.
@@ -25,12 +26,6 @@ export default function ProfileAvatar({ user }) {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Basic client-side guard
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file.");
-      return;
-    }
 
     setError(null);
     upload(
@@ -116,7 +111,7 @@ export default function ProfileAvatar({ user }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={Object.keys(AVATAR_MIME_TYPES).join(",")}
         onChange={handleFileChange}
         className="hidden"
       />
