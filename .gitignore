@@ -14,11 +14,7 @@ dist-ssr
 .env
 .env.production
 .env.development
-
-.env
-.env.production
-.env.development
-
+recovery-codes.txt
 
 # Editor directories and files
 .vscode/*
@@ -30,6 +26,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-recovery-codes.txt
+
+# Local tooling output
+.VSCodeCounter/
 
 
