@@ -1,14 +1,17 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 import { getPlatform } from "../../../lib/platforms";
 
-export default function GroupCard({ group }) {
-  const { id, title, description, topic, country, date, city, platform } =
-    group;
+/**
+ * @param {boolean} canDelete - Show the delete control. Only pass true for the
+ *   current user's own groups (RLS still enforces ownership server-side).
+ */
+export default function GroupCard({ group, canDelete = false }) {
+  const { id, title, description, topic, country, city, platform } = group;
 
   const { mutate: deleteGroup, isPending } = useDeleteGroup();
   const platformInfo = getPlatform(platform);
+  const PlatformIcon = platformInfo.icon;
 
   return (
     <div className="flex flex-col min-w-70  max-w-70 border-gray-200 bg-[#f5f5f7] dark:bg-[#121213] rounded-4xl pt-6 pb-3 px-6 hover:scale-105 transition-all duration-200 relative group overflow-hidden border shadow-lg hover:shadow-2xl hover:border-gray-300 dark:border-black dark:hover:border-[#333336]">
@@ -20,45 +23,46 @@ export default function GroupCard({ group }) {
           </span>
           {platform && (
             <span
-              className={`flex items-center bg-white dark:bg-black text-[10px] font-bold px-3 py-1 rounded-full border border-gray-100 dark:border-[#333336] ${platformInfo.color}`}
+              className={`flex items-center text-[10px] font-bold px-3 py-1 rounded-full border ${platformInfo.color}`}
             >
-              {React.createElement(platformInfo.icon, {
-                className: "mr-1 text-xs",
-              })}{" "}
+              <PlatformIcon className="mr-1 text-xs" />{" "}
               {platformInfo.label}
             </span>
           )}
         </div>
 
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            if (window.confirm("Remove this group?")) deleteGroup(id);
-          }}
-          disabled={isPending}
-          className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 cursor-pointer"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {canDelete && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              if (window.confirm("Remove this group?")) deleteGroup(id);
+            }}
+            disabled={isPending}
+            aria-label="Remove group"
+            className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 cursor-pointer"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="flex-1 border-b border-gray-400/50 dark:border-[#333336]/50 pb-10 mb-2">
         <h3 className="text-[14px] md:text-[16px] lg:text-[18px] font-black text-black dark:text-white mb-3 tracking-tighter leading-tight">
           {title}
         </h3>
-        <p className="text-[8px] md:text-[10px] lg:text-[12px]   text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed font-medium  truncate">
+        <p className="text-[8px] md:text-[10px] lg:text-[12px]   text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed font-medium">
           {description}
         </p>
       </div>
@@ -105,7 +109,7 @@ export default function GroupCard({ group }) {
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <p className="truncate">{[city, country]?.join(", ")}</p>
+            <p className="truncate">{[city, country].filter(Boolean).join(", ")}</p>
           </span>
         )}
       </div>

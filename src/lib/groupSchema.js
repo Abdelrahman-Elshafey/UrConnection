@@ -11,7 +11,7 @@ export const groupSchema = z
     title: z
       .string()
       .min(1, "Title is required")
-      .max(20, "Title is too long (max 20)"),
+      .max(20, "Title is too long (max 20 characters)"),
 
     platform: z
       .string()
@@ -28,9 +28,8 @@ export const groupSchema = z
 
     description: z
       .string()
-      .min(1, "Description is required")
-      .min(20, "Description too short (min 50)")
-      .max(200, "Description too long (max 500)"),
+      .min(20, "Description is too short (min 20 characters)")
+      .max(200, "Description is too long (max 200 characters)"),
   })
   .refine(
     (data) => {

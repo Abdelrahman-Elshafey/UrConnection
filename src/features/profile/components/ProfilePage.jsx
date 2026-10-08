@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "../../auth/hooks/useUser";
@@ -36,14 +36,14 @@ export default function ProfilePage() {
 
   /* ─── Edit mode state ─── */
   const [isEditing, setIsEditing] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(null); // timestamp of last save, or null
   const [saveError, setSaveError] = useState(null);
 
   const {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors, isDirty },
   } = useForm({
@@ -56,32 +56,28 @@ export default function ProfilePage() {
     },
   });
 
-  const selectedCountry = watch("country");
+  const selectedCountry = useWatch({ control, name: "country" });
 
-  /* ─── Sync form defaults when user data arrives or edit mode opens ─── */
-  const populateForm = useCallback(() => {
-    if (!user) return;
+  /* ─── Toast auto-hide: each save stores a new timestamp, which restarts the
+         timer; the cleanup clears it on repeat saves and on unmount ─── */
+  useEffect(() => {
+    if (!saveSuccess) return;
+    const timer = setTimeout(() => setSaveSuccess(null), 3000);
+    return () => clearTimeout(timer);
+  }, [saveSuccess]);
+
+  // Populate the form only when editing starts, so session updates
+  // (token refresh, avatar upload) never overwrite unsaved edits.
+  const startEditing = () => {
     reset({
       displayName: user?.user_metadata?.display_name || "",
       phoneNumber: user?.user_metadata?.phone_number || "",
       country: user?.user_metadata?.country || "",
       city: user?.user_metadata?.city || "",
     });
-  }, [user, reset]);
-
-  useEffect(() => {
-    if (isEditing) populateForm();
-  }, [isEditing, populateForm]);
-
-  /* ─── Reset city when country changes (only in edit mode) ─── */
-  useEffect(() => {
-    if (!isEditing) return;
-    const cities = COUNTRIES_CITIES[selectedCountry] || [];
-    const currentCity = watch("city");
-    if (currentCity && !cities.includes(currentCity)) {
-      setValue("city", "", { shouldDirty: true });
-    }
-  }, [selectedCountry, isEditing, setValue, watch]);
+    setSaveError(null);
+    setIsEditing(true);
+  };
 
   /* ─── Handlers ─── */
   const handleSignOut = async () => {
@@ -96,13 +92,12 @@ export default function ProfilePage() {
   const handleCancel = () => {
     setIsEditing(false);
     setSaveError(null);
-    setSaveSuccess(false);
-    populateForm();
+    setSaveSuccess(null);
   };
 
   const onSubmit = (data) => {
     setSaveError(null);
-    setSaveSuccess(false);
+    setSaveSuccess(null);
     updateProfile(
       {
         displayName: data.displayName || null,
@@ -112,9 +107,8 @@ export default function ProfilePage() {
       },
       {
         onSuccess: () => {
-          setSaveSuccess(true);
           setIsEditing(false);
-          setTimeout(() => setSaveSuccess(false), 3000);
+          setSaveSuccess(Date.now());
         },
         onError: (err) => {
           setSaveError(err.message || "Failed to update profile.");
@@ -245,7 +239,12 @@ export default function ProfilePage() {
                       Country
                     </label>
                     <div className="relative">
-                      <select {...register("country")} className={SELECT_CLS}>
+                      <select
+                        {...register("country", {
+                          onChange: () => setValue("city", "", { shouldDirty: true }),
+                        })}
+                        className={SELECT_CLS}
+                      >
                         <option value="">Select country</option>
                         {COUNTRY_LIST.map((c) => (
                           <option key={c} value={c}>
@@ -339,10 +338,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="pt-6 mt-10 border-t border-gray-200 dark:border-white/5 flex flex-wrap gap-4">
                   <button
-                    onClick={() => {
-                      setSaveError(null);
-                      setIsEditing(true);
-                    }}
+                    onClick={startEditing}
                     className="bg-[#0071e3] text-white px-8 py-4 rounded-full font-bold text-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-[#0071e3]/20 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,13 +372,13 @@ export default function ProfilePage() {
           {isGroupsLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-[#f5f5f7] dark:bg-[#111111] rounded-[32px] h-[400px] animate-pulse" />
+                <div key={i} className="bg-[#f5f5f7] dark:bg-[#111111] rounded-4xl h-[400px] animate-pulse" />
               ))}
             </div>
           ) : groups?.length > 0 ? (
             <div className="grid grid-cols-1 mx-4 md:grid-cols-2 place-items-center lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
               {groups.map((group) => (
-                <GroupCard key={group.id} group={group} />
+                <GroupCard key={group.id} group={group} canDelete />
               ))}
             </div>
           ) : (

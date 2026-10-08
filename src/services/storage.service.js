@@ -4,34 +4,47 @@ import imageCompression from "browser-image-compression";
 const BUCKET = "Users-Pics";
 
 /**
- * Compression options targeting ≤200KB output and max 512px dimensions
+ * Allowed avatar types → storage file extension. Keep in sync with the
+ * bucket's "allowed MIME types" (supabase/migrations) and ProfileAvatar's `accept`.
+ * SVG/GIF/HEIC are rejected: SVG can carry script, and the bucket is public.
+ */
+export const AVATAR_MIME_TYPES = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/**
+ * Compression options targeting ≤1MB output and max 512px dimensions
  * to keep storage usage minimal while retaining visual quality for avatars.
+ * useWebWorker is off: the library's worker downloads its own code from
+ * cdn.jsdelivr.net at runtime (third-party script, blocked by our CSP).
+ * A 512px avatar compresses fast enough on the main thread.
  */
 const COMPRESSION_OPTIONS = {
   maxSizeMB: 1,
   maxWidthOrHeight: 512,
-  useWebWorker: true,
+  useWebWorker: false,
 };
 
 /**
- * Compresses an image file using browser-image-compression.
+ * Validates and compresses an avatar image.
+ * Single source of truth for avatar validation (the UI just shows the error).
  * @param {File} file - The raw image file from an <input>.
  * @returns {Promise<File>} - The compressed file.
  */
 const compressImage = async (file) => {
-  // If it's not an image that browser-image-compression can handle, skip it.
-  if (!file.type.startsWith("image/")) return file;
+  if (!AVATAR_MIME_TYPES[file.type]) {
+    throw new Error("Please select a JPEG, PNG or WebP image.");
+  }
   return imageCompression(file, { ...COMPRESSION_OPTIONS, fileType: file.type });
 };
 
 /**
- * Builds the storage path for a user's avatar.
- * We now use the original file extension to support any image type.
+ * Builds the storage path for a user's avatar. The extension comes from the
+ * validated MIME type, never from the user-controlled file name.
  */
-const getAvatarPath = (userId, file) => {
-  const extension = file.name.split(".").pop();
-  return `${userId}/avatar.${extension}`;
-};
+const getAvatarPath = (userId, file) => `${userId}/avatar.${AVATAR_MIME_TYPES[file.type]}`;
 
 /**
  * Uploads (or replaces) the user's profile picture.
@@ -40,14 +53,7 @@ export const uploadAvatar = async (userId, file) => {
   const compressed = await compressImage(file);
   const filePath = getAvatarPath(userId, file);
 
-  // Before uploading a new one with a potentially different extension,
-  // we should clean up any existing avatar files in that folder.
-  const { data: existingFiles } = await supabase.storage.from(BUCKET).list(userId);
-  if (existingFiles && existingFiles.length > 0) {
-    const pathsToDelete = existingFiles.map((f) => `${userId}/${f.name}`);
-    await supabase.storage.from(BUCKET).remove(pathsToDelete);
-  }
-
+  // Upload first so a failed upload never leaves the user without an avatar.
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
     .upload(filePath, compressed, {
@@ -55,6 +61,15 @@ export const uploadAvatar = async (userId, file) => {
     });
 
   if (uploadError) throw new Error(uploadError.message);
+
+  // Then remove previous avatars saved under a different extension.
+  const { data: existingFiles } = await supabase.storage.from(BUCKET).list(userId);
+  const stalePaths = (existingFiles || [])
+    .map((f) => `${userId}/${f.name}`)
+    .filter((path) => path !== filePath);
+  if (stalePaths.length > 0) {
+    await supabase.storage.from(BUCKET).remove(stalePaths);
+  }
 
   const {
     data: { publicUrl },

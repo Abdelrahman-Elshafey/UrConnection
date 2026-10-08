@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { COUNTRIES_CITIES } from '../../../lib/countries';
 
 const LOCATION_STORAGE_KEY = 'ur_connections_user_location';
+const LOCATION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // re-detect weekly (people move)
 
 /**
  * Tries to find a matching country name from our COUNTRIES_CITIES map.
@@ -22,7 +23,6 @@ function findMatchingCountry(apiCountry) {
     'Great Britain': 'United Kingdom',
     'Republic of Korea': 'South Korea',
     'Korea': 'South Korea',
-    'Czechia': 'Czechia',
     'Czech Republic': 'Czechia',
     'Côte d\'Ivoire': 'Ivory Coast',
     'Cote d\'Ivoire': 'Ivory Coast',
@@ -61,17 +61,19 @@ const EMPTY_LOCATION = { country: '', city: '' };
 
 /**
  * Async function that:
- * 1. Checks localStorage for a cached result first.
- * 2. If not cached, calls the IP-based geolocation API.
+ * 1. Checks localStorage for a cached result younger than LOCATION_TTL_MS.
+ * 2. If not cached (or expired), calls the IP-based geolocation API.
  * 3. Caches the result in localStorage for future sessions.
  */
 async function fetchLocation() {
-  // 1. Check localStorage cache first
+  // 1. Check localStorage cache first (entries without savedAt are pre-TTL → expired)
   try {
     const cached = localStorage.getItem(LOCATION_STORAGE_KEY);
     if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed?.country !== undefined) return parsed;
+      const { country, city, savedAt } = JSON.parse(cached);
+      if (country !== undefined && Date.now() - savedAt < LOCATION_TTL_MS) {
+        return { country, city };
+      }
     }
   } catch {
     // Ignore parse errors and proceed to API call
@@ -93,7 +95,10 @@ async function fetchLocation() {
     const result = { country, city };
 
     // 3. Cache for future visits
-    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(result));
+    localStorage.setItem(
+      LOCATION_STORAGE_KEY,
+      JSON.stringify({ ...result, savedAt: Date.now() }),
+    );
 
     return result;
   } catch {
@@ -115,10 +120,9 @@ export function useUserLocation() {
   const { data, isPending } = useQuery({
     queryKey: ['userLocation'],
     queryFn: fetchLocation,
-    staleTime: Infinity,   // Don't refetch — location doesn't change mid-session
-    retry: 1,   
-    refetchOnWindowFocus: false, // ❌ Don't refetch when tab regains focus
-    refetchOnMount: false,           // One retry on failure
+    // Never refetch: location doesn't change mid-session. fetchLocation never
+    // throws (it falls back to an empty location), so no retry config is needed.
+    staleTime: Infinity,
   });
 
   return {
