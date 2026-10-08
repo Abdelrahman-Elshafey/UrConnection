@@ -3,10 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateGroup } from "../hooks/useCreateGroup";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../auth/hooks/useUser";
-import { COUNTRIES_CITIES, COUNTRY_LIST } from "../../../lib/countries";
-import { groupSchema } from "../../../lib/groupSchema";
 import { PLATFORMS, getPlatform } from "../../../lib/platforms";
-import { TOPICS } from "@urconnections/shared";
+import { COUNTRY_LIST, TOPICS, createGroupSchema, getCities } from "@urconnections/shared";
 
 function FieldError({ error }) {
   if (!error) return null;
@@ -26,7 +24,7 @@ export default function CreateGroupForm() {
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(groupSchema),
+    resolver: zodResolver(createGroupSchema),
     defaultValues: {
       title: "",
       topic: "",
@@ -42,7 +40,7 @@ export default function CreateGroupForm() {
     control,
     name: ["country", "platform"],
   });
-  const availableCities = selectedCountry ? COUNTRIES_CITIES[selectedCountry] : [];
+  const availableCities = getCities(selectedCountry);
 
   const platformConfig = selectedPlatform ? getPlatform(selectedPlatform) : null;
 

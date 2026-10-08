@@ -67,7 +67,7 @@
 | D4 | [ ] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
 | D5 | [x] | `TOPICS` is defined in both `CreateGroupForm` and `FilterBar` (with "All"). | `lib/topics.js` exporting `TOPICS`. FilterBar prepends "All". |
 | D6 | [ ] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
-| D7 | [ ] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
+| D7 | [x] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
 | D8 | [ ] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
 | D9 | [ ] | The sign-out handler is duplicated in MainLayout and ProfilePage. | `useSignOut()` mutation hook: signs out, clears the cache, navigates. |
 | D10 | [ ] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
@@ -78,8 +78,8 @@
 
 | ID | Status | Rule | Current state |
 |---|---|---|---|
-| R1 | [~] | No direct supabase calls outside services/api | `useUser` now goes through `auth.service`. `useGroup.js` still calls `supabase` directly. |
-| R2 | [ ] | Select only needed columns | `groupsApi.getGroups`, `getUserGroups`, and `useGroup` use `select('*')`. |
+| R1 | [x] | No direct supabase calls outside services/api | `useUser` now goes through `auth.service`. `useGroup.js` still calls `supabase` directly. |
+| R2 | [x] | Select only needed columns | `groupsApi.getGroups`, `getUserGroups`, and `useGroup` use `select('*')`. |
 | R3 | [~] | Loaders + `ensureQueryData` | Auth loaders now use `ensureQueryData` (B9). There's still no data prefetch for `/groups/:id`. |
 | R4 | [ ] | `errorElement` on routes | None. There's also no 404 route. |
 | R5 | [ ] | Lazy loading / code-splitting | None. `countries.js` (large) and every page ship in the main chunk. |
@@ -95,11 +95,11 @@ Code that is more complex than the problem needs. Simplifying these removes whol
 |---|---|---|---|---|
 | O1 | [ ] | `GroupList.jsx` + `useFilterCache.js` + `useUserLocation` | Filter state has **three sources of truth**: URL params, a sessionStorage cache with a 60-second TTL, and an async geo preset. Two `useEffect`s, a `hasInitialized` ref, two `eslint-disable`s, and a cache write on every change tie them together. | Keep the **URL as the only source of truth**. One `useGroupFilters()` hook: `filters = parse(searchParams)`, and `setFilter(key, value)`. To keep filters when the user clicks the logo, store the last search string in sessionStorage (no TTL) and have the nav/logo `Link` go to `/` + that string. Apply the geo preset only when there's no URL search **and** no stored search. |
 | O2 | [x] | `useUserLocation.js` | Double caching: localStorage **plus** React Query with `staleTime: Infinity`, `refetchOnMount: false`, and `refetchOnWindowFocus: false`. With `staleTime: Infinity` the last two flags do nothing. | Keep React Query and use `staleTime: Infinity, retry: 1` only. Keep localStorage as the cross-visit cache, and give it a TTL (S3). |
-| O3 | [ ] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
+| O3 | [~] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
 | O4 | [x] | `ProfilePage.jsx` | `populateForm` in a `useCallback`, an effect that populates on edit, and an effect that resets the city using `watch()`. This causes B22 and the L4 warning. | `startEditing = () => { reset(fromUser(user)); setIsEditing(true) }`. Reset the city in the country select's `onChange` (same pattern as CreateGroupForm). Both effects go away. |
 | O5 | [x] | small wrappers | `getRedirectUrl()` wraps a single env read. `mutationFn: (x) => updateProfile(x)` and `({userId, file}) => uploadAvatar(userId, file)` are pass-through arrows. The `image/` type check is duplicated in `ProfileAvatar` and `compressImage`. | Use `const REDIRECT_URL = import.meta.env…` and `mutationFn: updateProfile`. Do validation in one place. |
 | O6 | [ ] | `storage.service.js` | The extension varies with the uploaded file name, so both upload and remove need a `list()` + filter + `remove()` round-trip (3–4 network calls). | Always convert to WebP and save to the fixed path `<uid>/avatar.webp` with `upsert: true`. Upload is then 1 call and remove is 1 call. This also fixes S5's extension issue and makes the README's WebP claim true. |
-| O7 | [ ] | `lib/countries.js` | 118 `.sort()` calls at module load, and the data is re-sorted again for `COUNTRY_LIST`. | Store the data pre-sorted (a one-off script), or as JSON. No runtime work. |
+| O7 | [x] | `lib/countries.js` | 118 `.sort()` calls at module load, and the data is re-sorted again for `COUNTRY_LIST`. | Store the data pre-sorted (a one-off script), or as JSON. No runtime work. |
 | O8 | [ ] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
 | O9 | [ ] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
 | O10 | [x] | `GroupCard` / `GroupDetail` | `React.createElement(platformInfo.icon, {...})` plus `import React` just for it. `platforms.js` also has an unused `import React`. | Use `const Icon = platformInfo.icon; <Icon className=… />`, and drop the React imports (D8). |
@@ -160,7 +160,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 | H2 | [x] | Unused assets: `src/assets/hero.png`, `react.svg`, `vite.svg`, `public/icons.svg`. |
 | H3 | [x] | `.VSCodeCounter/` is tracked in git. Untrack it and add it to `.gitignore`. |
 | H4 | [ ] | Folder typo `src/GenealComponents` → `src/app/layouts` (or `src/components/layout`). |
-| H5 | [ ] | `useFilterCache.js` isn't a hook but lives in `hooks/` with a `use` prefix. Rename to `lib/filterCache.js` or `features/groups/utils/filterCache.js`. |
+| H5 | [x] | `useFilterCache.js` isn't a hook but lives in `hooks/` with a `use` prefix. Rename to `lib/filterCache.js` or `features/groups/utils/filterCache.js`. |
 | H6 | [ ] | README is inaccurate: says "MERN stack" and "Lucide React", and the WebP claim is false. Rewrite it with setup steps and env vars. |
 | H7 | [x] | `.gitignore` has duplicated `.env` lines. |
 | H8 | [ ] | `.agents/rules/style-guide.md` contains leftover e-commerce/hardware-brand text that contradicts the app's domain. Trim it to what applies. |
@@ -191,3 +191,11 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **S3**: Owner decision: keep IP geolocation, with a 7-day TTL on the cached location (old entries without a timestamp count as expired).
 - **S8 `[~]`**: `vercel.json` enforces X-Frame-Options, nosniff, Referrer-Policy, and Permissions-Policy. The CSP ships **Report-Only**. Switch it to enforcing after a clean production check (SUPABASE.md §6).
 - **S10 `[~]`**: Dashboard checklist in SUPABASE.md §5. **Pending: the owner applies it.**
+
+### Notes on Stage 2 (typed data layer, see MASTER_PLAN.md)
+- **R1/R2**: `useGroup` now goes through `groupsApi.getGroupById`. Every query selects an explicit column list (`GROUP_COLUMNS`).
+- **D7**: `features/groups/api/queryKeys.ts` (`groupKeys.all / list / byUser / byUserRoot / detail`). The detail key moved under `['groups', …]`.
+- **O7**: Countries are stored pre-sorted in `packages/shared/src/countries.ts`, with `getCities()` / `isCountry()` helpers.
+- **H5**: `hooks/useFilterCache.js` became `features/groups/utils/filterCache.ts`.
+- **O3 `[~]`**: Separate shared `loginSchema` / `signupSchema` (AuthPage picks one per submit via `authResolver`). Splitting AuthPage into LoginForm/SignupForm components is Stage 11.
+- New: shared schemas tightened validation (`topic`/`platform` are enums, `meeting_link` must be http(s), title/description trimmed), matching the DB CHECK constraints.

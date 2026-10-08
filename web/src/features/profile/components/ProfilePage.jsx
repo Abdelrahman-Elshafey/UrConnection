@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { useUser } from "../../auth/hooks/useUser";
 import { useGetUserGroups } from "../../groups/hooks/useGetUserGroups";
 import { signOut } from "../../../services/auth.service";
@@ -9,15 +8,7 @@ import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import GroupCard from "../../groups/components/GroupCard";
 import ProfileAvatar from "./ProfileAvatar";
 import { useNavigate } from "react-router-dom";
-import { COUNTRIES_CITIES, COUNTRY_LIST } from "../../../lib/countries";
-
-/* ─── Validation schema for the edit form ─── */
-const profileSchema = z.object({
-  displayName: z.string().max(100, "Name is too long.").optional().or(z.literal("")),
-  phoneNumber: z.string().max(30, "Phone number is too long.").optional().or(z.literal("")),
-  country: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-});
+import { COUNTRY_LIST, getCities, profileSchema } from "@urconnections/shared";
 
 /* ─── Reusable input class string ─── */
 const INPUT_CLS =
@@ -126,7 +117,7 @@ export default function ProfilePage() {
     );
   }
 
-  const availableCities = COUNTRIES_CITIES[selectedCountry] || [];
+  const availableCities = getCities(selectedCountry);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#000000] py-10 px-6 transition-colors duration-200">
