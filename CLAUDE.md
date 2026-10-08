@@ -5,19 +5,23 @@ Users can sign up, create groups that link to an external chat, and manage a pro
 Supabase handles auth, Postgres, and storage. The app is deployed on Vercel.
 
 ## Commands
+Monorepo (npm workspaces), so run everything from the **repo root**:
 ```bash
-npm run dev      # Vite dev server
-npm run build    # production build -> dist/
-npm run lint     # ESLint (flat config). Currently clean (0 problems). Keep it that way
+npm install         # installs all workspaces; one lockfile at the root
+npm run dev         # Vite dev server for web/
+npm run build       # production build -> web/dist/
+npm run typecheck   # tsc -b over web + packages/shared (strict)
+npm run lint        # ESLint for the whole repo (flat config at root). Keep it at 0 problems
 npm run preview
 ```
-There are no tests and no TypeScript. The code is plain JS/JSX.
+Layout: `web/` = React app (JS being converted to TS; `allowJs` during migration) · `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step) · `api/` arrives in Stage 3.
+There are no tests yet (they arrive with the API in Stage 3+).
 
 ## Stack
 React 19 · Vite 8 · Tailwind v4 (`@tailwindcss/vite`, no tailwind.config) · React Router 7 (data router, `createBrowserRouter`) ·
 TanStack Query 5 · react-hook-form + zod 4 · Supabase JS v2 · react-icons · browser-image-compression · @vercel/analytics.
 
-## Env vars (`.env`, gitignored)
+## Env vars (`web/.env`, gitignored; template in `web/.env.example`)
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_AUTH_REDIRECT_URL` (OAuth redirect).
 Never print or commit `.env` or `recovery-codes.txt`.
 
@@ -34,7 +38,7 @@ The owner's goal is **learning**: explain the *why* of each new concept while im
 - **[.agents/rules/](.agents/rules/)**: the owner's standing rules (general, auth, style guide). They are the intended standards, and the code doesn't fully meet them yet.
 
 ## Key rules (from .agents/rules, summarized)
-- Components never call `supabase.*` directly. Auth goes through `src/services/auth.service.js`, and DB access goes through `features/*/api`.
+- Components never call `supabase.*` directly. Auth goes through `web/src/services/auth.service.js`, and DB access goes through `features/*/api`.
 - Server state uses TanStack Query only. Don't fetch in `useEffect`. Route guards go in RR7 `loader`s, ideally through `queryClient.ensureQueryData`.
 - The global session key is `['session']`. Invalidate it on auth or profile changes.
 - Select explicit columns, not `*`. Assume the client is compromised: security lives in Supabase RLS.

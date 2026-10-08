@@ -1,0 +1,27 @@
+// Shared compiler settings. Every package's tsconfig "extends" this file.
+{
+  "compilerOptions": {
+    // Output / syntax level: modern JS. Vite (and later the API bundler) does the
+    // final build, so TypeScript is only used to *check* types here.
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler", // resolve imports the way Vite does (no file extensions needed)
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    // Strictness: the whole point of TypeScript.
+    "strict": true, // null checks, no implicit any, strict function types, ...
+    "noUncheckedIndexedAccess": true, // obj[key] / arr[i] may be undefined (the COUNTRIES_CITIES[country] bug class)
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Interop with how bundlers compile one file at a time.
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true, // type-only imports must say `import type`
+    "resolveJsonModule": true,
+    "skipLibCheck": true // don't type-check node_modules .d.ts files (faster)
+  }
+}
