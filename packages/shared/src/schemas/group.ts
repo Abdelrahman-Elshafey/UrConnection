@@ -28,13 +28,41 @@ export const createGroupSchema = groupFields.refine(
   { message: "Link does not match the selected platform", path: ["meeting_link"] },
 );
 
-/** A stored group, as read from the database / API. */
+/** A stored group, as returned by GET /api/groups and GET /api/groups/:id. */
 export const groupSchema = groupFields.extend({
-  id: z.string(),
-  user_id: z.string(),
-  date: z.string(),
+  id: z.uuid(),
+  user_id: z.uuid(),
+  created_at: z.iso.datetime({ offset: true }), // JSON has no Date type: timestamps travel as ISO strings
+});
+
+/**
+ * Query parameters of GET /api/groups. Everything is optional; omitted = no filter.
+ * Query strings are always text, so `limit` is coerced from "24" to 24.
+ */
+export const groupListQuerySchema = z.object({
+  query: z.string().trim().max(100).optional(), // searched in title and description
+  topic: z.enum(TOPICS).optional(),
+  country: z.string().max(100).optional(),
+  city: z.string().max(100).optional(),
+  platform: z.enum(PLATFORM_KEYS).optional(),
+  cursor: z.uuid().optional(), // id of the last group of the previous page
+  limit: z.coerce.number().int().min(1).max(50).default(24),
+});
+
+/** One page of groups. `nextCursor` is null on the last page. */
+export const groupListResponseSchema = z.object({
+  items: z.array(groupSchema),
+  nextCursor: z.uuid().nullable(),
 });
 
 // z.infer turns a schema into a TypeScript type, so the type can never drift from the validation.
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
 export type Group = z.infer<typeof groupSchema>;
+/** Parsed query (limit always set). */
+export type GroupListQuery = z.infer<typeof groupListQuerySchema>;
+/**
+ * Query as a client sends it: every field optional, limit a plain number.
+ * (Not z.input<>: with z.coerce, zod types the input as `unknown`, since coercion accepts anything.)
+ */
+export type GroupListParams = Partial<Omit<GroupListQuery, "limit">> & { limit?: number };
+export type GroupListResponse = z.infer<typeof groupListResponseSchema>;

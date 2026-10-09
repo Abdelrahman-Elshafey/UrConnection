@@ -283,7 +283,7 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 | 2 Shared schemas + typed data layer | ✅ | Shared: topics, platforms (meta), countries (pre-sorted), group/auth/profile zod schemas. Web data layer (lib, services, hooks, api) is 100% TS, no `any`. Query-key factory. Components still `.jsx` (Stage 11). Bundle 236.7 KB. |
 | 3 Docker dev + API skeleton + CI | ✅ | Postgres 18 in Docker (host port **5433**, because a native Windows Postgres uses 5432). Express 5 API: zod-validated config, pino + request ids, helmet, JSON errors, graceful shutdown, `/api/health`. 6 Vitest/Supertest tests. Vite `/api` proxy. CI workflow. Bundle 244 KB (npm moved zod to 4.6.5 when the API was added). |
 | 4 DB schema + migrations + seed | ✅ | Migration 0001 (users, oauth_accounts, sessions, email_tokens, groups; citext, uuidv7, updated_at trigger, CHECKs, indexes). Kysely + hand-written types. CLI: migrate / rollback / reset / seed (3 users, 60 groups, validated with the shared schema). 44 DB tests incl. shared↔DB drift check; CI runs them. |
-| 5 Groups read API + home/detail switch | ☐ | |
+| 5 Groups read API + home/detail switch | ✅ | `GET /api/groups` (filters, ILIKE search with escaped wildcards, uuidv7 cursor pagination) + `GET /api/groups/:id`. Shared contract: `groupListQuerySchema`, `groupListResponseSchema`. Web: `apiClient` (validates responses), `useGroups` (infinite query, Load more), `useGroupFilters` (URL = source of truth; O1/B13/B29). 18 unit + 57 DB tests. **Transitional:** profile "my groups" and create/delete still use Supabase until Stage 7. |
 | 6 Auth core | ☐ | |
 | 7 Groups write + ownership | ☐ | |
 | 8 Email verification + reset | ☐ | |

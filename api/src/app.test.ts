@@ -1,14 +1,15 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app";
+import { fakeDeps } from "./test/fakes";
 
 // Fake dependencies: no real database is needed to test the HTTP layer.
-const dbUp = { checkDatabase: async () => {} };
-const dbDown = {
+const dbUp = fakeDeps();
+const dbDown = fakeDeps({
   checkDatabase: async () => {
     throw new Error("connection refused");
   },
-};
+});
 
 describe("GET /api/health", () => {
   it("returns 200 when the database answers", async () => {

@@ -9,7 +9,7 @@ import {
   signUp,
   signInWithOAuth,
 } from "../../../services/auth.service";
-import { clearFilterCache } from "../../groups/utils/filterCache";
+import { clearSavedSearch } from "../../groups/utils/savedSearch";
 import { SESSION_QUERY_KEY } from "../hooks/useUser";
 import { COUNTRY_LIST, getCities, loginSchema, signupSchema } from "@urconnections/shared";
 
@@ -79,7 +79,7 @@ export default function AuthPage() {
       // Prime the cache so the route loaders see the new session immediately.
       queryClient.setQueryData(SESSION_QUERY_KEY, result.session);
       // Drop filters cached by a previous visitor of this tab.
-      clearFilterCache();
+      clearSavedSearch();
       navigate("/");
     } catch (error) {
       setAuthError(error.message || "An error occurred during authentication.");
@@ -90,7 +90,7 @@ export default function AuthPage() {
 
   const handleOAuth = async (provider) => {
     try {
-      clearFilterCache();
+      clearSavedSearch();
       await signInWithOAuth(provider);
     } catch (error) {
       setAuthError(error.message || `Failed to sign in with ${provider}.`);

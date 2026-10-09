@@ -12,8 +12,13 @@ export { COUNTRIES_CITIES, COUNTRY_LIST, getCities, isCountry, type Country } fr
 export {
   createGroupSchema,
   groupSchema,
+  groupListQuerySchema,
+  groupListResponseSchema,
   type CreateGroupInput,
   type Group,
+  type GroupListQuery,
+  type GroupListParams,
+  type GroupListResponse,
 } from "./schemas/group";
 export { profileSchema, type ProfileInput } from "./schemas/profile";
 export {
