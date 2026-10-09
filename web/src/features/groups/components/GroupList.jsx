@@ -1,119 +1,19 @@
-import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useGetGroups } from "../hooks/useGetGroups";
-import { useUserLocation } from "../hooks/useUserLocation";
-import {
-  readFilterCache,
-  writeFilterCache,
-  clearFilterCache,
-} from "../utils/filterCache";
+import { useRef } from "react";
+import { useGroupFilters } from "../hooks/useGroupFilters";
+import { useGroups } from "../hooks/useGroups";
 import GroupCard from "./GroupCard";
 import FilterBar from "./FilterBar";
 
 export default function GroupList() {
-  const { data: groups, isLoading, error, refetch } = useGetGroups();
-  const {
-    country: detectedCountry,
-    city: detectedCity,
-    isDetecting,
-  } = useUserLocation();
-  const hasInitialized = useRef(false);
+  // Filters live in the URL (useGroupFilters); the API does the filtering (useGroups).
+  const { filters, apiParams, setFilter, clearFilters, hasActiveFilters, isDetecting } = useGroupFilters();
+  const { groups, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useGroups(apiParams);
   const scrollRef = useRef(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const scrollToResults = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-
-  const searchQuery = searchParams.get("query") || "";
-  const selectedTopic = searchParams.get("topic") || "All";
-  const selectedCountry = searchParams.get("country") || "";
-  const selectedCity = searchParams.get("city") || "";
-  const selectedPlatform = searchParams.get("platform") || "";
-
-  const updateParam = (key, value) => {
-    setSearchParams(
-      (prev) => {
-        const newParams = new URLSearchParams(prev);
-        if (value && value !== "All") {
-          newParams.set(key, value);
-        } else {
-          newParams.delete(key);
-        }
-        if (key === "country") {
-          newParams.delete("city");
-        }
-        const snapshot = Object.fromEntries(newParams.entries());
-        writeFilterCache({
-          query: snapshot.query || "",
-          topic: snapshot.topic || "All",
-          country: snapshot.country || "",
-          city: snapshot.city || "",
-          platform: snapshot.platform || "",
-        });
-        return newParams;
-      },
-      { replace: true },
-    );
-  };
-
-  useEffect(() => {
-    // Explicit URL filters (e.g. a shared link) always win over the cache.
-    if (searchParams.toString() !== "") {
-      hasInitialized.current = true;
-      return;
-    }
-    const cached = readFilterCache();
-    if (!cached) return;
-    hasInitialized.current = true;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (cached.query) next.set("query", cached.query);
-        if (cached.topic && cached.topic !== "All")
-          next.set("topic", cached.topic);
-        if (cached.country) next.set("country", cached.country);
-        if (cached.city) next.set("city", cached.city);
-        if (cached.platform) next.set("platform", cached.platform);
-        return next;
-      },
-      { replace: true },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (
-      !isDetecting &&
-      !hasInitialized.current &&
-      searchParams.toString() === ""
-    ) {
-      hasInitialized.current = true;
-      if (detectedCountry) {
-        writeFilterCache({
-          query: "",
-          topic: "All",
-          country: detectedCountry,
-          city: detectedCity || "",
-          platform: "",
-        });
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev);
-            next.set("country", detectedCountry);
-            if (detectedCity) {
-              next.set("city", detectedCity);
-            }
-            return next;
-          },
-          { replace: true },
-        );
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDetecting, detectedCountry, detectedCity]);
 
   if (isLoading)
     return (
@@ -144,70 +44,34 @@ export default function GroupList() {
       </div>
     );
 
-  const normalizedQuery = searchQuery.toLowerCase();
-  const filteredGroups = groups?.filter((group) => {
-    const matchesSearch =
-      (group.title || "").toLowerCase().includes(normalizedQuery) ||
-      (group.description || "").toLowerCase().includes(normalizedQuery);
-    const matchesTopic =
-      selectedTopic === "All" ||
-      (group.topic || "").toLowerCase() === selectedTopic.toLowerCase();
-    const matchesCountry =
-      !selectedCountry ||
-      (group.country || "").toLowerCase() === selectedCountry.toLowerCase();
-    const matchesCity =
-      !selectedCity ||
-      (group.city || "").toLowerCase() === selectedCity.toLowerCase();
-    const matchesPlatform =
-      !selectedPlatform ||
-      (group.platform || "").toLowerCase() === selectedPlatform.toLowerCase();
-    return (
-      matchesSearch &&
-      matchesTopic &&
-      matchesCountry &&
-      matchesCity &&
-      matchesPlatform
-    );
-  });
-
-  const hasActiveFilters =
-    searchQuery ||
-    selectedTopic !== "All" ||
-    selectedCountry ||
-    selectedCity ||
-    selectedPlatform;
-
-  const handleClearFilters = () => {
-    clearFilterCache();
-    setSearchParams({}, { replace: true });
-  };
-
   return (
     <div className="w-full bg-white dark:bg-[#000000] min-h-screen transition-colors duration-200">
       <FilterBar
         onSearch={(val) => {
-          updateParam("query", val);
+          setFilter("query", val);
           scrollToResults();
         }}
-        onTopicChange={(val) => updateParam("topic", val)}
-        currentTopic={selectedTopic}
-        currentSearch={searchQuery}
-        onCountryChange={(val) => updateParam("country", val)}
-        onCityChange={(val) => updateParam("city", val)}
-        onPlatformChange={(val) => updateParam("platform", val)}
-        currentCountry={selectedCountry}
-        currentCity={selectedCity}
-        currentPlatform={selectedPlatform}
+        onTopicChange={(val) => setFilter("topic", val)}
+        currentTopic={filters.topic}
+        currentSearch={filters.query}
+        onCountryChange={(val) => setFilter("country", val)}
+        onCityChange={(val) => setFilter("city", val)}
+        onPlatformChange={(val) => setFilter("platform", val)}
+        currentCountry={filters.country}
+        currentCity={filters.city}
+        currentPlatform={filters.platform}
       />
 
       <div ref={scrollRef} className="max-w-350 mx-auto px-6 py-10 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 px-2">
           <div className="ml-4 ">
             <h2 className="text-4xl md:text-5xl font-black text-black dark:text-white tracking-tighter mb-4">
-              Explore {selectedTopic !== "All" ? selectedTopic : "Featured"}
+              Explore {filters.topic !== "All" ? filters.topic : "Featured"}
             </h2>
             <p className="text-gray-400 dark:text-gray-500 font-bold uppercase tracking-[0.2em] text-[11px]">
-              {filteredGroups?.length || 0} groups available in your network
+              {/* Only loaded pages are known; "+" means more can be loaded. */}
+              {groups.length}
+              {hasNextPage ? "+" : ""} groups available in your network
             </p>
           </div>
 
@@ -223,7 +87,7 @@ export default function GroupList() {
             )}
             {hasActiveFilters && (
               <button
-                onClick={handleClearFilters}
+                onClick={clearFilters}
                 className="text-[11px] font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/5 px-4 py-2 rounded-full transition-colors uppercase tracking-widest cursor-pointer"
               >
                 Clear all
@@ -233,11 +97,11 @@ export default function GroupList() {
         </div>
 
         <div className="grid grid-cols-1 place-items-center  sm:grid-cols-2  lg:grid-cols-4  gap-6 ">
-          {filteredGroups?.map((group) => (
+          {groups.map((group) => (
             <GroupCard key={group.id} group={group} />
           ))}
 
-          {filteredGroups?.length === 0 && (
+          {groups.length === 0 && (
             <div className="col-span-full py-30 text-center">
               <h3 className="text-4xl md:text-6xl font-black text-black dark:text-white mb-6 tracking-tighter">
                 No groups found.
@@ -247,7 +111,7 @@ export default function GroupList() {
                 locations.
               </p>
               <button
-                onClick={handleClearFilters}
+                onClick={clearFilters}
                 className="bg-black dark:bg-white text-white dark:text-black font-bold px-10 py-4 rounded-full text-sm uppercase tracking-widest hover:opacity-80 transition-all active:scale-95 cursor-pointer"
               >
                 Reset Filters
@@ -255,6 +119,21 @@ export default function GroupList() {
             </div>
           )}
         </div>
+
+        {hasNextPage && (
+          <div className="flex justify-center mt-16">
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="bg-black dark:bg-white text-white dark:text-black font-bold px-10 py-4 rounded-full text-sm uppercase tracking-widest hover:opacity-80 transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-3"
+            >
+              {isFetchingNextPage && (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white dark:border-black/30 dark:border-t-black rounded-full animate-spin" />
+              )}
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 # Architecture — UrConnections
 
-> **Current as of Stage 4** (branch `stage-04-db-schema`). Updated at the end of every stage (see MASTER_PLAN.md §3).
+> **Current as of Stage 5** (branch `stage-05-groups-read-api`). Updated at the end of every stage (see MASTER_PLAN.md §3).
 > This file describes the code **as it is now**. The target layout is in MASTER_PLAN.md §2. Line numbers drift, so search by symbol name.
 
 ## 1. Folder map
@@ -25,6 +25,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/index.ts              # starts the server (listen) + graceful shutdown on SIGINT/SIGTERM
   src/app.ts                # createApp(deps): helmet → pino-http (request ids) → express.json → routes → 404 → error handler
   src/app.test.ts           # Supertest: health up/down, request id, 404 JSON, bad JSON 400, security headers
+  src/test/fakes.ts         # fakeDeps(overrides) + sampleGroup(): complete fake dependencies for createApp()
   src/config.ts             # loads api/.env if present; validates env with zod; exits with a clear message if invalid
   src/db/pool.ts            # pg Pool (max 10) + checkDatabase() ("select 1")
   src/db/db.ts              # `db`: Kysely<Database> on that pool (use this for all queries)
@@ -36,16 +37,22 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/db/schema.db.test.ts  # 44 DB tests: migrations, CHECKs, citext, uuidv7, trigger, cascade, shared↔DB drift
   src/db/test/globalSetup.ts  # creates the *_test database if missing; refuses non-_test names
   src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
-  src/lib/errors.ts         # HttpError(status, code, message) + ErrorBody shape
+  src/lib/errors.ts         # HttpError(status, code, message, details?) + ErrorBody shape
+  src/lib/validate.ts       # parseOrThrow(schema, input): typed value or 400 invalid_request with per-field details
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
   src/modules/health/health.routes.ts  # GET /api/health → 200 {ok,db:"up"} or 503 {ok:false,db:"down"}
+  src/modules/groups/groups.repository.ts  # GroupsRepository interface + Kysely implementation (filters, search, cursor paging)
+  src/modules/groups/groups.routes.ts      # GET /api/groups, GET /api/groups/:id (validated with shared schemas)
+  src/modules/groups/groups.routes.test.ts # HTTP layer with a fake repository: validation, 400/404, response shape
+  src/modules/groups/groups.db.test.ts     # real Postgres: every filter, search escaping, pagination, detail
 
 packages/shared/            # @urconnections/shared: TS source imported directly (no build step)
   src/index.ts              # public exports (import only from "@urconnections/shared")
   src/topics.ts             # TOPICS (as const) + Topic type
   src/platforms.ts          # PLATFORMS: key, label, linkPattern (RegExp), placeholder; PLATFORM_KEYS/MAP, isPlatformKey
   src/countries.ts          # COUNTRIES_CITIES (stored pre-sorted), COUNTRY_LIST, getCities(), isCountry()
-  src/schemas/group.ts      # createGroupSchema (form/API input) + groupSchema (stored row); CreateGroupInput, Group types
+  src/schemas/group.ts      # createGroupSchema (input), groupSchema (API group, created_at ISO), groupListQuerySchema,
+                            # groupListResponseSchema ({ items, nextCursor }); types Group, GroupListQuery/Params/Response
   src/schemas/auth.ts       # loginSchema, signupSchema, passwordSchema; LoginInput, SignupInput
   src/schemas/profile.ts    # profileSchema + profileFields (reused by signup); ProfileInput
 
@@ -68,6 +75,7 @@ web/                        # the React app (Vite)
     lib/
       supabase.ts           # createClient(...); throws at startup if env vars are missing
       queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus); also used by route loaders
+      apiClient.ts          # apiGet(path, schema, params): fetch our API (same origin), ApiError on failure, zod-validated JSON
       platforms.ts          # UI side of platforms: icon + Tailwind badge colors per PlatformKey; PLATFORMS, getPlatform(key)
     services/
       auth.service.ts       # signUp, signInWithPassword, signInWithOAuth, signOut, onAuthStateChange, getSession, updateProfile
@@ -77,16 +85,17 @@ web/                        # the React app (Vite)
         components/AuthPage.jsx       # login + signup in one page; authResolver picks loginSchema/signupSchema; Google OAuth
         hooks/useUser.ts              # SESSION_QUERY_KEY, sessionQueryOptions (queryOptions), useUser, useAuthListener
       groups/
-        api/groupsApi.ts              # getGroups, getGroupById, getUserGroups, createGroup, deleteGroup (explicit columns)
-        api/queryKeys.ts              # groupKeys factory: all / list / byUserRoot / byUser / detail
-        hooks/useGetGroups.ts         # groupKeys.list()
+        api/groupsApi.ts              # API: getGroups(params), getGroupById · Supabase until Stage 7: getUserGroups, createGroup, deleteGroup
+        api/queryKeys.ts              # groupKeys factory: all / lists / list(filters) / byUserRoot / byUser / detail
+        hooks/useGroups.ts            # useInfiniteQuery over getGroups: pages + fetchNextPage, keepPreviousData
+        hooks/useGroupFilters.ts      # filters from/to the URL; saved search; one-time location preset
         hooks/useGetUserGroups.ts     # groupKeys.byUser(id), enabled once id is known
-        hooks/useGroup.ts             # groupKeys.detail(id)
+        hooks/useGroup.ts             # groupKeys.detail(id), via the API
         hooks/useCreateGroup.ts       # mutation → invalidate groupKeys.all; alert() on error (toast in Stage 7)
         hooks/useDeleteGroup.ts       # mutation → remove detail, invalidate groupKeys.all; alert() on error
         hooks/useUserLocation.ts      # ['userLocation']: ipapi.co, localStorage cache with 7-day TTL, never throws
-        utils/filterCache.ts          # read/write/clearFilterCache(): sessionStorage, 60s TTL (replaced in Stage 5)
-        components/GroupList.jsx      # home page: FilterBar + client-side filtering + grid
+        utils/savedSearch.ts          # read/save/clearSavedSearch(): last home search per tab ("" = user cleared filters)
+        components/GroupList.jsx      # home page: FilterBar + server-filtered grid + Load more
         components/FilterBar.jsx      # hero search (uncontrolled input) + sticky selects + topic pills
         components/GroupCard.jsx      # card: topic/platform badges, delete (X) only when `canDelete`, Connect / View Details
         components/GroupDetail.jsx    # /groups/:groupId
@@ -103,7 +112,11 @@ web/                        # the React app (Vite)
 - **Dev:** `npm run db:up` starts Postgres, then `npm run dev` runs web (:5173) and api (:3000) together. The browser calls `/api/*` on :5173, and Vite forwards it to :3000, so it's the same origin as production.
 - **Response contract:** success is plain JSON. Errors are always `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status. Throw `HttpError` in routes; Express 5 forwards async errors to `errorHandler`.
 - **Dependency injection:** `createApp(deps)` receives things like `checkDatabase`, so tests use fakes and never need a database or an open port.
-- **Endpoints so far:** `GET /api/health`.
+- **Endpoints so far:**
+  - `GET /api/health`
+  - `GET /api/groups?query&topic&country&city&platform&cursor&limit`: newest first, `{ items, nextCursor }`. limit 1–50 (default 24); bad values → 400 with `details`
+  - `GET /api/groups/:id`: one group; unknown or malformed id → 404
+- **Pagination:** cursor = id of the last item. uuidv7 ids sort by creation time, so the next page is `where id < cursor order by id desc limit n+1` (the extra row says whether more exist).
 - **Database workflow:** `npm run db:up` (container) → `npm run db:migrate` (tables) → `npm run db:seed` (demo data). `npm run db:reset` rebuilds from scratch. `npm run test:db` runs the DB tests in the separate `urconnections_test` database, so dev data is never touched.
 
 ## 2. Routing (`web/src/App.jsx`)
@@ -127,9 +140,9 @@ RootLayout (no path)
 | Key | Defined in | Fetches | Invalidated by |
 |---|---|---|---|
 | `['session']` (`SESSION_QUERY_KEY`) | `useUser` (`sessionQueryOptions`) | `getSession()`, `staleTime: Infinity` | avatar upload/remove, profile update; kept in sync by `useAuthListener` (`setQueryData`) |
-| `['groups','list']` (`groupKeys.list()`) | `useGetGroups` | all groups, explicit columns | create/delete (`groupKeys.all`) |
-| `['groups','user',id]` (`groupKeys.byUser`) | `useGetUserGroups` | groups where `user_id = id` | create/delete; removed on sign-out |
-| `['groups','detail',id]` (`groupKeys.detail`) | `useGroup` | one group (`getGroupById`) | create/delete (removed on its own delete) |
+| `['groups','list',filters]` (`groupKeys.list(filters)`) | `useGroups` (infinite) | pages from `GET /api/groups` | create/delete (`groupKeys.all`) |
+| `['groups','user',id]` (`groupKeys.byUser`) | `useGetUserGroups` | groups where `user_id = id` (**Supabase until Stage 7**) | create/delete; removed on sign-out |
+| `['groups','detail',id]` (`groupKeys.detail`) | `useGroup` | `GET /api/groups/:id` | create/delete (removed on its own delete) |
 | `['userLocation']` | `useUserLocation` | ipapi.co (localStorage-cached, 7-day TTL) | never (staleTime ∞) |
 
 `QueryClient` (`web/src/lib/queryClient.ts`) defaults: `staleTime: 60_000`, `refetchOnWindowFocus: false`, retry 3.
@@ -159,13 +172,12 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 3. `signOut()` calls `supabase.auth.signOut()`, then clears only the filter cache. The listener sets `['session']` to null.
 4. Profile edits use `supabase.auth.updateUser({ data })`.
 
-### Home page filter flow (`GroupList` + `FilterBar`)
-- The source of truth is the URL search params `query`, `topic`, `country`, `city`, `platform` (`topic` defaults to `"All"`).
-- `updateParam(key, value)` sets or deletes the param, clears `city` when `country` changes, and writes a snapshot to the sessionStorage filter cache (60s TTL).
-- On mount, if a cache exists, it is restored into the URL (`hasInitialized = true`).
-- Otherwise, once IP geolocation resolves and the URL is empty, it presets `country`/`city` from the detected location.
-- Filtering runs **client-side** over all groups (case-insensitive equality on topic/country/city/platform, substring match on title/description).
-- The filter cache is cleared on successful sign-in (password or before the OAuth redirect) and on sign-out.
+### Home page filter flow (`GroupList` → `useGroupFilters` + `useGroups`)
+- **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true`; changing country clears city).
+- Every URL change is also saved as the tab's **saved search** (`utils/savedSearch.ts`, sessionStorage, no expiry). On a visit to `/` without params: a saved search is restored; a saved `""` (user cleared) stays empty; otherwise the detected location is applied once.
+- `useGroups(apiParams)` = `useInfiniteQuery` keyed by the filters. The server filters and paginates; **Load more** calls `fetchNextPage`. `keepPreviousData` keeps old results visible while new filters load.
+- The saved search is cleared on sign-in and sign-out.
+- **Transitional (until Stage 7):** groups created on `dev` go to Supabase, so they don't show on the home page (local Postgres). Profile "my groups" cards are Supabase rows, so their "View Details" link 404s against the API.
 
 ## 4. UI conventions (current reality)
 - All styling is inline Tailwind class strings, and many are long and duplicated: inputs, labels, spinners, back buttons, CTA pills. Only `ProfilePage` extracts `INPUT_CLS`/`SELECT_CLS` constants.

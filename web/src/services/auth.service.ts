@@ -1,7 +1,7 @@
 import type { AuthChangeEvent, Provider, Session } from "@supabase/supabase-js";
 import type { ProfileInput } from "@urconnections/shared";
 import { supabase } from "../lib/supabase";
-import { clearFilterCache } from "../features/groups/utils/filterCache";
+import { clearSavedSearch } from "../features/groups/utils/savedSearch";
 
 const AUTH_REDIRECT_URL = import.meta.env.VITE_AUTH_REDIRECT_URL;
 
@@ -47,7 +47,7 @@ export const signOut = async (): Promise<void> => {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
   // Supabase removes its own session key; only drop app state that is user-specific.
-  clearFilterCache();
+  clearSavedSearch();
 };
 
 /** Subscribes to auth events. Returns an unsubscribe function. */

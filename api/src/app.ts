@@ -4,10 +4,11 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import { logger } from "./lib/logger";
 import { errorHandler, notFound } from "./middleware/errorHandler";
+import { groupsRouter, type GroupsDeps } from "./modules/groups/groups.routes";
 import { healthRouter, type HealthDeps } from "./modules/health/health.routes";
 
 /** Everything the app needs from the outside world. Tests pass fakes. */
-export type AppDeps = HealthDeps;
+export type AppDeps = HealthDeps & GroupsDeps;
 
 /**
  * Builds the Express app without starting it. index.ts calls listen();
@@ -47,6 +48,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(express.json({ limit: "100kb" }));
 
   app.use("/api/health", healthRouter(deps));
+  app.use("/api/groups", groupsRouter(deps));
 
   app.use(notFound);
   app.use(errorHandler); // must be registered last

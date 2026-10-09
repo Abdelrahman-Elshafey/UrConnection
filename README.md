@@ -51,7 +51,7 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 ## Project structure
 ```
 web/              React app (Vite)
-api/              Express 5 API (TypeScript): config, logging, errors, /api/health, Postgres schema (Kysely migrations)
+api/              Express 5 API (TypeScript): /api/health, /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
 packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries
 docker-compose.yml  development services (Postgres)
 docs/             architecture, code audit, master plan, security runbook

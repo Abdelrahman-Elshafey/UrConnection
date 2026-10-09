@@ -14,7 +14,9 @@ export const notFound: RequestHandler = (req, _res, next) => {
  */
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof HttpError) {
-    const body: ErrorBody = { error: { code: err.code, message: err.message } };
+    const body: ErrorBody = {
+      error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) },
+    };
     res.status(err.status).json(body);
     return;
   }
