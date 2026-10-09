@@ -1,0 +1,38 @@
+# Development services. Start: `npm run db:up` · stop: `npm run db:down` · logs: `npm run db:logs`
+#
+# Only what the code uses today. Each later stage adds its own service:
+#   Stage 8 → mailpit (catches outgoing email) · Stage 10 → file storage for avatars.
+# The production stack (Caddy, api, web, backups) lives in compose.prod.yml (Stage 13).
+
+name: urconnections
+
+services:
+  postgres:
+    # Pin the major version: a database must never jump majors by surprise.
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      # Development-only credentials (they match api/.env.example). Override them with a
+      # root .env file if you like. Production uses real secrets, never these values.
+      POSTGRES_USER: ${POSTGRES_USER:-urconnections}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urconnections_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-urconnections}
+    ports:
+      # SECURITY: 127.0.0.1 = reachable only from this computer, not from your Wi-Fi network.
+      # Host port 5433 (not the default 5432), so it never clashes with a Postgres installed
+      # directly on the machine. Inside Docker it is still 5432.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # A named volume keeps the data when the container is removed or recreated.
+      # Postgres 18 images store data under /var/lib/postgresql/<major>/docker.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # "healthy" only once Postgres really accepts connections, not just "the process started".
+      # `npm run db:up` (docker compose up --wait) waits for this.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:

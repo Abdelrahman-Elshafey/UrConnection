@@ -1,0 +1,42 @@
+# Continuous Integration: GitHub runs these checks on every push and pull request.
+# A red ❌ on a PR means "don't merge yet". Same commands you run locally.
+name: CI
+
+on:
+  push:
+    branches: [main, dev, "stage-*"]
+  pull_request:
+
+# A new push to the same branch cancels the run that is still going for the old commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# SECURITY: the workflow only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm # reuse downloaded packages between runs (faster installs)
+
+      # `npm ci` installs exactly what package-lock.json says (and fails if it is out of
+      # sync with package.json). That's why the lockfile is committed.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          # The web build only embeds these values; dummies are fine for a CI build.
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ci-placeholder
+          VITE_AUTH_REDIRECT_URL: http://localhost:5173

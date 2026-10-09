@@ -1,6 +1,5 @@
 // Root solution file: `npm run typecheck` (= tsc -b) checks every package.
-// Stage 3 adds { "path": "./api" }.
 {
   "files": [],
-  "references": [{ "path": "./web" }, { "path": "./packages/shared" }]
+  "references": [{ "path": "./web" }, { "path": "./api" }, { "path": "./packages/shared" }]
 }

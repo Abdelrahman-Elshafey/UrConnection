@@ -8,23 +8,26 @@ Supabase handles auth, Postgres, and storage. The app is deployed on Vercel.
 Monorepo (npm workspaces), so run everything from the **repo root**:
 ```bash
 npm install         # installs all workspaces; one lockfile at the root
-npm run dev         # Vite dev server for web/
-npm run build       # production build -> web/dist/
-npm run typecheck   # tsc -b over web + packages/shared (strict)
+npm run db:up       # start Postgres in Docker (127.0.0.1:5433) and wait until healthy; db:down / db:logs
+npm run dev         # web (Vite :5173) + api (Express :3000) together; dev:web / dev:api for one
+npm test            # tests of every workspace (api: Vitest + Supertest)
+npm run typecheck   # tsc -b over web + api + packages/shared (strict)
 npm run lint        # ESLint for the whole repo (flat config at root). Keep it at 0 problems
-npm run preview
+npm run build       # production build -> web/dist/
 ```
+Port 5432 on this machine is taken by a native Windows Postgres, so the Docker one uses **5433**. Docker Desktop must be running (`docker info`).
 Layout: `web/` = React app. Its data layer (`lib/`, `services/`, `features/*/hooks|api|utils`) is TS; components are still `.jsx` until Stage 11 (`allowJs`).
 `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step): topics, platforms (no UI), countries, and **zod schemas + inferred types** (`createGroupSchema`/`Group`, `loginSchema`, `signupSchema`, `profileSchema`). Validation rules live there, not in components.
-`api/` arrives in Stage 3. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
-There are no tests yet (they arrive with the API in Stage 3+).
+`api/` = `@urconnections/api`: Express 5 + TS run by `tsx`, `createApp(deps)` in `app.ts` (tests inject fakes), env validated in `config.ts` (`api/.env`, template `api/.env.example`), errors as `{ error: { code, message } }` via `HttpError`. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
+CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, typecheck, test and build on every push and PR.
 
 ## Stack
 React 19 · Vite 8 · Tailwind v4 (`@tailwindcss/vite`, no tailwind.config) · React Router 7 (data router, `createBrowserRouter`) ·
 TanStack Query 5 · react-hook-form + zod 4 · Supabase JS v2 · react-icons · browser-image-compression · @vercel/analytics.
 
-## Env vars (`web/.env`, gitignored; template in `web/.env.example`)
-`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_AUTH_REDIRECT_URL` (OAuth redirect).
+## Env vars (gitignored `.env` files; templates committed as `.env.example`)
+- `web/.env`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_AUTH_REDIRECT_URL` (OAuth redirect).
+- `api/.env`: `NODE_ENV`, `PORT`, `DATABASE_URL`, `LOG_LEVEL` (dev values match docker-compose.yml).
 Never print or commit `.env` or `recovery-codes.txt`.
 
 ## Direction (decided 2026-10-08)
