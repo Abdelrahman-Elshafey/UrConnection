@@ -1,7 +1,9 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Database tests have their own config (vitest.db.config.ts) because they need Postgres.
+    exclude: [...configDefaults.exclude, "src/**/*.db.test.ts"],
     // config.ts validates the environment on import, so tests provide a valid one.
     // The URL is never connected to: tests inject a fake database check.
     env: {

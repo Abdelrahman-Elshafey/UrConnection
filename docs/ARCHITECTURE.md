@@ -1,6 +1,6 @@
 # Architecture — UrConnections
 
-> **Current as of Stage 3** (branch `stage-03-docker-api`). Updated at the end of every stage (see MASTER_PLAN.md §3).
+> **Current as of Stage 4** (branch `stage-04-db-schema`). Updated at the end of every stage (see MASTER_PLAN.md §3).
 > This file describes the code **as it is now**. The target layout is in MASTER_PLAN.md §2. Line numbers drift, so search by symbol name.
 
 ## 1. Folder map
@@ -20,12 +20,21 @@ supabase/                   # v1 only: inspect.sql + migrations (RLS, CHECKs, bu
 
 api/                        # @urconnections/api: Express 5 + TypeScript, run by tsx (no build step yet; Stage 13)
   .env.example              # NODE_ENV, PORT, DATABASE_URL, LOG_LEVEL (copy to api/.env, gitignored)
-  vitest.config.ts          # test env (fake DATABASE_URL; tests inject a fake DB check)
+  vitest.config.ts          # unit tests (no DB): fake DATABASE_URL, excludes *.db.test.ts
+  vitest.db.config.ts       # database tests: real Postgres via TEST_DATABASE_URL (default: Docker urconnections_test)
   src/index.ts              # starts the server (listen) + graceful shutdown on SIGINT/SIGTERM
   src/app.ts                # createApp(deps): helmet → pino-http (request ids) → express.json → routes → 404 → error handler
   src/app.test.ts           # Supertest: health up/down, request id, 404 JSON, bad JSON 400, security headers
   src/config.ts             # loads api/.env if present; validates env with zod; exits with a clear message if invalid
   src/db/pool.ts            # pg Pool (max 10) + checkDatabase() ("select 1")
+  src/db/db.ts              # `db`: Kysely<Database> on that pool (use this for all queries)
+  src/db/types.ts           # hand-written table types (Database, UsersTable, GroupsTable, ...); NewGroupRow etc.
+  src/db/migrations/        # 0001_initial_schema.ts (raw SQL up/down) + index.ts (explicit ordered list)
+  src/db/migrator.ts        # runMigrations(db, latest | down | reset), shared by CLI and tests
+  src/db/migrate.ts         # CLI behind npm run db:migrate / db:rollback / db:reset (reset refused in production)
+  src/db/seed.ts            # CLI behind npm run db:seed: truncates, inserts 3 users + 60 groups (refused in production)
+  src/db/schema.db.test.ts  # 44 DB tests: migrations, CHECKs, citext, uuidv7, trigger, cascade, shared↔DB drift
+  src/db/test/globalSetup.ts  # creates the *_test database if missing; refuses non-_test names
   src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
   src/lib/errors.ts         # HttpError(status, code, message) + ErrorBody shape
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
@@ -95,6 +104,7 @@ web/                        # the React app (Vite)
 - **Response contract:** success is plain JSON. Errors are always `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status. Throw `HttpError` in routes; Express 5 forwards async errors to `errorHandler`.
 - **Dependency injection:** `createApp(deps)` receives things like `checkDatabase`, so tests use fakes and never need a database or an open port.
 - **Endpoints so far:** `GET /api/health`.
+- **Database workflow:** `npm run db:up` (container) → `npm run db:migrate` (tables) → `npm run db:seed` (demo data). `npm run db:reset` rebuilds from scratch. `npm run test:db` runs the DB tests in the separate `urconnections_test` database, so dev data is never touched.
 
 ## 2. Routing (`web/src/App.jsx`)
 
@@ -123,6 +133,19 @@ RootLayout (no path)
 | `['userLocation']` | `useUserLocation` | ipapi.co (localStorage-cached, 7-day TTL) | never (staleTime ∞) |
 
 `QueryClient` (`web/src/lib/queryClient.ts`) defaults: `staleTime: 60_000`, `refetchOnWindowFocus: false`, retry 3.
+
+### v2 database (own Postgres, migration 0001)
+| Table | Key columns | Notes |
+|---|---|---|
+| `users` | `id uuid` (uuidv7), `email citext unique`, `password_hash`, `email_verified_at`, `display_name`, `phone`, `country`, `city`, `avatar_key`, `created_at`, `updated_at` | `updated_at` maintained by a trigger; profile fields default to `''` |
+| `oauth_accounts` | pk `(provider, provider_user_id)`, `user_id` → users | provider ∈ `google` |
+| `sessions` | pk `id_hash` (sha256 hex, CHECKed), `user_id` → users, `expires_at`, `last_seen_at`, `user_agent`, `ip inet` | the raw token is never stored |
+| `email_tokens` | pk `token_hash`, `user_id`, `purpose` ∈ verify/reset, `expires_at`, `used_at` | single use |
+| `groups` | `id uuid` (uuidv7), `user_id` → users, `title`, `description`, `topic`, `platform`, `meeting_link`, `country`, `city`, `created_at` | same CHECKs as the shared zod schema; indexes on user_id, (country, city), topic, platform |
+
+All foreign keys are `on delete cascade`: deleting a user deletes their groups, sessions, tokens and OAuth links.
+Rules: **never edit a migration that has run**; add `0002_...` and register it in `migrations/index.ts`, then update `types.ts` and the DB tests.
+Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in Stage 5.
 
 ### Supabase data model (v1; inferred from the code)
 - **Table `groups`**: `id`, `title` (≤20), `description` (20–200), `topic` (one of TOPICS), `platform` (PLATFORMS key), `meeting_link` (http(s) URL), `country`, `city`, `user_id` (set by the client), `date` (ISO string set by the client). Shape and rules: `groupSchema` / `createGroupSchema` in packages/shared.

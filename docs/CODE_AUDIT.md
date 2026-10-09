@@ -203,3 +203,8 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 ### Notes on Stage 3 (Docker + API skeleton)
 - **H9 `[~]`**: Vitest + Supertest are set up for the API (6 tests), and `npm test` runs every workspace's tests. CI runs them on every push and PR. There are no web tests yet.
 - **Bundle**: 244 KB gzip (was 236.7). Adding the API made npm move every workspace to zod 4.6.5, one shared copy. Stage 12's route splitting removes zod from the home page.
+
+### Notes on Stage 4 (v2 database schema)
+- **S6 (v2)**: The v2 schema enforces the group rules in Postgres from day one (lengths, topic/platform lists, http(s)-only links, non-empty location). DB tests prove each CHECK rejects bad data, and that the shared lists match the DB lists.
+- **S2 (v2)**: The schema is versioned in `api/src/db/migrations/`. Ownership rules (who may change which row) move into the API in Stages 6–7 instead of RLS.
+- **Tooling**: `kysely-codegen` was dropped (it pulls in vulnerable `braces`/`micromatch`). Types are hand-written and covered by the DB tests. `npm audit`: 0 vulnerabilities.

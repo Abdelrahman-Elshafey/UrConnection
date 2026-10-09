@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:migrate": "tsx src/db/migrate.ts latest",
+    "db:rollback": "tsx src/db/migrate.ts down",
+    "db:reset": "tsx src/db/migrate.ts reset",
+    "db:seed": "tsx src/db/seed.ts",
+    "test:db": "vitest run --config vitest.db.config.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
@@ -20,6 +25,7 @@
     "@urconnections/shared": "*",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
+    "kysely": "^0.29.6",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",

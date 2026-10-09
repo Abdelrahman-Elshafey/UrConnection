@@ -10,7 +10,9 @@ Monorepo (npm workspaces), so run everything from the **repo root**:
 npm install         # installs all workspaces; one lockfile at the root
 npm run db:up       # start Postgres in Docker (127.0.0.1:5433) and wait until healthy; db:down / db:logs
 npm run dev         # web (Vite :5173) + api (Express :3000) together; dev:web / dev:api for one
-npm test            # tests of every workspace (api: Vitest + Supertest)
+npm run db:migrate  # apply new migrations; db:rollback (undo last) · db:reset (rebuild, dev only) · db:seed (demo data)
+npm test            # unit tests of every workspace (api: Vitest + Supertest, no DB needed)
+npm run test:db     # database tests in the separate urconnections_test DB (needs db:up)
 npm run typecheck   # tsc -b over web + api + packages/shared (strict)
 npm run lint        # ESLint for the whole repo (flat config at root). Keep it at 0 problems
 npm run build       # production build -> web/dist/
@@ -18,7 +20,7 @@ npm run build       # production build -> web/dist/
 Port 5432 on this machine is taken by a native Windows Postgres, so the Docker one uses **5433**. Docker Desktop must be running (`docker info`).
 Layout: `web/` = React app. Its data layer (`lib/`, `services/`, `features/*/hooks|api|utils`) is TS; components are still `.jsx` until Stage 11 (`allowJs`).
 `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step): topics, platforms (no UI), countries, and **zod schemas + inferred types** (`createGroupSchema`/`Group`, `loginSchema`, `signupSchema`, `profileSchema`). Validation rules live there, not in components.
-`api/` = `@urconnections/api`: Express 5 + TS run by `tsx`, `createApp(deps)` in `app.ts` (tests inject fakes), env validated in `config.ts` (`api/.env`, template `api/.env.example`), errors as `{ error: { code, message } }` via `HttpError`. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
+`api/` = `@urconnections/api`: Express 5 + TS run by `tsx`, `createApp(deps)` in `app.ts` (tests inject fakes), env validated in `config.ts` (`api/.env`, template `api/.env.example`), errors as `{ error: { code, message } }` via `HttpError`. DB: Kysely (`db` from `api/src/db/db.ts`), **hand-written** table types in `api/src/db/types.ts`, raw-SQL migrations in `api/src/db/migrations/` (never edit one that has run; add the next number and register it in `migrations/index.ts`). `tsx` does not type-check: always run `npm run typecheck`. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
 CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, typecheck, test and build on every push and PR.
 
 ## Stack
