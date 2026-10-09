@@ -1,20 +1,35 @@
 # Architecture — UrConnections
 
-> **Current as of Stage 2** (branch `stage-02-typed-data-layer`). Updated at the end of every stage (see MASTER_PLAN.md §3).
+> **Current as of Stage 3** (branch `stage-03-docker-api`). Updated at the end of every stage (see MASTER_PLAN.md §3).
 > This file describes the code **as it is now**. The target layout is in MASTER_PLAN.md §2. Line numbers drift, so search by symbol name.
 
 ## 1. Folder map
 
 ```
-package.json                # npm workspaces root: ["web", "packages/*"]; scripts dev/build/lint/typecheck
+package.json                # npm workspaces root: ["web", "api", "packages/*"]; scripts dev (web+api), test, lint, typecheck, db:up/down/logs
 package-lock.json           # the only lockfile (don't delete: it pins every version)
 tsconfig.base.json          # shared strict TS settings (strict, noUncheckedIndexedAccess, bundler resolution)
-tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + packages/shared
+tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
+docker-compose.yml          # dev services: postgres:18-alpine on 127.0.0.1:5433 (named volume pgdata, health check)
+.github/workflows/ci.yml    # on push/PR: npm ci → lint → typecheck → test → build
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
 .agents/rules/              # owner's standing rules: general-rules.md, auth-implmentation.md, style-guide.md
 docs/                       # this file, CODE_AUDIT, MASTER_PLAN (the plan), SUPABASE (v1 security runbook), REFACTOR_ROADMAP (history)
 supabase/                   # v1 only: inspect.sql + migrations (RLS, CHECKs, bucket). Removed in Stage 16
 .VSCodeCounter/             # local line-count reports (gitignored)
+
+api/                        # @urconnections/api: Express 5 + TypeScript, run by tsx (no build step yet; Stage 13)
+  .env.example              # NODE_ENV, PORT, DATABASE_URL, LOG_LEVEL (copy to api/.env, gitignored)
+  vitest.config.ts          # test env (fake DATABASE_URL; tests inject a fake DB check)
+  src/index.ts              # starts the server (listen) + graceful shutdown on SIGINT/SIGTERM
+  src/app.ts                # createApp(deps): helmet → pino-http (request ids) → express.json → routes → 404 → error handler
+  src/app.test.ts           # Supertest: health up/down, request id, 404 JSON, bad JSON 400, security headers
+  src/config.ts             # loads api/.env if present; validates env with zod; exits with a clear message if invalid
+  src/db/pool.ts            # pg Pool (max 10) + checkDatabase() ("select 1")
+  src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
+  src/lib/errors.ts         # HttpError(status, code, message) + ErrorBody shape
+  src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
+  src/modules/health/health.routes.ts  # GET /api/health → 200 {ok,db:"up"} or 503 {ok:false,db:"down"}
 
 packages/shared/            # @urconnections/shared: TS source imported directly (no build step)
   src/index.ts              # public exports (import only from "@urconnections/shared")
@@ -27,7 +42,7 @@ packages/shared/            # @urconnections/shared: TS source imported directly
 
 web/                        # the React app (Vite)
   index.html                # Vite entry; title "UrConnections"
-  vite.config.ts            # react() + tailwindcss() plugins only
+  vite.config.ts            # react() + tailwindcss(); dev proxy /api → http://localhost:3000
   vercel.json               # SPA rewrite + security headers (CSP report-only). Vercel Root Directory must be `web` if deployed
   .env.example              # required VITE_* vars (copy to web/.env, which is gitignored)
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; allowJs during the JS→TS migration
@@ -74,6 +89,12 @@ web/                        # the React app (Vite)
         hooks/useUpdateProfile.ts     # → invalidate SESSION_QUERY_KEY
 ```
 **TypeScript status:** `packages/shared` and the whole web data layer (`lib`, `services`, `hooks`, `api`, `utils`) are TS. Components (`.jsx`) are converted in Stage 11.
+
+## API (Stage 3)
+- **Dev:** `npm run db:up` starts Postgres, then `npm run dev` runs web (:5173) and api (:3000) together. The browser calls `/api/*` on :5173, and Vite forwards it to :3000, so it's the same origin as production.
+- **Response contract:** success is plain JSON. Errors are always `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status. Throw `HttpError` in routes; Express 5 forwards async errors to `errorHandler`.
+- **Dependency injection:** `createApp(deps)` receives things like `checkDatabase`, so tests use fakes and never need a database or an open port.
+- **Endpoints so far:** `GET /api/health`.
 
 ## 2. Routing (`web/src/App.jsx`)
 

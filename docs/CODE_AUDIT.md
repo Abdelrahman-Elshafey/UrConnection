@@ -164,7 +164,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 | H6 | [ ] | README is inaccurate: says "MERN stack" and "Lucide React", and the WebP claim is false. Rewrite it with setup steps and env vars. |
 | H7 | [x] | `.gitignore` has duplicated `.env` lines. |
 | H8 | [ ] | `.agents/rules/style-guide.md` contains leftover e-commerce/hardware-brand text that contradicts the app's domain. Trim it to what applies. |
-| H9 | [ ] | No tests. Vitest + React Testing Library would be the natural fit with Vite. The best first targets are the pure utils: `filterGroups`, `findMatchingCountry`, `groupSchema`. |
+| H9 | [~] | No tests. Vitest + React Testing Library would be the natural fit with Vite. The best first targets are the pure utils: `filterGroups`, `findMatchingCountry`, `groupSchema`. |
 | H10 | [x] | `useUserLocation.js` has a redundant alias `'Czechia': 'Czechia'` and misplaced comments on `refetchOnMount`/`retry`. |
 
 ### Notes on partly-done items (bug-fix pass, after `86180e9`)
@@ -199,3 +199,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **H5**: `hooks/useFilterCache.js` became `features/groups/utils/filterCache.ts`.
 - **O3 `[~]`**: Separate shared `loginSchema` / `signupSchema` (AuthPage picks one per submit via `authResolver`). Splitting AuthPage into LoginForm/SignupForm components is Stage 11.
 - New: shared schemas tightened validation (`topic`/`platform` are enums, `meeting_link` must be http(s), title/description trimmed), matching the DB CHECK constraints.
+
+### Notes on Stage 3 (Docker + API skeleton)
+- **H9 `[~]`**: Vitest + Supertest are set up for the API (6 tests), and `npm test` runs every workspace's tests. CI runs them on every push and PR. There are no web tests yet.
+- **Bundle**: 244 KB gzip (was 236.7). Adding the API made npm move every workspace to zod 4.6.5, one shared copy. Stage 12's route splitting removes zod from the home page.

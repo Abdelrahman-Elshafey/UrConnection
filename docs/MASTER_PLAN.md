@@ -26,7 +26,7 @@ Audit IDs (B, S, D, O, P, A…) refer to [CODE_AUDIT.md](CODE_AUDIT.md). This pl
 | Sessions | **Server-side sessions in Postgres**, random token in an `httpOnly; Secure; SameSite=Lax` cookie | Simpler and safer than JWT in localStorage: XSS can't read it, and logout really revokes it. |
 | Google login | **`arctic`** (small OAuth 2.0 library) with state + PKCE | You write the flow yourself; the library only handles the protocol details. |
 | Email | **nodemailer**. **Mailpit** catches all mail in dev. Any SMTP provider in prod | See every email locally without sending real mail. |
-| File storage | **MinIO** (S3-compatible) in Docker. Images converted to WebP with **sharp** on the server | Learn the S3 API, which is the same as AWS. Server-side conversion closes S5 for good. |
+| File storage | **S3-compatible storage in Docker, product chosen in Stage 10** (MinIO was the plan, but it reportedly stopped publishing free images in late 2025). Images converted to WebP with **sharp** on the server | Learn the S3 API, which is the same as AWS. Server-side conversion closes S5 for good. |
 | Tests | **Vitest** (both sides) + **Supertest** (API) + React Testing Library | Vite-native and fast. |
 | Logging | **pino** (JSON logs) + request IDs | Production-grade logs from the start. |
 | Containers | **Docker** multi-stage images + **Docker Compose** (dev and prod files) | The core deployment skill. |
@@ -148,7 +148,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 
 ### Stage 3 — Docker dev environment + API skeleton + CI
 **You'll learn:** images vs containers, volumes, networks, Compose, health checks, env validation, the Express request lifecycle, GitHub Actions.
-- `docker-compose.yml`: `postgres` (with a named volume), `mailpit` (UI on :8025), `minio` (console on :9001).
+- `docker-compose.yml`: `postgres` (with a named volume). Services are added in the stage that first uses them: mail catcher in Stage 8, file storage in Stage 10.
 - `api/`: Express 5 + TS, run with `tsx watch` in dev. `config.ts` (zod-validated env), `app.ts`, and `index.ts`. pino logger with request IDs. `GET /api/health` checks the DB connection. Error-handler middleware returning a consistent JSON error shape. `helmet`.
 - Vite dev proxy: `/api` → `http://localhost:3000`, so dev is same-origin too.
 - `.github/workflows/ci.yml`: install → lint → typecheck → test, on every PR.
@@ -188,6 +188,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 
 ### Stage 8 — Email verification + password reset
 **You'll learn:** one-time tokens, expiry, email templates, SMTP, why "if the email exists, we sent a link" is the right message.
+- Add the **Mailpit** service to `docker-compose.yml` (web UI on :8025).
 - `email_tokens` (hashed, 24h verify, 1h reset, single use). Use nodemailer in dev → open Mailpit to see the email.
 - Unverified users can log in but **can't create groups** until they verify (product rule; adjust if you like).
 - Web: a verify-email landing page, plus "Forgot password" and "Reset password" pages.
@@ -201,6 +202,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 
 ### Stage 10 — Profile + avatars on MinIO
 **You'll learn:** multipart uploads (`multer`), validating files by their *content* (not the name), image processing, the S3 API, cache-busting.
+- **First, re-check the storage choice.** MinIO reportedly stopped publishing free Docker images in late 2025. Compare S3-compatible alternatives (e.g. Garage, SeaweedFS) with plain files on a Docker volume served by Caddy, then add the chosen service to `docker-compose.yml`.
 - `PATCH /api/users/me` (shared profile schema). `PUT /api/users/me/avatar`: max 5 MB in → `sharp` → 512px WebP → `avatars/<uid>.webp` in MinIO. `DELETE` removes it.
 - The browser no longer compresses anything, so `browser-image-compression` is removed (P2, O6, S5 all closed).
 - Web: the profile page uses the API. `startEditing` stays (B22 fix).
@@ -278,7 +280,7 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 | 0 Freeze v1 + Supabase hardening | 🟡 | Commits pushed, `main` merged, tag `v1-supabase` pushed (2026-10-08). **Owner: pause the Supabase project, or run the Phase 1 SQL.** |
 | 1 Monorepo + TS foundation | ✅ | `web/` + `packages/shared`, TS 6 strict, `tsc -b`, typescript-eslint, `TOPICS` shared (D5). Bundle unchanged at 237 KB. **Vercel: set Root Directory = `web` before the next deploy from a branch containing this layout.** |
 | 2 Shared schemas + typed data layer | ✅ | Shared: topics, platforms (meta), countries (pre-sorted), group/auth/profile zod schemas. Web data layer (lib, services, hooks, api) is 100% TS, no `any`. Query-key factory. Components still `.jsx` (Stage 11). Bundle 236.7 KB. |
-| 3 Docker dev + API skeleton + CI | ☐ | |
+| 3 Docker dev + API skeleton + CI | ✅ | Postgres 18 in Docker (host port **5433**, because a native Windows Postgres uses 5432). Express 5 API: zod-validated config, pino + request ids, helmet, JSON errors, graceful shutdown, `/api/health`. 6 Vitest/Supertest tests. Vite `/api` proxy. CI workflow. Bundle 244 KB (npm moved zod to 4.6.5 when the API was added). |
 | 4 DB schema + migrations + seed | ☐ | |
 | 5 Groups read API + home/detail switch | ☐ | |
 | 6 Auth core | ☐ | |

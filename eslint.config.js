@@ -45,9 +45,9 @@ export default defineConfig([
     },
   },
 
-  // Config files run in Node.
+  // Config files and the API run in Node.
   {
-    files: ['*.config.{js,ts}', 'web/*.config.{js,ts}'],
+    files: ['*.config.{js,ts}', 'web/*.config.{js,ts}', 'api/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 ])
