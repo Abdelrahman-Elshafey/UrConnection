@@ -157,8 +157,9 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ### Stage 4 — Database schema + migrations + seed
 **You'll learn:** schema design, primary and foreign keys, `CHECK` constraints, indexes, migrations (up/down), `citext`, UUIDs, typed queries.
 - Kysely instance, plus migrations for every table in §2 (the groups constraints carry over from Phase 1). Run with `npm run db:migrate -w api`.
-- Generate DB types (`kysely-codegen`) so every query is typed from the real schema.
+- DB types are **hand-written** in `api/src/db/types.ts` (kysely-codegen was tried, but it pulls in vulnerable dependencies). Database tests insert into and read every table, so the types can't silently drift from the SQL.
 - A seed script with a few users and about 50 groups across countries, for realistic dev data.
+- Database tests (`npm run test:db`) against a separate `*_test` database: migrations, every CHECK constraint, and a check that the shared topic/platform lists match the DB constraints. CI runs them against a Postgres service.
 - **Done when:** `db:migrate` + `db:seed` work from scratch, and `db:reset` rebuilds everything.
 
 ### Stage 5 — Groups API (read) + switch the home and detail pages
@@ -281,7 +282,7 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 | 1 Monorepo + TS foundation | ✅ | `web/` + `packages/shared`, TS 6 strict, `tsc -b`, typescript-eslint, `TOPICS` shared (D5). Bundle unchanged at 237 KB. **Vercel: set Root Directory = `web` before the next deploy from a branch containing this layout.** |
 | 2 Shared schemas + typed data layer | ✅ | Shared: topics, platforms (meta), countries (pre-sorted), group/auth/profile zod schemas. Web data layer (lib, services, hooks, api) is 100% TS, no `any`. Query-key factory. Components still `.jsx` (Stage 11). Bundle 236.7 KB. |
 | 3 Docker dev + API skeleton + CI | ✅ | Postgres 18 in Docker (host port **5433**, because a native Windows Postgres uses 5432). Express 5 API: zod-validated config, pino + request ids, helmet, JSON errors, graceful shutdown, `/api/health`. 6 Vitest/Supertest tests. Vite `/api` proxy. CI workflow. Bundle 244 KB (npm moved zod to 4.6.5 when the API was added). |
-| 4 DB schema + migrations + seed | ☐ | |
+| 4 DB schema + migrations + seed | ✅ | Migration 0001 (users, oauth_accounts, sessions, email_tokens, groups; citext, uuidv7, updated_at trigger, CHECKs, indexes). Kysely + hand-written types. CLI: migrate / rollback / reset / seed (3 users, 60 groups, validated with the shared schema). 44 DB tests incl. shared↔DB drift check; CI runs them. |
 | 5 Groups read API + home/detail switch | ☐ | |
 | 6 Auth core | ☐ | |
 | 7 Groups write + ownership | ☐ | |
