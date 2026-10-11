@@ -5,6 +5,7 @@
  *   reset   undo everything, then re-apply (development only: deletes all data)
  */
 import { isProduction } from "../config";
+import { exitWithDatabaseError } from "./connectionHelp";
 import { db } from "./db";
 import { runMigrations, type MigrationCommand } from "./migrator";
 
@@ -30,7 +31,5 @@ if (results?.length === 0) console.log("Nothing to do: the database is up to dat
 
 await db.destroy(); // close the connections so the process can exit
 
-if (error) {
-  console.error("Migration failed:", error);
-  process.exit(1);
-}
+// Kysely returns failures (including "can't connect") as `error` instead of throwing.
+if (error) exitWithDatabaseError("Migration failed.", error);
