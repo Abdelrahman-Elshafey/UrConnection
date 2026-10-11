@@ -1,4 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { useUser } from "../../auth/hooks/useUser";
+import { useDeleteGroup } from "../hooks/useDeleteGroup";
 import { useGroup } from "../hooks/useGroup";
 import { getPlatform } from "../../../lib/platforms";
 
@@ -6,6 +8,9 @@ export default function GroupDetail() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { data: group, isLoading, error } = useGroup(groupId);
+  // Hooks must run on every render, so they come before the early returns below.
+  const { data: user } = useUser();
+  const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
 
   if (isLoading)
     return (
@@ -37,6 +42,14 @@ export default function GroupDetail() {
     city,
   } = group;
   const platformInfo = getPlatform(platform);
+  // Only decides what to show; the API refuses edits/deletes from anyone else anyway.
+  const isOwner = !!user && user.id === group.user_id;
+
+  const handleDelete = () => {
+    if (window.confirm("Delete this group? This can't be undone.")) {
+      deleteGroup(group.id, { onSuccess: () => navigate("/profile") });
+    }
+  };
   const PlatformIcon = platformInfo.icon;
 
   return (
@@ -108,6 +121,24 @@ export default function GroupDetail() {
                 <svg className="w-6 h-6 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
               </a>
             </div>
+
+            {isOwner && (
+              <div className="mt-10 pt-6 border-t border-gray-100 dark:border-[#1d1d1f] flex flex-wrap gap-4">
+                <Link
+                  to={`/groups/${group.id}/edit`}
+                  className="bg-black dark:bg-white text-white dark:text-black px-8 py-4 rounded-full font-bold text-sm hover:opacity-80 transition-all active:scale-95"
+                >
+                  Edit Group
+                </Link>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="border-2 border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 px-8 py-4 rounded-full font-bold text-sm hover:bg-red-50 dark:hover:bg-red-900/10 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                >
+                  {isDeleting ? "Deleting…" : "Delete Group"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>

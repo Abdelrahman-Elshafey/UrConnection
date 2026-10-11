@@ -12,7 +12,7 @@ export function useDeleteGroup() {
       queryClient.removeQueries({ queryKey: groupKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: groupKeys.all });
     },
-    // Replaced by a toast in Stage 7.
+    // Replaced by a toast in Stage 11 (UI kit).
     onError: (err) => alert(err.message),
   });
 }

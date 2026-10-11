@@ -7,11 +7,11 @@ export function useCreateGroup() {
 
   return useMutation({
     mutationFn: createGroup,
-    onSuccess: () => {
-      // Every cached group list is now outdated: refetch them.
+    onSuccess: (group) => {
+      // The API answered with the new group: cache it for its detail page...
+      queryClient.setQueryData(groupKeys.detail(group.id), group);
+      // ...and refetch every list that might now include it (home lists, "my groups").
       queryClient.invalidateQueries({ queryKey: groupKeys.all });
     },
-    // Replaced by a toast in Stage 7.
-    onError: (err) => alert("Failed to create group: " + err.message),
   });
 }

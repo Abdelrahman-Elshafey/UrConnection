@@ -27,6 +27,14 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
     groups: {
       list: async () => ({ items: [sampleGroup()], nextCursor: null }),
       getById: async (id) => (id === sampleGroup().id ? sampleGroup() : undefined),
+      // Writes need a signed-in owner; they're tested against Postgres (groups.write.db.test.ts).
+      listByOwner: async () => [],
+      create: async () => {
+        throw new Error("fake groups.create not implemented");
+      },
+      getOwned: async () => undefined,
+      updateOwned: async () => undefined,
+      deleteOwned: async () => false,
     },
     // Nobody is signed in: auth flows are tested against real Postgres (auth.db.test.ts).
     users: {

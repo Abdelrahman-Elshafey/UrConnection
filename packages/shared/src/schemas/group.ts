@@ -5,7 +5,7 @@ import { PLATFORM_KEYS, PLATFORM_MAP } from "../platforms";
 /**
  * The fields a user fills in to create a group. Kept as a plain object
  * (no refinements) so it can be extended for the stored row below.
- * Limits match the database CHECK constraints (supabase/migrations, later api/ migrations).
+ * Limits match the database CHECK constraints (api/src/db/migrations/0001_initial_schema.ts).
  */
 const groupFields = z.object({
   topic: z.enum(TOPICS, { error: "Interest is required" }),
@@ -22,11 +22,26 @@ const groupFields = z.object({
     .max(200, "Description is too long (max 200 characters)"),
 });
 
-/** Validates the create-group form (and, from Stage 7, the POST /api/groups body). */
+/** Validates the create/edit group form and the POST /api/groups body. */
 export const createGroupSchema = groupFields.refine(
   (data) => PLATFORM_MAP[data.platform].linkPattern.test(data.meeting_link),
   { message: "Link does not match the selected platform", path: ["meeting_link"] },
 );
+
+/** Fields the owner may change after creating a group. */
+export const EDITABLE_GROUP_FIELDS = ["title", "description", "topic", "country", "city"] as const;
+
+/**
+ * PATCH /api/groups/:id: send only the fields that change (any of EDITABLE_GROUP_FIELDS).
+ * The meeting link is fixed once the group exists, and so is the platform, because the
+ * platform is determined by the link (a WhatsApp link only fits "whatsapp").
+ * `.strict()`: sending meeting_link or platform is a 400 error, not silently ignored,
+ * so a client finds out immediately that it can't change them.
+ */
+export const updateGroupSchema = groupFields
+  .pick({ title: true, description: true, topic: true, country: true, city: true })
+  .partial()
+  .strict();
 
 /** A stored group, as returned by GET /api/groups and GET /api/groups/:id. */
 export const groupSchema = groupFields.extend({
@@ -55,8 +70,12 @@ export const groupListResponseSchema = z.object({
   nextCursor: z.uuid().nullable(),
 });
 
+/** GET /api/users/me/groups: every group the signed-in user owns, newest first. */
+export const myGroupsResponseSchema = z.object({ items: z.array(groupSchema) });
+
 // z.infer turns a schema into a TypeScript type, so the type can never drift from the validation.
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+export type UpdateGroupInput = z.infer<typeof updateGroupSchema>;
 export type Group = z.infer<typeof groupSchema>;
 /** Parsed query (limit always set). */
 export type GroupListQuery = z.infer<typeof groupListQuerySchema>;
@@ -66,3 +85,4 @@ export type GroupListQuery = z.infer<typeof groupListQuerySchema>;
  */
 export type GroupListParams = Partial<Omit<GroupListQuery, "limit">> & { limit?: number };
 export type GroupListResponse = z.infer<typeof groupListResponseSchema>;
+export type MyGroupsResponse = z.infer<typeof myGroupsResponseSchema>;

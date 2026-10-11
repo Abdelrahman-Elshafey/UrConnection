@@ -1,4 +1,4 @@
-import type { Group, GroupListQuery, GroupListResponse } from "@urconnections/shared";
+import type { CreateGroupInput, Group, GroupListQuery, GroupListResponse, UpdateGroupInput } from "@urconnections/shared";
 import type { Kysely, Selectable } from "kysely";
 import type { Database, GroupsTable } from "../../db/types";
 
@@ -9,6 +9,17 @@ import type { Database, GroupsTable } from "../../db/types";
 export interface GroupsRepository {
   list(query: GroupListQuery): Promise<GroupListResponse>;
   getById(id: string): Promise<Group | undefined>;
+  /** All groups owned by `userId`, newest first. */
+  listByOwner(userId: string): Promise<Group[]>;
+  create(userId: string, input: CreateGroupInput): Promise<Group>;
+  /**
+   * Ownership is part of every write query (`WHERE id = $1 AND user_id = $2`):
+   * for someone else's group these find nothing and return undefined / false.
+   */
+  getOwned(id: string, userId: string): Promise<Group | undefined>;
+  /** Only the editable fields: this method can't change meeting_link or platform at all. */
+  updateOwned(id: string, userId: string, values: Required<UpdateGroupInput>): Promise<Group | undefined>;
+  deleteOwned(id: string, userId: string): Promise<boolean>;
 }
 
 // Explicit column list (never `select *`): adding a private column later
@@ -73,6 +84,69 @@ export function createGroupsRepository(db: Kysely<Database>): GroupsRepository {
     async getById(id) {
       const row = await db.selectFrom("groups").select(COLUMNS).where("id", "=", id).executeTakeFirst();
       return row ? toGroup(row) : undefined;
+    },
+
+    async listByOwner(userId) {
+      const rows = await db.selectFrom("groups").select(COLUMNS).where("user_id", "=", userId).orderBy("id", "desc").execute();
+      return rows.map(toGroup);
+    },
+
+    async create(userId, input) {
+      // SECURITY: list the columns explicitly; user_id comes from the session (the
+      // caller), never from the request body.
+      const row = await db
+        .insertInto("groups")
+        .values({
+          user_id: userId,
+          title: input.title,
+          description: input.description,
+          topic: input.topic,
+          platform: input.platform,
+          meeting_link: input.meeting_link,
+          country: input.country,
+          city: input.city,
+        })
+        .returning(COLUMNS)
+        .executeTakeFirstOrThrow();
+      return toGroup(row);
+    },
+
+    async getOwned(id, userId) {
+      const row = await db
+        .selectFrom("groups")
+        .select(COLUMNS)
+        .where("id", "=", id)
+        .where("user_id", "=", userId)
+        .executeTakeFirst();
+      return row ? toGroup(row) : undefined;
+    },
+
+    async updateOwned(id, userId, values) {
+      const row = await db
+        .updateTable("groups")
+        // SECURITY / rule: meeting_link and platform are deliberately absent. They're fixed
+        // after creation, enforced here as well as in updateGroupSchema.
+        .set({
+          title: values.title,
+          description: values.description,
+          topic: values.topic,
+          country: values.country,
+          city: values.city,
+        })
+        .where("id", "=", id)
+        .where("user_id", "=", userId) // SECURITY: only the owner's row can match
+        .returning(COLUMNS)
+        .executeTakeFirst();
+      return row ? toGroup(row) : undefined;
+    },
+
+    async deleteOwned(id, userId) {
+      const result = await db
+        .deleteFrom("groups")
+        .where("id", "=", id)
+        .where("user_id", "=", userId) // SECURITY: only the owner's row can match
+        .executeTakeFirst();
+      return result.numDeletedRows > 0n; // bigint: Postgres row counts can be huge
     },
   };
 }
