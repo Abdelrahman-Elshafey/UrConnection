@@ -1,21 +1,28 @@
 import { randomUUID } from "node:crypto";
+import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
+import { config } from "./config";
 import { logger } from "./lib/logger";
 import { errorHandler, notFound } from "./middleware/errorHandler";
+import { originCheck } from "./middleware/originCheck";
+import { authRouter, type AuthDeps } from "./modules/auth/auth.routes";
+import { loadSession } from "./modules/auth/session.middleware";
 import { groupsRouter, type GroupsDeps } from "./modules/groups/groups.routes";
 import { healthRouter, type HealthDeps } from "./modules/health/health.routes";
+import { usersRouter } from "./modules/users/users.routes";
 
 /** Everything the app needs from the outside world. Tests pass fakes. */
-export type AppDeps = HealthDeps & GroupsDeps;
+export type AppDeps = HealthDeps & GroupsDeps & AuthDeps;
 
 /**
  * Builds the Express app without starting it. index.ts calls listen();
  * tests hand the app straight to Supertest, so no real port or database is needed.
  *
  * Middleware runs top to bottom for every request, like a pipeline:
- * security headers → request logging → JSON body parsing → routes → 404 → error handler.
+ * security headers → request logging → CSRF origin check → body + cookie parsing →
+ * session (req.user) → routes → 404 → error handler.
  */
 export function createApp(deps: AppDeps): Express {
   const app = express();
@@ -44,11 +51,20 @@ export function createApp(deps: AppDeps): Express {
     }),
   );
 
+  // SECURITY: reject state-changing requests from other sites before doing any work.
+  app.use(originCheck(config.APP_ORIGIN));
+
   // Parse JSON request bodies. The size limit stops someone sending a 1 GB body.
   app.use(express.json({ limit: "100kb" }));
+  app.use(cookieParser());
+
+  // Who is this? Sets req.user from the session cookie (if any) for every route below.
+  app.use(loadSession(deps));
 
   app.use("/api/health", healthRouter(deps));
   app.use("/api/groups", groupsRouter(deps));
+  app.use("/api/auth", authRouter(deps));
+  app.use("/api/users", usersRouter(deps));
 
   app.use(notFound);
   app.use(errorHandler); // must be registered last

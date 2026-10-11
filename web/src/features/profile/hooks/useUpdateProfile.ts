@@ -1,14 +1,14 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { updateProfile } from "../../../services/auth.service";
-import { SESSION_QUERY_KEY } from "../../auth/hooks/useUser";
+import { useSetUser } from "../../auth/hooks/useUser";
 
 export function useUpdateProfile() {
-  const queryClient = useQueryClient();
+  const setUser = useSetUser();
 
   return useMutation({
     mutationFn: updateProfile,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-    },
+    // The API answers with the updated user: put it straight into the cache
+    // (no extra request to refetch /me).
+    onSuccess: (user) => setUser(user),
   });
 }

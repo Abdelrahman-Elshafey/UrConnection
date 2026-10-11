@@ -1,87 +1,39 @@
-import type { AuthChangeEvent, Provider, Session } from "@supabase/supabase-js";
-import type { ProfileInput } from "@urconnections/shared";
-import { supabase } from "../lib/supabase";
+import {
+  meResponseSchema,
+  type LoginInput,
+  type ProfileUpdate,
+  type RegisterInput,
+  type User,
+} from "@urconnections/shared";
+import { apiGet, apiSend, apiSendNoContent } from "../lib/apiClient";
 import { clearSavedSearch } from "../features/groups/utils/savedSearch";
 
-const AUTH_REDIRECT_URL = import.meta.env.VITE_AUTH_REDIRECT_URL;
-
-/** Profile values as stored: empty fields are saved as null. */
-export type ProfileUpdate = { [K in keyof ProfileInput]: string | null };
-
-export const signUp = async (email: string, password: string, metadata: Partial<ProfileInput> = {}) => {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        display_name: metadata.displayName,
-        phone_number: metadata.phoneNumber,
-        country: metadata.country,
-        city: metadata.city,
-      },
-    },
-  });
-  if (error) throw error;
-  return data; // { user, session }; session is null when email confirmation is required
-};
-
-export const signInWithPassword = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
-};
-
-export const signInWithOAuth = async (provider: Provider) => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: AUTH_REDIRECT_URL,
-      queryParams: { prompt: "select_account" },
-    },
-  });
-  if (error) throw error;
-  return data;
-};
-
-export const signOut = async (): Promise<void> => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-  // Supabase removes its own session key; only drop app state that is user-specific.
-  clearSavedSearch();
-};
-
-/** Subscribes to auth events. Returns an unsubscribe function. */
-export const onAuthStateChange = (
-  callback: (event: AuthChangeEvent, session: Session | null) => void,
-): (() => void) => {
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(callback);
-  return () => subscription.unsubscribe();
-};
-
-export const getSession = async (): Promise<Session | null> => {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-  if (error) throw error;
-  return session;
-};
-
 /**
- * Updates the signed-in user's profile metadata.
- * Supabase scopes this call to the user's own JWT.
+ * Authentication through our own API (Stage 6). The session lives in an httpOnly
+ * cookie the browser sends automatically: this code never sees or stores the token.
+ * (Google sign-in returns in Stage 9; avatars move to the API in Stage 10.)
  */
-export const updateProfile = async ({ displayName, phoneNumber, country, city }: ProfileUpdate) => {
-  const { data, error } = await supabase.auth.updateUser({
-    data: {
-      display_name: displayName,
-      phone_number: phoneNumber,
-      country,
-      city,
-    },
-  });
-  if (error) throw error;
-  return data;
+
+/** Who is signed in? `null` when nobody is (not an error). */
+export const getMe = async (): Promise<User | null> => (await apiGet("/api/auth/me", meResponseSchema)).user;
+
+export const register = async (input: RegisterInput): Promise<User> => {
+  const { user } = await apiSend("POST", "/api/auth/register", meResponseSchema, input);
+  return user!; // register always returns the new user
+};
+
+export const login = async (input: LoginInput): Promise<User> => {
+  const { user } = await apiSend("POST", "/api/auth/login", meResponseSchema, input);
+  return user!;
+};
+
+export const logout = async (): Promise<void> => {
+  await apiSendNoContent("POST", "/api/auth/logout");
+  clearSavedSearch(); // the next person on this tab starts with fresh filters
+};
+
+/** Update the signed-in user's own profile; returns the updated user. */
+export const updateProfile = async (patch: ProfileUpdate): Promise<User> => {
+  const { user } = await apiSend("PATCH", "/api/users/me", meResponseSchema, patch);
+  return user!;
 };

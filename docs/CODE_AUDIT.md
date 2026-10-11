@@ -69,7 +69,7 @@
 | D6 | [ ] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
 | D7 | [x] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
 | D8 | [ ] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
-| D9 | [ ] | The sign-out handler is duplicated in MainLayout and ProfilePage. | `useSignOut()` mutation hook: signs out, clears the cache, navigates. |
+| D9 | [x] | The sign-out handler is duplicated in MainLayout and ProfilePage. | `useSignOut()` mutation hook: signs out, clears the cache, navigates. |
 | D10 | [ ] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
 | D11 | [ ] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
 | D12 | [ ] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
@@ -213,3 +213,10 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **O1 / B13 / B29**: `useGroupFilters` makes the URL the single source of truth. The 60s filter cache is replaced by a saved-search bookmark, where `""` means "cleared", so the location preset doesn't return.
 - **P4 / P8**: Filtering, search and pagination run in Postgres (indexes from migration 0001). The client no longer downloads the whole table or filters it on every render.
 - **Security**: Search input is passed as a SQL parameter, with LIKE wildcards escaped. Every query param is zod-validated (400 with details). Malformed ids → 404 (never a 500 from a failed uuid cast). The API selects explicit columns only.
+
+### Notes on Stage 6 (own authentication)
+- **D9**: One `useSignOut()` mutation (logout → clear the user cache → go home) is used by MainLayout and ProfilePage.
+- **S10 (v2)**: The password policy is enforced by the API with the same `passwordSchema` the form uses, so it can't be bypassed.
+- **S8 (v2)**: The API adds CSRF protection itself (Origin check + SameSite cookie). helmet sets the API's security headers.
+- **Bug caught by a test**: `register` spread the whole validated body, including the plain-text `password`, into the users insert (TypeScript doesn't flag extra fields in spread objects). Postgres rejected it only because no `password` column exists. Fixed by taking `password` out explicitly; tests check that the stored hash never contains the password.
+- **Known trade-off**: Register answers 409 `email_taken`, revealing that an account exists. Stage 8 (email verification) can change this to a uniform "check your email" response.

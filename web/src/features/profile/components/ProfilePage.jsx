@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useUser } from "../../auth/hooks/useUser";
+import { useSignOut, useUser } from "../../auth/hooks/useUser";
 import { useGetUserGroups } from "../../groups/hooks/useGetUserGroups";
-import { signOut } from "../../../services/auth.service";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import GroupCard from "../../groups/components/GroupCard";
 import ProfileAvatar from "./ProfileAvatar";
@@ -18,8 +17,8 @@ const SELECT_CLS =
   "w-full bg-white dark:bg-[#0a0a0a] px-6 py-4 rounded-2xl outline-none text-base font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white appearance-none cursor-pointer";
 
 export default function ProfilePage() {
-  const { data: session, isLoading: isUserLoading } = useUser();
-  const user = session?.user;
+  const { data: user, isLoading: isUserLoading } = useUser();
+  const { mutate: signOut } = useSignOut();
   const navigate = useNavigate();
 
   const { data: groups, isLoading: isGroupsLoading } = useGetUserGroups(user?.id);
@@ -40,8 +39,8 @@ export default function ProfilePage() {
   } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      displayName: "",
-      phoneNumber: "",
+      display_name: "",
+      phone: "",
       country: "",
       city: "",
     },
@@ -57,28 +56,21 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [saveSuccess]);
 
-  // Populate the form only when editing starts, so session updates
-  // (token refresh, avatar upload) never overwrite unsaved edits.
+  // Populate the form only when editing starts, so later cache updates
+  // never overwrite unsaved edits.
   const startEditing = () => {
     reset({
-      displayName: user?.user_metadata?.display_name || "",
-      phoneNumber: user?.user_metadata?.phone_number || "",
-      country: user?.user_metadata?.country || "",
-      city: user?.user_metadata?.city || "",
+      display_name: user?.display_name ?? "",
+      phone: user?.phone ?? "",
+      country: user?.country ?? "",
+      city: user?.city ?? "",
     });
     setSaveError(null);
     setIsEditing(true);
   };
 
   /* ─── Handlers ─── */
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const handleSignOut = () => signOut();
 
   const handleCancel = () => {
     setIsEditing(false);
@@ -89,13 +81,9 @@ export default function ProfilePage() {
   const onSubmit = (data) => {
     setSaveError(null);
     setSaveSuccess(null);
+    // The form fields are named like the API fields, so the data goes as-is.
     updateProfile(
-      {
-        displayName: data.displayName || null,
-        phoneNumber: data.phoneNumber || null,
-        country: data.country || null,
-        city: data.city || null,
-      },
+      data,
       {
         onSuccess: () => {
           setIsEditing(false);
@@ -199,11 +187,11 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     placeholder="Jane Doe"
-                    {...register("displayName")}
+                    {...register("display_name")}
                     className={INPUT_CLS}
                   />
-                  {errors.displayName && (
-                    <p className="text-red-500 text-xs font-bold ml-1">{errors.displayName.message}</p>
+                  {errors.display_name && (
+                    <p className="text-red-500 text-xs font-bold ml-1">{errors.display_name.message}</p>
                   )}
                 </div>
 
@@ -215,11 +203,11 @@ export default function ProfilePage() {
                   <input
                     type="tel"
                     placeholder="+1 234 567 8900"
-                    {...register("phoneNumber")}
+                    {...register("phone")}
                     className={INPUT_CLS}
                   />
-                  {errors.phoneNumber && (
-                    <p className="text-red-500 text-xs font-bold ml-1">{errors.phoneNumber.message}</p>
+                  {errors.phone && (
+                    <p className="text-red-500 text-xs font-bold ml-1">{errors.phone.message}</p>
                   )}
                 </div>
 
@@ -307,7 +295,7 @@ export default function ProfilePage() {
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Display Name</p>
                     <p className="text-xl font-bold text-black dark:text-white">
-                      {user?.user_metadata?.display_name || "Not set"}
+                      {user?.display_name || "Not set"}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -317,13 +305,13 @@ export default function ProfilePage() {
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Phone Number</p>
                     <p className="text-2xl font-bold text-black dark:text-white">
-                      {user?.user_metadata?.phone_number || "Not set"}
+                      {user?.phone || "Not set"}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Location</p>
                     <p className="text-2xl font-bold text-black dark:text-white">
-                      {[user?.user_metadata?.city, user?.user_metadata?.country].filter(Boolean).join(", ") || "Not set"}
+                      {[user?.city, user?.country].filter(Boolean).join(", ") || "Not set"}
                     </p>
                   </div>
                 </div>

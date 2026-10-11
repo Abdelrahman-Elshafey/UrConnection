@@ -1,25 +1,15 @@
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { useUser } from "../features/auth/hooks/useUser";
-import { signOut } from "../services/auth.service";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { useSignOut, useUser } from "../features/auth/hooks/useUser";
 
 export default function MainLayout() {
-
-  const navigate = useNavigate();
   const location = useLocation();
   const isCreatePage = location.pathname === "/create";
-  const { data: session } = useUser();
-  const user = session?.user;
-  const avatarUrl = user?.user_metadata?.avatar_url;
-  const displayName = user?.user_metadata?.display_name || user?.email || "?";
+  const { data: user } = useUser();
+  const avatarUrl = user?.avatar_url;
+  const displayName = user?.display_name || user?.email || "?";
   const initials = displayName.charAt(0).toUpperCase();
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const { mutate: signOut } = useSignOut();
+  const handleSignOut = () => signOut();
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#000000] transition-colors duration-200 flex flex-col selection:bg-[#0071e3] selection:text-white">

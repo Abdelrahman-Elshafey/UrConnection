@@ -21,7 +21,8 @@ Port 5432 on this machine is taken by a native Windows Postgres, so the Docker o
 Layout: `web/` = React app. Its data layer (`lib/`, `services/`, `features/*/hooks|api|utils`) is TS; components are still `.jsx` until Stage 11 (`allowJs`).
 `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step): topics, platforms (no UI), countries, and **zod schemas + inferred types** (`createGroupSchema`/`Group`, `loginSchema`, `signupSchema`, `profileSchema`). Validation rules live there, not in components.
 `api/` = `@urconnections/api`: Express 5 + TS run by `tsx`, `createApp(deps)` in `app.ts` (tests inject fakes), env validated in `config.ts` (`api/.env`, template `api/.env.example`), errors as `{ error: { code, message } }` via `HttpError`. DB: Kysely (`db` from `api/src/db/db.ts`), **hand-written** table types in `api/src/db/types.ts`, raw-SQL migrations in `api/src/db/migrations/` (never edit one that has run; add the next number and register it in `migrations/index.ts`). `tsx` does not type-check: always run `npm run typecheck`. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
-**Data sources right now:** group reads (home list, detail) go to **our API** via `web/src/lib/apiClient.ts` (`apiGet(path, schema, params)` validates responses with shared schemas). Auth, profile, "my groups", create/delete still use **Supabase** until Stages 6–7. Home filters: `useGroupFilters` (URL is the source of truth) + `useGroups` (infinite query).
+**Data sources right now:** group reads (home list, detail), **auth** (register/login/logout/me) and **profile edits** go to **our API** via `web/src/lib/apiClient.ts` (`apiGet` / `apiSend` / `apiSendNoContent`, responses validated with shared schemas; the session is an httpOnly cookie that JS never touches). Still Supabase until Stage 7: create/delete group and "my groups" (broken in the meantime: no Supabase session). Paused: Google sign-in (Stage 9), avatar upload (Stage 10, `UPLOADS_ENABLED`). Home filters: `useGroupFilters` (URL is the source of truth) + `useGroups` (infinite query).
+**Auth (api):** `loadSession` sets `req.user` from the cookie; put `requireAuth` on routes that need a user; never take a user id from the request body. All non-GET requests need `Origin: APP_ORIGIN` (tests: `.set("Origin", "http://localhost:5173")`). Demo logins after `npm run db:seed`: alice@ / bob@ / carol@example.com, password `Demo123!pass`.
 CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, typecheck, test and build on every push and PR.
 
 ## Stack
@@ -30,7 +31,7 @@ TanStack Query 5 · react-hook-form + zod 4 · Supabase JS v2 · react-icons · 
 
 ## Env vars (gitignored `.env` files; templates committed as `.env.example`)
 - `web/.env`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `VITE_AUTH_REDIRECT_URL` (OAuth redirect).
-- `api/.env`: `NODE_ENV`, `PORT`, `DATABASE_URL`, `LOG_LEVEL` (dev values match docker-compose.yml).
+- `api/.env`: `NODE_ENV`, `PORT`, `DATABASE_URL`, `LOG_LEVEL`, `APP_ORIGIN` (the site's origin for the CSRF check; default http://localhost:5173). Dev values match docker-compose.yml.
 Never print or commit `.env` or `recovery-codes.txt`.
 
 ## Direction (decided 2026-10-08)
@@ -46,9 +47,9 @@ The owner's goal is **learning**: explain the *why* of each new concept while im
 - **[.agents/rules/](.agents/rules/)**: the owner's standing rules (general, auth, style guide). They are the intended standards, and the code doesn't fully meet them yet.
 
 ## Key rules (from .agents/rules, summarized)
-- Components never call `supabase.*` directly. Auth goes through `web/src/services/auth.service.js`, and DB access goes through `features/*/api`.
+- Components never call `supabase.*` or `fetch` directly. Auth goes through `web/src/services/auth.service.ts`, and data access goes through `features/*/api` (both use `lib/apiClient.ts`).
 - Server state uses TanStack Query only. Don't fetch in `useEffect`. Route guards go in RR7 `loader`s, ideally through `queryClient.ensureQueryData`.
-- The global session key is `['session']`. Invalidate it on auth or profile changes.
+- The global session key is `['session']` (value: `User | null`). Update it with `useSetUser` after login/register/profile changes; `useSignOut` sets it to null.
 - Select explicit columns, not `*`. Assume the client is compromised: security lives in Supabase RLS.
 - Style with Tailwind utilities in markup. Extract repeated UI into React components, not `@apply`.
 - Design language: "Aspirational Minimalism" (Apple-like). Accent `#0071e3`, black/white with `#f5f5f7`/`#1d1d1f` bands, light and dark via `prefers-color-scheme` (Tailwind `dark:`). Typography is Inter with huge, tight headlines.

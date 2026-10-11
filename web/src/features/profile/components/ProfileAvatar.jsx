@@ -2,6 +2,10 @@ import { useRef, useState } from "react";
 import { useUploadAvatar, useRemoveAvatar } from "../hooks/useAvatar";
 import { AVATAR_MIME_TYPES } from "../../../services/storage.service";
 
+// Avatar storage moves from Supabase to our API in Stage 10. Until then, uploading
+// is switched off (the Supabase upload needs a Supabase login, which no longer exists).
+const UPLOADS_ENABLED = false;
+
 /**
  * ProfileAvatar — A premium, interactive avatar component.
  *
@@ -18,8 +22,8 @@ export default function ProfileAvatar({ user }) {
   const { mutate: upload, isPending: isUploading } = useUploadAvatar();
   const { mutate: remove, isPending: isRemoving } = useRemoveAvatar();
 
-  const avatarUrl = user?.user_metadata?.avatar_url;
-  const displayName = user?.user_metadata?.display_name || user?.email || "?";
+  const avatarUrl = user?.avatar_url;
+  const displayName = user?.display_name || user?.email || "?";
   const initials = displayName.charAt(0).toUpperCase();
   const isBusy = isUploading || isRemoving;
 
@@ -78,7 +82,7 @@ export default function ProfileAvatar({ user }) {
         )}
 
         {/* Hover overlay — only when idle */}
-        {!isBusy && (
+        {UPLOADS_ENABLED && !isBusy && (
           <button
             onClick={() => fileInputRef.current?.click()}
             className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer"
@@ -116,7 +120,11 @@ export default function ProfileAvatar({ user }) {
         className="hidden"
       />
 
-      {avatarUrl && (
+      {!UPLOADS_ENABLED && (
+        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">Photo upload is coming back soon.</p>
+      )}
+
+      {UPLOADS_ENABLED && avatarUrl && (
         <>
           <button
             onClick={handleRemove}

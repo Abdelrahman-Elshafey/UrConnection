@@ -20,11 +20,19 @@ export {
   type GroupListParams,
   type GroupListResponse,
 } from "./schemas/group";
-export { profileSchema, type ProfileInput } from "./schemas/profile";
+export {
+  profileSchema,
+  profileUpdateSchema,
+  type ProfileInput,
+  type ProfileUpdate,
+} from "./schemas/profile";
 export {
   loginSchema,
+  registerSchema,
   signupSchema,
   passwordSchema,
   type LoginInput,
+  type RegisterInput,
   type SignupInput,
 } from "./schemas/auth";
+export { userSchema, meResponseSchema, type User, type MeResponse } from "./schemas/user";
