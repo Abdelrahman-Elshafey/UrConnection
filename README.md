@@ -30,10 +30,12 @@ cp web/.env.example web/.env     # then fill in your Supabase URL, key and redir
 cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml
 npm run db:up                    # start Postgres in Docker (127.0.0.1:5433)
 npm run db:migrate               # create the tables
-npm run db:seed                  # optional: 3 demo users and 60 demo groups
+npm run db:seed                  # optional: demo users and groups
 npm run dev                      # web on http://localhost:5173, API on http://localhost:3000
 ```
 Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
+
+**Troubleshooting:** `Can't reach Postgres at localhost:5433` (or `ECONNREFUSED`) means the database container isn't running, usually because Docker Desktop isn't started (it doesn't start by itself after a reboot unless you enable *Settings → General → Start Docker Desktop when you sign in*). Start Docker Desktop, then run `npm run db:up`.
 
 | Command | What it does |
 |---|---|

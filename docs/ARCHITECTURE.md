@@ -33,7 +33,8 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/db/migrations/        # 0001_initial_schema.ts (raw SQL up/down) + index.ts (explicit ordered list)
   src/db/migrator.ts        # runMigrations(db, latest | down | reset), shared by CLI and tests
   src/db/migrate.ts         # CLI behind npm run db:migrate / db:rollback / db:reset (reset refused in production)
-  src/db/seed.ts            # CLI behind npm run db:seed: truncates, inserts 3 users + 60 groups (refused in production)
+  src/db/connectionHelp.ts  # explainDatabaseError(): plain-language hints for DB down / wrong password / no schema (CLI scripts)
+  src/db/seed.ts            # CLI behind npm run db:seed: truncates, inserts 3 users + GROUP_COUNT groups (refused in production)
   src/db/schema.db.test.ts  # 44 DB tests: migrations, CHECKs, citext, uuidv7, trigger, cascade, shared↔DB drift
   src/db/test/globalSetup.ts  # creates the *_test database if missing; refuses non-_test names
   src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
