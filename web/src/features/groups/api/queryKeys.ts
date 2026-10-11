@@ -10,7 +10,7 @@ export const groupKeys = {
   // The filters are part of the key: each combination is cached separately, so going
   // back to a previous filter shows its results instantly.
   list: (filters: Omit<GroupListParams, "cursor" | "limit">) => [...groupKeys.lists(), filters] as const,
-  byUserRoot: () => [...groupKeys.all, "user"] as const,
-  byUser: (userId: string) => [...groupKeys.byUserRoot(), userId] as const,
+  // The signed-in user's own groups. Removed on sign-out (see useSignOut).
+  mine: () => [...groupKeys.all, "mine"] as const,
   detail: (id: string) => [...groupKeys.all, "detail", id] as const,
 };

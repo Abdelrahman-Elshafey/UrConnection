@@ -11,10 +11,15 @@ export {
 export { COUNTRIES_CITIES, COUNTRY_LIST, getCities, isCountry, type Country } from "./countries";
 export {
   createGroupSchema,
+  updateGroupSchema,
+  EDITABLE_GROUP_FIELDS,
   groupSchema,
+  myGroupsResponseSchema,
   groupListQuerySchema,
   groupListResponseSchema,
   type CreateGroupInput,
+  type UpdateGroupInput,
+  type MyGroupsResponse,
   type Group,
   type GroupListQuery,
   type GroupListParams,

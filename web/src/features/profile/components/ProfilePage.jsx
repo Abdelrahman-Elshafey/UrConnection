@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSignOut, useUser } from "../../auth/hooks/useUser";
-import { useGetUserGroups } from "../../groups/hooks/useGetUserGroups";
+import { useMyGroups } from "../../groups/hooks/useMyGroups";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import GroupCard from "../../groups/components/GroupCard";
 import ProfileAvatar from "./ProfileAvatar";
@@ -21,7 +21,7 @@ export default function ProfilePage() {
   const { mutate: signOut } = useSignOut();
   const navigate = useNavigate();
 
-  const { data: groups, isLoading: isGroupsLoading } = useGetUserGroups(user?.id);
+  const { data: groups, isLoading: isGroupsLoading } = useMyGroups(!!user);
   const { mutate: updateProfile, isPending: isSaving } = useUpdateProfile();
 
   /* ─── Edit mode state ─── */
@@ -357,7 +357,7 @@ export default function ProfilePage() {
           ) : groups?.length > 0 ? (
             <div className="grid grid-cols-1 mx-4 md:grid-cols-2 place-items-center lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
               {groups.map((group) => (
-                <GroupCard key={group.id} group={group} canDelete />
+                <GroupCard key={group.id} group={group} />
               ))}
             </div>
           ) : (

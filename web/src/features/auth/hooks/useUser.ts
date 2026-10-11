@@ -35,7 +35,7 @@ export function useSignOut() {
     onSettled: () => {
       // Even if the request failed (offline), forget the user locally.
       queryClient.setQueryData(SESSION_QUERY_KEY, null);
-      queryClient.removeQueries({ queryKey: groupKeys.byUserRoot() });
+      queryClient.removeQueries({ queryKey: groupKeys.mine() });
       navigate("/");
     },
   });

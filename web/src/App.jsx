@@ -7,6 +7,7 @@ import MainLayout from "./GenealComponents/MainLayout";
 import GroupList from "./features/groups/components/GroupList";
 import CreateGroupForm from "./features/groups/components/CreateGroupForm";
 import GroupDetail from "./features/groups/components/GroupDetail";
+import EditGroupPage from "./features/groups/components/EditGroupPage";
 import AuthPage from "./features/auth/components/AuthPage";
 import ProfilePage from "./features/profile/components/ProfilePage";
 import RootLayout from "./GenealComponents/RootLayout";
@@ -49,6 +50,11 @@ const router = createBrowserRouter([
           {
             path: "groups/:groupId",
             element: <GroupDetail />,
+          },
+          {
+            path: "groups/:groupId/edit",
+            element: <EditGroupPage />,
+            loader: requireAuth,
           },
           {
             path: "create",

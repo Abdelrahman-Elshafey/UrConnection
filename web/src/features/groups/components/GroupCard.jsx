@@ -1,13 +1,16 @@
 import { Link } from "react-router-dom";
+import { useUser } from "../../auth/hooks/useUser";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 import { getPlatform } from "../../../lib/platforms";
 
 /**
- * @param {boolean} canDelete - Show the delete control. Only pass true for the
- *   current user's own groups (RLS still enforces ownership server-side).
+ * One group in a grid. The owner also sees Edit and Delete. That's only about what
+ * to show: the API itself refuses edits and deletes from anyone else.
  */
-export default function GroupCard({ group, canDelete = false }) {
+export default function GroupCard({ group }) {
   const { id, title, description, topic, country, city, platform } = group;
+  const { data: user } = useUser();
+  const isOwner = !!user && user.id === group.user_id;
 
   const { mutate: deleteGroup, isPending } = useDeleteGroup();
   const platformInfo = getPlatform(platform);
@@ -31,30 +34,39 @@ export default function GroupCard({ group, canDelete = false }) {
           )}
         </div>
 
-        {canDelete && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              if (window.confirm("Remove this group?")) deleteGroup(id);
-            }}
-            disabled={isPending}
-            aria-label="Remove group"
-            className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 cursor-pointer"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        {isOwner && (
+          <div className="flex items-center gap-1">
+            <Link
+              to={`/groups/${id}/edit`}
+              aria-label="Edit group"
+              className="text-gray-300 dark:text-gray-600 hover:text-[#0071e3] transition-colors p-1"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </Link>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (window.confirm("Remove this group?")) deleteGroup(id);
+              }}
+              disabled={isPending}
+              aria-label="Remove group"
+              className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 cursor-pointer"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 

@@ -9,6 +9,7 @@ Find study and interest groups near you, or online. Browse groups by topic, coun
 ## Features
 - **Discover groups**: search, filter by topic / country / city / platform, with your country and city pre-selected from your location
 - **Create groups**: validated form; the meeting link must match the chosen platform
+- **Manage your groups**: only the creator can edit (title, description, topic, location) or delete a group; the link and platform stay fixed
 - **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies); Google sign-in returns in a later stage
 - **Profile**: edit your details and upload an avatar (compressed in the browser; JPEG/PNG/WebP only)
 - Light and dark mode (follows the system), responsive layout

@@ -1,6 +1,6 @@
 # Architecture — UrConnections
 
-> **Current as of Stage 6** (branch `stage-06-auth`). Updated at the end of every stage (see MASTER_PLAN.md §3).
+> **Current as of Stage 7** (branch `stage-07-groups-write`). Updated at the end of every stage (see MASTER_PLAN.md §3).
 > This file describes the code **as it is now**. The target layout is in MASTER_PLAN.md §2. Line numbers drift, so search by symbol name.
 
 ## 1. Folder map
@@ -45,10 +45,11 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
   src/middleware/originCheck.ts        # CSRF: non-GET requests must have Origin == APP_ORIGIN, else 403 forbidden_origin
   src/modules/health/health.routes.ts  # GET /api/health → 200 {ok,db:"up"} or 503 {ok:false,db:"down"}
-  src/modules/groups/groups.repository.ts  # GroupsRepository interface + Kysely implementation (filters, search, cursor paging)
-  src/modules/groups/groups.routes.ts      # GET /api/groups, GET /api/groups/:id (validated with shared schemas)
+  src/modules/groups/groups.repository.ts  # list / getById / listByOwner / create / getOwned / updateOwned (editable fields only) / deleteOwned
+  src/modules/groups/groups.routes.ts      # GET list + detail (public); POST, PATCH, DELETE (requireAuth, owner only, others → 404)
   src/modules/groups/groups.routes.test.ts # HTTP layer with a fake repository: validation, 400/404, response shape
   src/modules/groups/groups.db.test.ts     # real Postgres: every filter, search escaping, pagination, detail
+  src/modules/groups/groups.write.db.test.ts  # two users: create/edit/delete ownership, fixed link/platform, my groups
   src/modules/auth/passwords.ts            # argon2id hashPassword / verifyPassword + DUMMY_HASH (timing-safe login)
   src/modules/auth/tokens.ts               # newSessionToken() (32 random bytes) + hashToken() (sha256 hex)
   src/modules/auth/cookies.ts              # session cookie: sid / __Host-sid, httpOnly, SameSite=Lax, Secure in prod; TTL 30d, renew <15d
@@ -57,15 +58,15 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/modules/auth/auth.routes.ts          # POST register / login / logout, GET me; rate limits; session rotation
   src/modules/auth/auth.db.test.ts         # full flow with real Postgres + argon2 (cookie flags, hashing, 409/401/429, expiry)
   src/modules/users/users.repository.ts    # findForLogin / create (EmailTakenError) / updateProfile; USER_COLUMNS never include password_hash
-  src/modules/users/users.routes.ts        # PATCH /api/users/me (requireAuth; the user comes from the session, never the request)
+  src/modules/users/users.routes.ts        # PATCH /api/users/me + GET /api/users/me/groups (requireAuth; "me" always from the session)
 
 packages/shared/            # @urconnections/shared: TS source imported directly (no build step)
   src/index.ts              # public exports (import only from "@urconnections/shared")
   src/topics.ts             # TOPICS (as const) + Topic type
   src/platforms.ts          # PLATFORMS: key, label, linkPattern (RegExp), placeholder; PLATFORM_KEYS/MAP, isPlatformKey
   src/countries.ts          # COUNTRIES_CITIES (stored pre-sorted), COUNTRY_LIST, getCities(), isCountry()
-  src/schemas/group.ts      # createGroupSchema (input), groupSchema (API group, created_at ISO), groupListQuerySchema,
-                            # groupListResponseSchema ({ items, nextCursor }); types Group, GroupListQuery/Params/Response
+  src/schemas/group.ts      # createGroupSchema (input), updateGroupSchema (strict: EDITABLE_GROUP_FIELDS only), groupSchema,
+                            # groupListQuerySchema, groupListResponseSchema, myGroupsResponseSchema; matching types
   src/schemas/auth.ts       # loginSchema, registerSchema (API body), signupSchema (form: + confirmPassword), passwordSchema
   src/schemas/user.ts       # userSchema (API user, never a hash) + meResponseSchema ({ user | null }); User type
   src/schemas/profile.ts    # profileFields (display_name, phone, country, city) → profileSchema (form) + profileUpdateSchema (PATCH)
@@ -99,21 +100,24 @@ web/                        # the React app (Vite)
         components/AuthPage.jsx       # login + signup via our API; authResolver picks loginSchema/signupSchema; Google button hidden until Stage 9
         hooks/useUser.ts              # SESSION_QUERY_KEY, sessionQueryOptions (GET /api/auth/me), useUser, useSetUser, useSignOut
       groups/
-        api/groupsApi.ts              # API: getGroups(params), getGroupById · Supabase until Stage 7: getUserGroups, createGroup, deleteGroup
-        api/queryKeys.ts              # groupKeys factory: all / lists / list(filters) / byUserRoot / byUser / detail
+        api/groupsApi.ts              # all via our API: getGroups, getGroupById, getMyGroups, createGroup, updateGroup, deleteGroup
+        api/queryKeys.ts              # groupKeys factory: all / lists / list(filters) / mine / detail
         hooks/useGroups.ts            # useInfiniteQuery over getGroups: pages + fetchNextPage, keepPreviousData
         hooks/useGroupFilters.ts      # filters from/to the URL; saved search; one-time location preset
-        hooks/useGetUserGroups.ts     # groupKeys.byUser(id), enabled once id is known
+        hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (enabled when signed in)
+        hooks/useUpdateGroup.ts       # PATCH → cache the group's detail + invalidate lists
         hooks/useGroup.ts             # groupKeys.detail(id), via the API
-        hooks/useCreateGroup.ts       # mutation → invalidate groupKeys.all; alert() on error (toast in Stage 7)
-        hooks/useDeleteGroup.ts       # mutation → remove detail, invalidate groupKeys.all; alert() on error
+        hooks/useCreateGroup.ts       # POST → cache the new group's detail + invalidate lists (form shows errors)
+        hooks/useDeleteGroup.ts       # DELETE → remove detail, invalidate lists; alert() on error (toast in Stage 11)
         hooks/useUserLocation.ts      # ['userLocation']: ipapi.co, localStorage cache with 7-day TTL, never throws
         utils/savedSearch.ts          # read/save/clearSavedSearch(): last home search per tab ("" = user cleared filters)
         components/GroupList.jsx      # home page: FilterBar + server-filtered grid + Load more
         components/FilterBar.jsx      # hero search (uncontrolled input) + sticky selects + topic pills
-        components/GroupCard.jsx      # card: topic/platform badges, delete (X) only when `canDelete`, Connect / View Details
-        components/GroupDetail.jsx    # /groups/:groupId
-        components/CreateGroupForm.jsx # /create, validated by createGroupSchema
+        components/GroupCard.jsx      # card: badges, Connect / View Details; owner (user.id === group.user_id) also sees Edit + Delete
+        components/GroupDetail.jsx    # /groups/:groupId; owner sees Edit Group / Delete Group
+        components/GroupForm.jsx      # shared create/edit form (edit: platform + link read-only)
+        components/EditGroupPage.jsx  # /groups/:groupId/edit (requireAuth); non-owners see Not Found
+        components/CreateGroupForm.jsx # /create: GroupForm mode="create" → POST, then opens the new group
       profile/
         components/ProfilePage.jsx    # /profile: read/edit form (profileSchema) + the user's groups grid
         components/ProfileAvatar.jsx  # avatar display; upload/remove switched off (UPLOADS_ENABLED) until Stage 10
@@ -131,7 +135,8 @@ web/                        # the React app (Vite)
   - `GET /api/groups?query&topic&country&city&platform&cursor&limit`: newest first, `{ items, nextCursor }`. limit 1–50 (default 24); bad values → 400 with `details`
   - `GET /api/groups/:id`: one group; unknown or malformed id → 404
   - `POST /api/auth/register` → 201 `{ user }` + session cookie (409 email_taken, 400 policy) · `POST /api/auth/login` → 200 `{ user }` (401 invalid_credentials, 429) · `POST /api/auth/logout` → 204 · `GET /api/auth/me` → `{ user | null }` (no-store)
-  - `PATCH /api/users/me` → `{ user }` (401 without a session)
+  - `PATCH /api/users/me` → `{ user }` (401 without a session) · `GET /api/users/me/groups` → `{ items }`
+  - `POST /api/groups` → 201 group (owner = session user; a body `user_id` is ignored) · `PATCH /api/groups/:id` → group (title, description, topic, country, city; meeting_link/platform → 400) · `DELETE /api/groups/:id` → 204. Writes need a session (401). **Not your group → 404**, the same as a missing one.
 - **Pagination:** cursor = id of the last item. uuidv7 ids sort by creation time, so the next page is `where id < cursor order by id desc limit n+1` (the extra row says whether more exist).
 - **Database workflow:** `npm run db:up` (container) → `npm run db:migrate` (tables) → `npm run db:seed` (demo data). `npm run db:reset` rebuilds from scratch. `npm run test:db` runs the DB tests in the separate `urconnections_test` database, so dev data is never touched.
 
@@ -142,6 +147,7 @@ RootLayout (no path)
 ├── "/"  MainLayout
 │   ├── index              GroupList
 │   ├── groups/:groupId    GroupDetail
+│   ├── groups/:groupId/edit  EditGroupPage  loader: requireAuth
 │   ├── create             CreateGroupForm   loader: requireAuth  (redirect /login if no session)
 │   └── profile            ProfilePage       loader: requireAuth
 └── "login"                AuthPage          loader: redirectIfAuth (redirect / if session)
@@ -156,9 +162,9 @@ RootLayout (no path)
 | Key | Defined in | Fetches | Invalidated by |
 |---|---|---|---|
 | `['session']` (`SESSION_QUERY_KEY`) | `useUser` (`sessionQueryOptions`) | `GET /api/auth/me` → `User \| null`, `staleTime: Infinity` | set directly by login/register (`useSetUser`), profile update, and sign-out (`null`) |
-| `['groups','list',filters]` (`groupKeys.list(filters)`) | `useGroups` (infinite) | pages from `GET /api/groups` | create/delete (`groupKeys.all`) |
-| `['groups','user',id]` (`groupKeys.byUser`) | `useGetUserGroups` | groups where `user_id = id` (**Supabase until Stage 7**) | create/delete; removed on sign-out |
-| `['groups','detail',id]` (`groupKeys.detail`) | `useGroup` | `GET /api/groups/:id` | create/delete (removed on its own delete) |
+| `['groups','list',filters]` (`groupKeys.list(filters)`) | `useGroups` (infinite) | pages from `GET /api/groups` | create/edit/delete (`groupKeys.all`) |
+| `['groups','mine']` (`groupKeys.mine()`) | `useMyGroups` | `GET /api/users/me/groups` | create/edit/delete (`groupKeys.all`); removed on sign-out |
+| `['groups','detail',id]` (`groupKeys.detail`) | `useGroup` | `GET /api/groups/:id` | set by create/edit; removed on its own delete |
 | `['userLocation']` | `useUserLocation` | ipapi.co (localStorage-cached, 7-day TTL) | never (staleTime ∞) |
 
 `QueryClient` (`web/src/lib/queryClient.ts`) defaults: `staleTime: 60_000`, `refetchOnWindowFocus: false`, retry 3.
@@ -196,7 +202,7 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - Every URL change is also saved as the tab's **saved search** (`utils/savedSearch.ts`, sessionStorage, no expiry). On a visit to `/` without params: a saved search is restored; a saved `""` (user cleared) stays empty; otherwise the detected location is applied once.
 - `useGroups(apiParams)` = `useInfiniteQuery` keyed by the filters. The server filters and paginates; **Load more** calls `fetchNextPage`. `keepPreviousData` keeps old results visible while new filters load.
 - The saved search is cleared on sign-in and sign-out.
-- **Transitional (until Stage 7):** create/delete group and profile "my groups" still call Supabase, which no longer has a session, so they fail or stay empty until Stage 7 moves them to the API.
+- **Ownership (Stage 7):** every group has exactly one owner (`groups.user_id`, NOT NULL, FK to users). Create/edit/delete go through the API, which takes the owner from the session and checks it inside the SQL. The UI only *shows* Edit/Delete to the owner.
 
 ## 4. UI conventions (current reality)
 - All styling is inline Tailwind class strings, and many are long and duplicated: inputs, labels, spinners, back buttons, CTA pills. Only `ProfilePage` extracts `INPUT_CLS`/`SELECT_CLS` constants.
