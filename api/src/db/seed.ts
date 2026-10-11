@@ -15,6 +15,7 @@ import { sql } from "kysely";
 import { isProduction } from "../config";
 import { exitWithDatabaseError } from "./connectionHelp";
 import { db } from "./db";
+import { hashPassword } from "../modules/auth/passwords";
 import type { NewGroupRow, NewUser } from "./types";
 
 // SECURITY / safety: the seed deletes everything first.
@@ -24,29 +25,34 @@ if (isProduction) {
 }
 
 const USERS: NewUser[] = [
-  // password_hash stays null until Stage 6 adds passwords (these accounts can't log in yet).
+  // All demo users share DEMO_PASSWORD (hashed below). Development data only.
   {
     email: "alice@example.com",
-    password_hash: null,
+    password_hash: "", // set below
     display_name: "Alice",
     country: "Egypt",
     city: "Cairo",
   },
   {
     email: "bob@example.com",
-    password_hash: null,
+    password_hash: "", // set below
     display_name: "Bob",
     country: "Germany",
     city: "Berlin",
   },
   {
     email: "carol@example.com",
-    password_hash: null,
+    password_hash: "", // set below
     display_name: "Carol",
     country: "Brazil",
     city: "São Paulo",
   },
 ];
+
+/** Development-only password for every demo user (meets the password policy). */
+const DEMO_PASSWORD = "Demo123!pass";
+const demoHash = await hashPassword(DEMO_PASSWORD);
+for (const user of USERS) user.password_hash = demoHash;
 
 const COUNTRIES = [
   "Egypt",
@@ -130,6 +136,7 @@ try {
     countRows("groups"),
   ]);
   console.log(`✔ Seeded ${users.count} users and ${groupsInDb.count} groups.`);
+  console.log(`  Sign in as ${USERS.map((u) => u.email).join(", ")} with password: ${DEMO_PASSWORD}`);
 
 } catch (err) {
   // Unreachable database, wrong password, missing tables: explain in plain words.

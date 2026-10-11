@@ -9,7 +9,7 @@ Find study and interest groups near you, or online. Browse groups by topic, coun
 ## Features
 - **Discover groups**: search, filter by topic / country / city / platform, with your country and city pre-selected from your location
 - **Create groups**: validated form; the meeting link must match the chosen platform
-- **Accounts**: email + password sign-up and login, Google sign-in
+- **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies); Google sign-in returns in a later stage
 - **Profile**: edit your details and upload an avatar (compressed in the browser; JPEG/PNG/WebP only)
 - Light and dark mode (follows the system), responsive layout
 
@@ -30,7 +30,7 @@ cp web/.env.example web/.env     # then fill in your Supabase URL, key and redir
 cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml
 npm run db:up                    # start Postgres in Docker (127.0.0.1:5433)
 npm run db:migrate               # create the tables
-npm run db:seed                  # optional: demo users and groups
+npm run db:seed                  # optional: demo users and groups (log in as alice@example.com / Demo123!pass)
 npm run dev                      # web on http://localhost:5173, API on http://localhost:3000
 ```
 Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
@@ -53,7 +53,7 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 ## Project structure
 ```
 web/              React app (Vite)
-api/              Express 5 API (TypeScript): /api/health, /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
+api/              Express 5 API (TypeScript): auth (sessions, argon2id), /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
 packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries
 docker-compose.yml  development services (Postgres)
 docs/             architecture, code audit, master plan, security runbook

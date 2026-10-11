@@ -28,6 +28,21 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       list: async () => ({ items: [sampleGroup()], nextCursor: null }),
       getById: async (id) => (id === sampleGroup().id ? sampleGroup() : undefined),
     },
+    // Nobody is signed in: auth flows are tested against real Postgres (auth.db.test.ts).
+    users: {
+      findForLogin: async () => undefined,
+      create: async () => {
+        throw new Error("fake users.create not implemented");
+      },
+      updateProfile: async () => undefined,
+    },
+    sessions: {
+      create: async () => {},
+      findValid: async () => undefined,
+      extend: async () => {},
+      delete: async () => {},
+      deleteExpired: async () => 0,
+    },
     ...overrides,
   };
 }

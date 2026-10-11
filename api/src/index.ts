@@ -2,11 +2,29 @@ import { createApp } from "./app";
 import { config } from "./config";
 import { db } from "./db/db";
 import { checkDatabase, pool } from "./db/pool";
+import { createSessionsRepository } from "./modules/auth/sessions.repository";
 import { createGroupsRepository } from "./modules/groups/groups.repository";
+import { createUsersRepository } from "./modules/users/users.repository";
 import { logger } from "./lib/logger";
 
 // The real dependencies. Tests build the app with fakes instead.
-const app = createApp({ checkDatabase, groups: createGroupsRepository(db) });
+const sessions = createSessionsRepository(db);
+const app = createApp({
+  checkDatabase,
+  groups: createGroupsRepository(db),
+  users: createUsersRepository(db),
+  sessions,
+});
+
+// Housekeeping: delete expired sessions at startup and every 6 hours.
+// unref(): this timer alone shouldn't keep the process alive during shutdown.
+const cleanSessions = () =>
+  sessions
+    .deleteExpired()
+    .then((n) => n > 0 && logger.info(`removed ${n} expired sessions`))
+    .catch((err) => logger.warn({ err }, "session cleanup failed"));
+void cleanSessions();
+setInterval(cleanSessions, 6 * 60 * 60 * 1000).unref();
 
 const server = app.listen(config.PORT, () => {
   logger.info(`API listening on http://localhost:${config.PORT} (${config.NODE_ENV})`);

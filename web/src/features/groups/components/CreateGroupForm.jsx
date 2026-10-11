@@ -14,8 +14,7 @@ function FieldError({ error }) {
 export default function CreateGroupForm() {
   const navigate = useNavigate();
   const { mutate, isPending } = useCreateGroup();
-  const { data: session } = useUser();
-  const user = session?.user;
+  const { data: user } = useUser();
 
   const {
     register,

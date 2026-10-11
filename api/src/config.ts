@@ -15,6 +15,9 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000), // env values are strings; coerce turns "3000" into 3000
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/, error: "DATABASE_URL must be a postgres:// URL" }),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  // The site's own origin (scheme + host + port). State-changing requests from any
+  // other origin are rejected (CSRF protection). Production: e.g. https://urconnections.example
+  APP_ORIGIN: z.url().default("http://localhost:5173"),
 });
 
 const parsed = envSchema.safeParse(process.env);

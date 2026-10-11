@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  signInWithPassword,
-  signUp,
-  signInWithOAuth,
-} from "../../../services/auth.service";
+import { login, register as registerAccount } from "../../../services/auth.service";
 import { clearSavedSearch } from "../../groups/utils/savedSearch";
-import { SESSION_QUERY_KEY } from "../hooks/useUser";
+import { useSetUser } from "../hooks/useUser";
 import { COUNTRY_LIST, getCities, loginSchema, signupSchema } from "@urconnections/shared";
+
+// Google sign-in was Supabase's. It comes back in Stage 9, built on our own API.
+const GOOGLE_SIGN_IN_ENABLED = false;
 
 // Login and signup have separate shared schemas (audit O3). The form keeps an
 // `isLogin` value, and this resolver validates with the matching schema each time.
@@ -20,16 +18,15 @@ const signupResolver = zodResolver(signupSchema);
 const authResolver = (values, context, options) =>
   (values.isLogin ? loginResolver : signupResolver)(values, context, options);
 
-const EMPTY_FORM = { email: "", password: "", confirmPassword: "", displayName: "", phoneNumber: "", country: "", city: "" };
+const EMPTY_FORM = { email: "", password: "", confirmPassword: "", display_name: "", phone: "", country: "", city: "" };
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState("");
-  const [authInfo, setAuthInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const setUser = useSetUser();
 
   const {
     register,
@@ -50,50 +47,34 @@ export default function AuthPage() {
     const newMode = !isLogin;
     setIsLogin(newMode);
     setAuthError("");
-    setAuthInfo("");
     reset({ ...EMPTY_FORM, isLogin: newMode });
   };
 
   const onSubmit = async (data) => {
     setIsLoading(true);
     setAuthError("");
-    setAuthInfo("");
     try {
-      const result = isLogin
-        ? await signInWithPassword(data.email, data.password)
-        : await signUp(data.email, data.password, {
-            displayName: data.displayName,
-            phoneNumber: data.phoneNumber,
+      // The API sets the session cookie and answers with the user.
+      const user = isLogin
+        ? await login({ email: data.email, password: data.password })
+        : await registerAccount({
+            email: data.email,
+            password: data.password,
+            display_name: data.display_name,
+            phone: data.phone,
             country: data.country,
             city: data.city,
           });
 
-      // Sign-up with email confirmation enabled returns no session yet.
-      if (!result.session) {
-        setAuthInfo("Account created. Check your email to confirm it, then sign in.");
-        setIsLogin(true);
-        reset({ ...EMPTY_FORM, email: data.email, isLogin: true });
-        return;
-      }
-
-      // Prime the cache so the route loaders see the new session immediately.
-      queryClient.setQueryData(SESSION_QUERY_KEY, result.session);
-      // Drop filters cached by a previous visitor of this tab.
+      // Put the user in the cache, so the nav bar and route guards know at once.
+      setUser(user);
+      // Drop filters saved by a previous visitor of this tab.
       clearSavedSearch();
       navigate("/");
     } catch (error) {
       setAuthError(error.message || "An error occurred during authentication.");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleOAuth = async (provider) => {
-    try {
-      clearSavedSearch();
-      await signInWithOAuth(provider);
-    } catch (error) {
-      setAuthError(error.message || `Failed to sign in with ${provider}.`);
     }
   };
 
@@ -144,14 +125,6 @@ export default function AuthPage() {
           </div>
         )}
 
-        {authInfo && (
-          <div className="mb-8 p-4 bg-[#0071e3]/5 border border-[#0071e3]/20 rounded-2xl text-center">
-            <p className="text-xs font-bold text-[#0071e3] tracking-wide">
-              {authInfo}
-            </p>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mb-10">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
@@ -179,7 +152,7 @@ export default function AuthPage() {
                 <input
                   type="text"
                   placeholder="Jane Doe"
-                  {...register("displayName")}
+                  {...register("display_name")}
                   className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700"
                 />
               </div>
@@ -191,7 +164,7 @@ export default function AuthPage() {
                 <input
                   type="tel"
                   placeholder="+1 234 567 8900"
-                  {...register("phoneNumber")}
+                  {...register("phone")}
                   className="w-full bg-[#f5f5f7] dark:bg-[#111111] px-6 py-5 rounded-2xl outline-none text-lg font-bold transition-all border-2 border-transparent focus:border-[#0071e3] text-black dark:text-white placeholder-gray-300 dark:placeholder-gray-700"
                 />
               </div>
@@ -296,23 +269,28 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <div className="relative mb-10 flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-100 dark:border-[#1d1d1f]"></div>
+        {/* Stage 9: this button will start Google sign-in on our API (GET /api/auth/google). */}
+        {GOOGLE_SIGN_IN_ENABLED && (
+          <>
+          <div className="relative mb-10 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-100 dark:border-[#1d1d1f]"></div>
+            </div>
+            <div className="relative bg-white dark:bg-[#000000] px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Or continue with
+            </div>
           </div>
-          <div className="relative bg-white dark:bg-[#000000] px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-            Or continue with
-          </div>
-        </div>
 
-        <div className="flex items-center justify-center ">
-          <button
-            onClick={() => handleOAuth("google")}
-            className="flex items-center justify-center gap-3 text-xl px-20 bg-[#f5f5f7] dark:bg-[#111111] hover:bg-gray-200 dark:hover:bg-[#1d1d1f] text-black dark:text-white py-6 rounded-full font-bold transition-colors cursor-pointer"
-          >
-            <FaGoogle className="text-xl" /> Google
-          </button>
-        </div>
+          <div className="flex items-center justify-center ">
+            <button
+              type="button"
+              className="flex items-center justify-center gap-3 text-xl px-20 bg-[#f5f5f7] dark:bg-[#111111] hover:bg-gray-200 dark:hover:bg-[#1d1d1f] text-black dark:text-white py-6 rounded-full font-bold transition-colors cursor-pointer"
+            >
+              <FaGoogle className="text-xl" /> Google
+            </button>
+          </div>
+          </>
+        )}
 
         <div className="mt-12 text-center">
           <p className="text-xs font-bold text-gray-500 dark:text-gray-400">

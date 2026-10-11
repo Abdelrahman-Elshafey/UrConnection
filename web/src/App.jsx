@@ -14,20 +14,21 @@ import { Analytics } from "@vercel/analytics/react";
 import { queryClient } from "./lib/queryClient";
 import { sessionQueryOptions } from "./features/auth/hooks/useUser";
 
-// Read through the ['session'] cache so loaders and components agree on auth state.
-const getCachedSession = () => queryClient.ensureQueryData(sessionQueryOptions);
+// Who is signed in? Read through the ['session'] cache (GET /api/auth/me once, then
+// cached), so route guards and components always agree. Resolves to a User or null.
+const getCurrentUser = () => queryClient.ensureQueryData(sessionQueryOptions);
 
 const requireAuth = async () => {
-  const session = await getCachedSession();
-  if (!session) {
+  const user = await getCurrentUser();
+  if (!user) {
     return redirect("/login");
   }
   return null;
 };
 
 const redirectIfAuth = async () => {
-  const session = await getCachedSession();
-  if (session) {
+  const user = await getCurrentUser();
+  if (user) {
     return redirect("/");
   }
   return null;
