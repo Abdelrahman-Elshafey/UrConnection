@@ -1,5 +1,12 @@
 import type { Group } from "@urconnections/shared";
 import type { AppDeps } from "../app";
+import type { MailMessage, Mailer } from "../lib/mailer";
+
+/** A mailer that keeps messages in memory instead of sending them. Tests read `sent`. */
+export function fakeMailer(): { mailer: Mailer; sent: MailMessage[] } {
+  const sent: MailMessage[] = [];
+  return { sent, mailer: { send: async (message) => void sent.push(message) } };
+}
 
 /** A valid group for tests; override any field. */
 export const sampleGroup = (overrides: Partial<Group> = {}): Group => ({
@@ -43,14 +50,23 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
         throw new Error("fake users.create not implemented");
       },
       updateProfile: async () => undefined,
+      findByEmail: async () => undefined,
+      markEmailVerified: async () => undefined,
+      setPasswordHash: async () => {},
     },
     sessions: {
       create: async () => {},
       findValid: async () => undefined,
       extend: async () => {},
       delete: async () => {},
+      deleteAllForUser: async () => {},
       deleteExpired: async () => 0,
     },
+    emailTokens: {
+      issue: async () => "fake-token",
+      consume: async () => undefined,
+    },
+    mailer: fakeMailer().mailer,
     ...overrides,
   };
 }

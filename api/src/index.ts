@@ -2,6 +2,8 @@ import { createApp } from "./app";
 import { config } from "./config";
 import { db } from "./db/db";
 import { checkDatabase, pool } from "./db/pool";
+import { createSmtpMailer } from "./lib/mailer";
+import { createEmailTokensRepository } from "./modules/auth/emailTokens.repository";
 import { createSessionsRepository } from "./modules/auth/sessions.repository";
 import { createGroupsRepository } from "./modules/groups/groups.repository";
 import { createUsersRepository } from "./modules/users/users.repository";
@@ -14,6 +16,8 @@ const app = createApp({
   groups: createGroupsRepository(db),
   users: createUsersRepository(db),
   sessions,
+  emailTokens: createEmailTokensRepository(db),
+  mailer: createSmtpMailer(config.SMTP_URL, config.MAIL_FROM),
 });
 
 // Housekeeping: delete expired sessions at startup and every 6 hours.

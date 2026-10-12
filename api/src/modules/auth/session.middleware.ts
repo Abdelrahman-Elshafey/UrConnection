@@ -41,3 +41,11 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
   if (!req.user) return next(new HttpError(401, "unauthenticated", "Please sign in"));
   next();
 };
+
+/** Put after requireAuth on actions that need a confirmed email address: 403 otherwise. */
+export const requireVerified: RequestHandler = (req, _res, next) => {
+  if (!req.user?.email_verified) {
+    return next(new HttpError(403, "email_not_verified", "Please confirm your email address first."));
+  }
+  next();
+};

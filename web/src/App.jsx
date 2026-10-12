@@ -9,6 +9,9 @@ import CreateGroupForm from "./features/groups/components/CreateGroupForm";
 import GroupDetail from "./features/groups/components/GroupDetail";
 import EditGroupPage from "./features/groups/components/EditGroupPage";
 import AuthPage from "./features/auth/components/AuthPage";
+import VerifyEmailPage from "./features/auth/components/VerifyEmailPage";
+import ForgotPasswordPage from "./features/auth/components/ForgotPasswordPage";
+import ResetPasswordPage from "./features/auth/components/ResetPasswordPage";
 import ProfilePage from "./features/profile/components/ProfilePage";
 import RootLayout from "./GenealComponents/RootLayout";
 import { Analytics } from "@vercel/analytics/react";
@@ -73,6 +76,10 @@ const router = createBrowserRouter([
         element: <AuthPage />,
         loader: redirectIfAuth,
       },
+      // Email-link pages: public, because the link may be opened in another browser.
+      { path: "verify-email", element: <VerifyEmailPage /> },
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
     ],
   },
 ]);

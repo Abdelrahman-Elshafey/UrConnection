@@ -1,5 +1,5 @@
 import type { ProfileUpdate, User } from "@urconnections/shared";
-import type { Kysely, Selectable } from "kysely";
+import { sql, type Kysely, type Selectable } from "kysely";
 import type { Database, UsersTable } from "../../db/types";
 
 /** Postgres SQLSTATE for "unique constraint violated" (here: email already used). */
@@ -27,6 +27,10 @@ export interface UsersRepository {
   /** Throws EmailTakenError if the email exists (case-insensitive, thanks to citext). */
   create(input: NewUserInput): Promise<User>;
   updateProfile(id: string, patch: ProfileUpdate): Promise<User | undefined>;
+  findByEmail(email: string): Promise<User | undefined>;
+  /** Sets email_verified_at (once; later calls keep the first timestamp). */
+  markEmailVerified(id: string): Promise<User | undefined>;
+  setPasswordHash(id: string, passwordHash: string): Promise<void>;
 }
 
 // SECURITY: password_hash is deliberately not in this list, so it can't end up in a response.
@@ -81,6 +85,26 @@ export function createUsersRepository(db: Kysely<Database>): UsersRepository {
         if ((err as { code?: string }).code === UNIQUE_VIOLATION) throw new EmailTakenError();
         throw err;
       }
+    },
+
+    async findByEmail(email) {
+      const row = await db.selectFrom("users").select(USER_COLUMNS).where("email", "=", email).executeTakeFirst();
+      return row ? toUser(row) : undefined;
+    },
+
+    async markEmailVerified(id) {
+      const row = await db
+        .updateTable("users")
+        // coalesce: keep the original verification time if it was already set
+        .set((eb) => ({ email_verified_at: eb.fn.coalesce("email_verified_at", sql<Date>`now()`) }))
+        .where("id", "=", id)
+        .returning(USER_COLUMNS)
+        .executeTakeFirst();
+      return row ? toUser(row) : undefined;
+    },
+
+    async setPasswordHash(id, passwordHash) {
+      await db.updateTable("users").set({ password_hash: passwordHash }).where("id", "=", id).execute();
     },
 
     async updateProfile(id, patch) {

@@ -18,6 +18,8 @@ export interface SessionsRepository {
   /** Sliding expiry: push expires_at forward and record activity. */
   extend(idHash: string, expiresAt: Date): Promise<void>;
   delete(idHash: string): Promise<void>;
+  /** Signs the user out everywhere (e.g. after a password reset). */
+  deleteAllForUser(userId: string): Promise<void>;
   /** Housekeeping: remove sessions that have expired. Returns how many were removed. */
   deleteExpired(): Promise<number>;
 }
@@ -62,6 +64,10 @@ export function createSessionsRepository(db: Kysely<Database>): SessionsReposito
 
     async delete(idHash) {
       await db.deleteFrom("sessions").where("id_hash", "=", idHash).execute();
+    },
+
+    async deleteAllForUser(userId) {
+      await db.deleteFrom("sessions").where("user_id", "=", userId).execute();
     },
 
     async deleteExpired() {

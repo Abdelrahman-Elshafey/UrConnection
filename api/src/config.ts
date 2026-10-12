@@ -18,6 +18,10 @@ const envSchema = z.object({
   // The site's own origin (scheme + host + port). State-changing requests from any
   // other origin are rejected (CSRF protection). Production: e.g. https://urconnections.example
   APP_ORIGIN: z.url().default("http://localhost:5173"),
+  // Outgoing email. Development: Mailpit from docker-compose.yml (catches everything).
+  // Production: your mail provider's SMTP URL, e.g. smtps://user:pass@smtp.example.com:465
+  SMTP_URL: z.url({ protocol: /^smtps?$/ }).default("smtp://localhost:1025"),
+  MAIL_FROM: z.string().min(3).default("UrConnections <no-reply@urconnections.local>"),
 });
 
 const parsed = envSchema.safeParse(process.env);

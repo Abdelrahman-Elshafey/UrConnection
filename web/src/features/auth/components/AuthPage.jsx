@@ -227,6 +227,13 @@ export default function AuthPage() {
                 {errors.password.message}
               </p>
             )}
+            {isLogin && (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-xs font-bold text-gray-500 hover:text-[#0071e3] transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
           </div>
 
           {!isLogin && (

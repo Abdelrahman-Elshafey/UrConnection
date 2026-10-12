@@ -52,7 +52,11 @@ const USERS: NewUser[] = [
 /** Development-only password for every demo user (meets the password policy). */
 const DEMO_PASSWORD = "Demo123!pass";
 const demoHash = await hashPassword(DEMO_PASSWORD);
-for (const user of USERS) user.password_hash = demoHash;
+// Demo users are verified, so they can create groups straight away.
+for (const user of USERS) {
+  user.password_hash = demoHash;
+  user.email_verified_at = new Date();
+}
 
 const COUNTRIES = [
   "Egypt",
