@@ -31,3 +31,6 @@ recovery-codes.txt
 .VSCodeCounter/
 
 
+
+# Local drafts kept for reference, never committed
+.drafts/
