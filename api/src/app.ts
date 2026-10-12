@@ -8,13 +8,14 @@ import { logger } from "./lib/logger";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 import { originCheck } from "./middleware/originCheck";
 import { authRouter, type AuthDeps } from "./modules/auth/auth.routes";
+import { googleRouter, type GoogleDeps } from "./modules/auth/google.routes";
 import { loadSession } from "./modules/auth/session.middleware";
 import { groupsRouter, type GroupsDeps } from "./modules/groups/groups.routes";
 import { healthRouter, type HealthDeps } from "./modules/health/health.routes";
 import { usersRouter } from "./modules/users/users.routes";
 
 /** Everything the app needs from the outside world. Tests pass fakes. */
-export type AppDeps = HealthDeps & GroupsDeps & AuthDeps;
+export type AppDeps = HealthDeps & GroupsDeps & AuthDeps & GoogleDeps;
 
 /**
  * Builds the Express app without starting it. index.ts calls listen();
@@ -63,6 +64,7 @@ export function createApp(deps: AppDeps): Express {
 
   app.use("/api/health", healthRouter(deps));
   app.use("/api/groups", groupsRouter(deps));
+  app.use("/api/auth/google", googleRouter(deps));
   app.use("/api/auth", authRouter(deps));
   app.use("/api/users", usersRouter(deps));
 

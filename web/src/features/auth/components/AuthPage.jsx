@@ -2,14 +2,11 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
-import { login, register as registerAccount } from "../../../services/auth.service";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { GOOGLE_SIGN_IN_URL, login, register as registerAccount } from "../../../services/auth.service";
 import { clearSavedSearch } from "../../groups/utils/savedSearch";
 import { useSetUser } from "../hooks/useUser";
-import { COUNTRY_LIST, getCities, loginSchema, signupSchema } from "@urconnections/shared";
-
-// Google sign-in was Supabase's. It comes back in Stage 9, built on our own API.
-const GOOGLE_SIGN_IN_ENABLED = false;
+import { COUNTRY_LIST, getCities, loginSchema, oauthErrorMessage, signupSchema } from "@urconnections/shared";
 
 // Login and signup have separate shared schemas (audit O3). The form keeps an
 // `isLogin` value, and this resolver validates with the matching schema each time.
@@ -22,7 +19,9 @@ const EMPTY_FORM = { email: "", password: "", confirmPassword: "", display_name:
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [authError, setAuthError] = useState("");
+  const [searchParams] = useSearchParams();
+  // A failed Google sign-in lands here as /login?error=<code> (see the API's google.routes.ts).
+  const [authError, setAuthError] = useState(() => oauthErrorMessage(searchParams.get("error")) ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -276,28 +275,25 @@ export default function AuthPage() {
           </button>
         </form>
 
-        {/* Stage 9: this button will start Google sign-in on our API (GET /api/auth/google). */}
-        {GOOGLE_SIGN_IN_ENABLED && (
-          <>
-          <div className="relative mb-10 flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-100 dark:border-[#1d1d1f]"></div>
-            </div>
-            <div className="relative bg-white dark:bg-[#000000] px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Or continue with
-            </div>
+        <div className="relative mb-10 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-100 dark:border-[#1d1d1f]"></div>
           </div>
+          <div className="relative bg-white dark:bg-[#000000] px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            Or continue with
+          </div>
+        </div>
 
-          <div className="flex items-center justify-center ">
-            <button
-              type="button"
-              className="flex items-center justify-center gap-3 text-xl px-20 bg-[#f5f5f7] dark:bg-[#111111] hover:bg-gray-200 dark:hover:bg-[#1d1d1f] text-black dark:text-white py-6 rounded-full font-bold transition-colors cursor-pointer"
-            >
-              <FaGoogle className="text-xl" /> Google
-            </button>
-          </div>
-          </>
-        )}
+        {/* A real link, not fetch(): the whole page has to travel to Google and back.
+            The API answers with a redirect to Google; Google then redirects back to the API. */}
+        <div className="flex items-center justify-center ">
+          <a
+            href={GOOGLE_SIGN_IN_URL}
+            className="flex items-center justify-center gap-3 text-xl px-20 bg-[#f5f5f7] dark:bg-[#111111] hover:bg-gray-200 dark:hover:bg-[#1d1d1f] text-black dark:text-white py-6 rounded-full font-bold transition-colors cursor-pointer"
+          >
+            <FaGoogle className="text-xl" /> Google
+          </a>
+        </div>
 
         <div className="mt-12 text-center">
           <p className="text-xs font-bold text-gray-500 dark:text-gray-400">

@@ -10,6 +10,9 @@ if (existsSync(".env")) process.loadEnvFile(".env");
  * If something is missing or malformed, the server refuses to start and says why,
  * instead of failing later with a confusing error in the middle of a request.
  */
+/** "KEY=" (empty) in a .env file means "not set". */
+const optionalString = z.preprocess((value) => (value === "" ? undefined : value), z.string().optional());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000), // env values are strings; coerce turns "3000" into 3000
@@ -22,6 +25,13 @@ const envSchema = z.object({
   // Production: your mail provider's SMTP URL, e.g. smtps://user:pass@smtp.example.com:465
   SMTP_URL: z.url({ protocol: /^smtps?$/ }).default("smtp://localhost:1025"),
   MAIL_FROM: z.string().min(3).default("UrConnections <no-reply@urconnections.local>"),
+  // Google sign-in (Stage 9), from Google Cloud console → APIs & Services → Credentials →
+  // "OAuth client ID" (type: Web application). Leave both empty to switch Google sign-in off.
+  GOOGLE_CLIENT_ID: optionalString,
+  GOOGLE_CLIENT_SECRET: optionalString,
+}).refine((env) => !env.GOOGLE_CLIENT_ID === !env.GOOGLE_CLIENT_SECRET, {
+  message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither",
+  path: ["GOOGLE_CLIENT_SECRET"],
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -34,3 +44,10 @@ if (!parsed.success) {
 
 export const config = parsed.data;
 export const isProduction = config.NODE_ENV === "production";
+
+/**
+ * Where Google sends the browser back to. It must be registered, character for character,
+ * as an "Authorized redirect URI" in the Google Cloud console. It's on the site's own origin
+ * (Vite proxies /api in dev, Caddy in prod), so the session cookie lands on the site.
+ */
+export const GOOGLE_REDIRECT_URI = `${new URL(config.APP_ORIGIN).origin}/api/auth/google/callback`;

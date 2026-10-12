@@ -12,8 +12,15 @@ import { clearSavedSearch } from "../features/groups/utils/savedSearch";
 /**
  * Authentication through our own API (Stage 6). The session lives in an httpOnly
  * cookie the browser sends automatically: this code never sees or stores the token.
- * (Google sign-in returns in Stage 9; avatars move to the API in Stage 10.)
+ * (Avatars move to the API in Stage 10.)
  */
+
+/**
+ * Google sign-in (Stage 9) is a page navigation, not an API call: link to this URL.
+ * The API redirects to Google and back, sets the session cookie, then sends the browser
+ * to "/" (or to /login?error=<code> if something went wrong).
+ */
+export const GOOGLE_SIGN_IN_URL = "/api/auth/google";
 
 /** Who is signed in? `null` when nobody is (not an error). */
 export const getMe = async (): Promise<User | null> => (await apiGet("/api/auth/me", meResponseSchema)).user;

@@ -233,3 +233,9 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Reset hygiene**: A password reset ends every session of the account.
 - **Link scanners**: The verify page needs a click (POST) rather than verifying on page load, so mail security scanners can't use the token up.
 - **Production TODO (Stage 14)**: Set `SMTP_URL` / `MAIL_FROM` to a real provider and add SPF/DKIM for the domain.
+
+### Notes on Stage 9 (Google sign-in)
+- **Own OAuth flow**: The Supabase redirect (`VITE_AUTH_REDIRECT_URL`) is gone. The API runs the authorization-code flow with `state` (login CSRF) and PKCE (stolen codes are useless) via `arctic`, and only the API holds the client secret.
+- **ID token trust**: It comes straight from Google's token endpoint over TLS, so the signature isn't re-checked (allowed by OIDC Core §3.1.3.7). `aud` must equal our client id, `iss` must be Google, and `email_verified` must be true.
+- **Account linking**: Lookup is by Google `sub`, never by email alone. A verified local account with the same email is linked. An *unverified* one is treated as a possible pre-hijack: its password is removed and its sessions ended, and Google's proof of ownership wins. Tested in `google.db.test.ts`.
+- **Production TODO (Stage 14/16)**: Add `https://<domain>/api/auth/google/callback` as an authorized redirect URI in the Google Cloud console, and publish the OAuth consent screen.

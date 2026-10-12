@@ -19,16 +19,16 @@ supabase/                   # v1 only: inspect.sql + migrations (RLS, CHECKs, bu
 .VSCodeCounter/             # local line-count reports (gitignored)
 
 api/                        # @urconnections/api: Express 5 + TypeScript, run by tsx (no build step yet; Stage 13)
-  .env.example              # NODE_ENV, PORT, DATABASE_URL, LOG_LEVEL, APP_ORIGIN, SMTP_URL, MAIL_FROM (copy to api/.env)
+  .env.example              # NODE_ENV, PORT, DATABASE_URL, LOG_LEVEL, APP_ORIGIN, SMTP_URL, MAIL_FROM, GOOGLE_CLIENT_ID/SECRET (copy to api/.env)
   vitest.config.ts          # unit tests (no DB): fake DATABASE_URL, excludes *.db.test.ts
   vitest.db.config.ts       # database tests: real Postgres via TEST_DATABASE_URL (default: Docker urconnections_test)
   src/index.ts              # starts the server (listen) + graceful shutdown on SIGINT/SIGTERM
   src/app.ts                # createApp(deps): helmet → pino-http (request ids) → express.json → routes → 404 → error handler
   src/app.test.ts           # Supertest: health up/down, request id, 404 JSON, bad JSON 400, security headers
-  src/test/fakes.ts         # fakeDeps(overrides) + sampleGroup(): complete fake dependencies for createApp()
+  src/test/fakes.ts         # fakeDeps(overrides) + sampleGroup() + fakeMailer() + fakeGoogle()/googleProfile(): fakes for createApp()
   src/test/testDb.ts        # createTestDb(): Kysely on the *_test DB + reset() / truncate() for *.db.test.ts
   src/types/express.d.ts    # adds req.user / req.sessionIdHash to Express's Request type
-  src/config.ts             # loads api/.env if present; validates env with zod; exits with a clear message if invalid
+  src/config.ts             # loads api/.env if present; validates env with zod; exits with a clear message if invalid; GOOGLE_REDIRECT_URI
   src/db/pool.ts            # pg Pool (max 10) + checkDatabase() ("select 1")
   src/db/db.ts              # `db`: Kysely<Database> on that pool (use this for all queries)
   src/db/types.ts           # hand-written table types (Database, UsersTable, GroupsTable, ...); NewGroupRow etc.
@@ -53,11 +53,17 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/modules/groups/groups.write.db.test.ts  # two users: create/edit/delete ownership, fixed link/platform, my groups
   src/modules/auth/passwords.ts            # argon2id hashPassword / verifyPassword + DUMMY_HASH (timing-safe login)
   src/modules/auth/tokens.ts               # newSessionToken() (32 random bytes) + hashToken() (sha256 hex)
-  src/modules/auth/cookies.ts              # session cookie: sid / __Host-sid, httpOnly, SameSite=Lax, Secure in prod; TTL 30d, renew <15d
+  src/modules/auth/cookies.ts              # session cookie: sid / __Host-sid, httpOnly, SameSite=Lax, Secure in prod; TTL 30d, renew <15d; google_oauth cookie (state.verifier, 10 min)
+  src/modules/auth/startSession.ts         # startSession(): new session row + cookie, drops the old one (rotation); used by every sign-in path
   src/modules/auth/sessions.repository.ts  # create / findValid (join users, DB clock) / extend / delete / deleteExpired
   src/modules/auth/session.middleware.ts   # loadSession (cookie → req.user, sliding renewal), requireAuth (401), requireVerified (403)
   src/modules/auth/emailTokens.repository.ts  # issue (cancels older) / consume (one atomic UPDATE: unused + unexpired + purpose)
   src/modules/auth/emails.ts               # verifyEmailMessage / resetPasswordMessage (text + escaped HTML)
+  src/modules/auth/google.ts               # GoogleOAuth interface + createGoogleOAuth (arctic: PKCE URL, code exchange) + parseGoogleClaims (iss/aud/email_verified)
+  src/modules/auth/google.routes.ts        # GET /api/auth/google (state + PKCE cookie → redirect) and /callback (checks → sign in → redirect; errors → /login?error=)
+  src/modules/auth/oauthAccounts.repository.ts  # signInWithGoogle: by sub → by verified email (link) → unverified email (pre-hijack wipe) → create; one transaction
+  src/modules/auth/google.test.ts          # no DB: claim checks, redirects, state/cookie checks, cancel, unverified, failed exchange
+  src/modules/auth/google.db.test.ts       # real Postgres: create, reuse, email change, link, case-insensitive, pre-hijack defence, rotation
   src/modules/auth/auth.routes.ts          # register / login / logout / me + verify-email(/request), forgot-password, reset-password; rate limits
   src/modules/auth/auth.db.test.ts         # full flow with real Postgres + argon2 (cookie flags, hashing, 409/401/429, expiry)
   src/modules/auth/emailFlows.db.test.ts   # verify + reset with a fake mailer: one-time, expiry, cancel, no enumeration, sign-out
@@ -101,7 +107,7 @@ web/                        # the React app (Vite)
       storage.service.ts    # uploadAvatar / removeAvatar (bucket "Users-Pics"; jpeg/png/webp only; no remote worker)
     features/
       auth/
-        components/AuthPage.jsx       # login + signup via our API; authResolver picks loginSchema/signupSchema; Google button hidden until Stage 9
+        components/AuthPage.jsx       # login + signup via our API; authResolver picks loginSchema/signupSchema; Google = link to /api/auth/google; shows ?error= via oauthErrorMessage
         hooks/useUser.ts              # SESSION_QUERY_KEY, sessionQueryOptions (GET /api/auth/me), useUser, useSetUser, useSignOut
         hooks/useEmailFlows.ts        # useVerifyEmail, useResendVerification, useForgotPassword, useResetPassword
         components/AuthCard.jsx       # shared centered layout + Notice + input/button classes for the small auth pages
@@ -210,7 +216,8 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 5. **Login rotates the session** (the old token is deleted). **Logout** deletes the row, so a copied cookie stops working. Expired sessions are cleaned at API start and every 6 h.
 6. **Route guards** (`requireAuth` / `redirectIfAuth` in `App.jsx`) read `['session']` through `ensureQueryData`, so `/me` is called once.
 7. **Email flows (Stage 8):** links carry a 32-byte token; only `sha256(token)` is stored in `email_tokens` (verify 24 h, reset 1 h). `consume` is one atomic `UPDATE … WHERE unused AND unexpired AND purpose … RETURNING user_id`, so a link works once even under races, and issuing a new one deletes the older ones. Sign-up sends a verify email (a mail failure doesn't fail sign-up). Forgot-password replies 202 *before* looking anything up (same text and timing for every email). Reset sets the hash, deletes **all** the user's sessions and marks the email verified. Creating groups requires `email_verified` (`requireVerified`).
-8. **Not yet on the API:** Google sign-in (Stage 9), avatar upload (Stage 10).
+8. **Google sign-in (Stage 9):** the Google button is a plain link to `GET /api/auth/google`. The API makes `state` and a PKCE verifier (32 random bytes each), keeps them in the 10-minute httpOnly `google_oauth` cookie (SameSite=Lax, so it survives Google's top-level redirect back), and redirects to Google (`openid email profile`, `prompt=select_account`). `/callback` clears the cookie, checks `state`, exchanges `code` + verifier for an ID token (arctic, server to server), checks `iss`/`aud`/`email_verified`, then `signInWithGoogle` picks the user: linked `sub` → same **verified** email (link) → same **unverified** email (Google proves ownership: password removed, sessions ended, email verified; pre-hijack defence) → new user without password. Then `startSession` and a redirect to `/`. Any failure redirects to `/login?error=<code>`; the codes and messages are `OAUTH_ERROR_MESSAGES` in packages/shared.
+9. **Not yet on the API:** avatar upload (Stage 10).
 
 ### Home page filter flow (`GroupList` → `useGroupFilters` + `useGroups`)
 - **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true`; changing country clears city).

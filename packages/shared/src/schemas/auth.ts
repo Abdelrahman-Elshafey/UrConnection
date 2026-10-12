@@ -73,3 +73,22 @@ export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+/**
+ * Google sign-in ends with a browser redirect, not a JSON response, so the API reports
+ * problems as /login?error=<code>. The login page shows the matching message.
+ */
+export const OAUTH_ERROR_MESSAGES = {
+  google_unavailable: "Google sign-in isn't set up on this server yet.",
+  google_cancelled: "Google sign-in was cancelled.",
+  google_expired: "That Google sign-in expired or was started in another tab. Please try again.",
+  google_unverified: "Your Google account's email address isn't verified, so it can't be used to sign in here.",
+  google_too_many: "Too many sign-in attempts. Please wait a few minutes and try again.",
+  google_failed: "Google sign-in didn't work. Please try again.",
+} as const;
+
+export type OAuthErrorCode = keyof typeof OAUTH_ERROR_MESSAGES;
+
+/** The message for a `?error=` value, or undefined for anything unknown (never echo raw input). */
+export const oauthErrorMessage = (code: string | null): string | undefined =>
+  code !== null && Object.hasOwn(OAUTH_ERROR_MESSAGES, code) ? OAUTH_ERROR_MESSAGES[code as OAuthErrorCode] : undefined;
