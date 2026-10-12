@@ -11,6 +11,7 @@ package-lock.json           # the only lockfile (don't delete: it pins every ver
 tsconfig.base.json          # shared strict TS settings (strict, noUncheckedIndexedAccess, bundler resolution)
 tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
 docker-compose.yml          # dev services: postgres:18-alpine on 127.0.0.1:5433 (volume pgdata) + mailpit (SMTP :1025, inbox http://localhost:8025)
+vercel.json                 # {git.deploymentEnabled: false}: v2 branches never deploy to Vercel. Only v1 on `main` stays live there until Stage 16
 .github/workflows/ci.yml    # on push/PR: npm ci → lint → typecheck → test → build
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
 .agents/rules/              # owner's standing rules: general-rules.md, auth-implmentation.md, style-guide.md
