@@ -44,6 +44,32 @@ export const signupSchema = registerSchema
     path: ["confirmPassword"],
   });
 
+/** One-time tokens from email links: 32 random bytes as base64url (43 characters). */
+const emailToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "This link is invalid.");
+
+/** POST /api/auth/verify-email: the token from the verification link. */
+export const verifyEmailSchema = z.object({ token: emailToken });
+
+/** POST /api/auth/forgot-password. */
+export const forgotPasswordSchema = z.object({ email });
+
+/** Its answer: the same message whether or not the email has an account. */
+export const forgotPasswordResponseSchema = z.object({ message: z.string() });
+
+/** POST /api/auth/reset-password: the token from the reset link plus the new password. */
+export const resetPasswordSchema = z.object({ token: emailToken, password: passwordSchema });
+
+/** The reset form: new password twice (the token comes from the URL, not the form). */
+export const resetPasswordFormSchema = z
+  .object({ password: passwordSchema, confirmPassword: z.string() })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.input<typeof registerSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

@@ -1,7 +1,7 @@
 # Development services. Start: `npm run db:up` · stop: `npm run db:down` · logs: `npm run db:logs`
 #
 # Only what the code uses today. Each later stage adds its own service:
-#   Stage 8 → mailpit (catches outgoing email) · Stage 10 → file storage for avatars.
+#   mailpit (Stage 8: catches outgoing email) is here · Stage 10 adds file storage for avatars.
 # The production stack (Caddy, api, web, backups) lives in compose.prod.yml (Stage 13).
 
 name: urconnections
@@ -30,6 +30,20 @@ services:
       # "healthy" only once Postgres really accepts connections, not just "the process started".
       # `npm run db:up` (docker compose up --wait) waits for this.
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Fake mail server for development (Stage 8). The API "sends" email to it over SMTP;
+  # nothing leaves your computer. Read every message in the web UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP: where the API delivers mail
+      - "127.0.0.1:8025:8025" # web UI: the inbox
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 2s
       timeout: 3s
       retries: 15

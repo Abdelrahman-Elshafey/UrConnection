@@ -9,7 +9,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { HttpError } from "../../lib/errors";
 import { parseOrThrow } from "../../lib/validate";
-import { requireAuth } from "../auth/session.middleware";
+import { requireAuth, requireVerified } from "../auth/session.middleware";
 import type { GroupsRepository } from "./groups.repository";
 
 export interface GroupsDeps {
@@ -32,7 +32,7 @@ function groupId(req: Request): string {
  *   GET    /api/groups       → { items, nextCursor }  filters: query, topic, country, city, platform; paging: cursor, limit
  *   GET    /api/groups/:id   → one group, or 404
  * Owner only (session required; anyone else gets 404):
- *   POST   /api/groups       → 201 the new group (owned by the signed-in user)
+ *   POST   /api/groups       → 201 the new group (owned by the signed-in user; needs a verified email)
  *   PATCH  /api/groups/:id   → the updated group (title, description, topic, country, city;
  *                               the meeting link and platform can't be changed)
  *   DELETE /api/groups/:id   → 204
@@ -53,7 +53,7 @@ export function groupsRouter({ groups }: GroupsDeps): Router {
     res.json(group);
   });
 
-  router.post("/", requireAuth, async (req, res) => {
+  router.post("/", requireAuth, requireVerified, async (req, res) => {
     const input = parseOrThrow(createGroupSchema, req.body);
     // SECURITY: the owner is whoever is signed in. A `user_id` in the body is ignored
     // (zod drops unknown keys), so nobody can create groups in someone else's name.

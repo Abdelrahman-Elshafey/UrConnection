@@ -226,3 +226,10 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **B19 (v2)**: The client no longer sends `user_id` or `date`. The owner comes from the session, and `created_at`/`id` are database defaults.
 - **Rule (owner decision)**: After creation only title, description, topic, country and city can change. `meeting_link` and `platform` are fixed: `updateGroupSchema` is strict (400 if sent), `updateOwned` can't write those columns, and the edit form shows them read-only.
 - **IDOR protection**: Writes use `WHERE id = $1 AND user_id = $me`, and a non-owner gets 404 (never 403), so group ids can't be probed. Tested with two real users.
+
+### Notes on Stage 8 (email verification + password reset)
+- **Account enumeration**: Forgot-password responds identically, and *before* doing any work, so neither text nor timing reveals whether an email exists. Login already did the same. Register keeps its 409 `email_taken` as a deliberate UX trade-off.
+- **One-time links**: Tokens are stored hashed, expire (24 h / 1 h), are purpose-bound (a verify link can't reset a password), and are consumed atomically. A new link cancels older ones.
+- **Reset hygiene**: A password reset ends every session of the account.
+- **Link scanners**: The verify page needs a click (POST) rather than verifying on page load, so mail security scanners can't use the token up.
+- **Production TODO (Stage 14)**: Set `SMTP_URL` / `MAIL_FROM` to a real provider and add SPF/DKIM for the domain.

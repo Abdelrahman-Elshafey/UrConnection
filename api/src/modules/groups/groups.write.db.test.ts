@@ -2,6 +2,7 @@ import { groupSchema, myGroupsResponseSchema } from "@urconnections/shared";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../../app";
+import { fakeDeps } from "../../test/fakes";
 import { createTestDb } from "../../test/testDb";
 import { createSessionsRepository } from "../auth/sessions.repository";
 import { createUsersRepository } from "../users/users.repository";
@@ -16,12 +17,13 @@ const ORIGIN = "http://localhost:5173";
 // A fresh app per test (see beforeEach): each app has its own rate-limit counters.
 // Sharing one would trip the register limit (10/hour per IP) after a few tests.
 const makeApp = () =>
-  createApp({
-    checkDatabase: async () => {},
-    groups: createGroupsRepository(db),
-    users: createUsersRepository(db),
-    sessions: createSessionsRepository(db),
-  });
+  createApp(
+    fakeDeps({
+      groups: createGroupsRepository(db),
+      users: createUsersRepository(db),
+      sessions: createSessionsRepository(db),
+    }),
+  );
 let app: ReturnType<typeof makeApp>;
 
 type Agent = ReturnType<typeof request.agent>;
@@ -39,11 +41,13 @@ const newGroup = {
   city: "Cairo",
 };
 
-/** A signed-in browser for a fresh account. */
-async function signUp(email: string): Promise<[Agent, string]> {
+/** A signed-in browser for a fresh account with a verified email (needed to create groups). */
+async function signUp(email: string, verified = true): Promise<[Agent, string]> {
   const agent = request.agent(app);
   const res = await agent.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: "Str0ng!pass" });
-  return [agent, res.body.user.id];
+  const id: string = res.body.user.id;
+  if (verified) await db.updateTable("users").set({ email_verified_at: new Date() }).where("id", "=", id).execute();
+  return [agent, id];
 }
 
 const create = (agent: Agent, body: object = newGroup) => agent.post("/api/groups").set("Origin", ORIGIN).send(body);
@@ -78,6 +82,13 @@ describe("POST /api/groups", () => {
   it("requires a session (401)", async () => {
     const res = await request(app).post("/api/groups").set("Origin", ORIGIN).send(newGroup);
     expect(res.status).toBe(401);
+  });
+
+  it("requires a verified email (403)", async () => {
+    const [unverified] = await signUp("new@example.com", false);
+    const res = await create(unverified);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("email_not_verified");
   });
 
   it("validates with the shared rules (400), e.g. a link that doesn't match the platform", async () => {

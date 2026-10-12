@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSignOut, useUser } from "../features/auth/hooks/useUser";
+import VerifyEmailBanner from "../features/auth/components/VerifyEmailBanner";
 
 export default function MainLayout() {
   const location = useLocation();
@@ -84,6 +85,8 @@ export default function MainLayout() {
           </div>
         </div>
       </nav>
+
+      <VerifyEmailBanner />
 
       <main className="flex-1 w-full">
         <Outlet />

@@ -1,4 +1,5 @@
 import {
+  forgotPasswordResponseSchema,
   meResponseSchema,
   type LoginInput,
   type ProfileUpdate,
@@ -37,3 +38,19 @@ export const updateProfile = async (patch: ProfileUpdate): Promise<User> => {
   const { user } = await apiSend("PATCH", "/api/users/me", meResponseSchema, patch);
   return user!;
 };
+
+// ── Email flows (Stage 8) ───────────────────────────────────────────────────
+
+/** Send a new verification email to the signed-in user. */
+export const requestVerificationEmail = (): Promise<void> => apiSendNoContent("POST", "/api/auth/verify-email/request");
+
+/** Confirm the email address with the token from the link. */
+export const verifyEmail = (token: string): Promise<void> => apiSendNoContent("POST", "/api/auth/verify-email", { token });
+
+/** Always succeeds (the API never reveals whether the email has an account). */
+export const forgotPassword = async (email: string): Promise<string> =>
+  (await apiSend("POST", "/api/auth/forgot-password", forgotPasswordResponseSchema, { email })).message;
+
+/** Set a new password with the token from the reset link. Signs the account out everywhere. */
+export const resetPassword = (token: string, password: string): Promise<void> =>
+  apiSendNoContent("POST", "/api/auth/reset-password", { token, password });
