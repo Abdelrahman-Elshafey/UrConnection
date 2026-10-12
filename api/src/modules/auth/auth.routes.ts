@@ -8,7 +8,7 @@ import {
   type MeResponse,
   type User,
 } from "@urconnections/shared";
-import { Router, type Request, type Response } from "express";
+import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit, type Options } from "express-rate-limit";
 import { config } from "../../config";
 import { HttpError } from "../../lib/errors";
@@ -16,13 +16,13 @@ import { logger } from "../../lib/logger";
 import type { Mailer } from "../../lib/mailer";
 import { parseOrThrow } from "../../lib/validate";
 import { EmailTakenError, type UsersRepository } from "../users/users.repository";
-import { clearSessionCookie, SESSION_TTL_MS, setSessionCookie } from "./cookies";
+import { clearSessionCookie } from "./cookies";
 import { resetPasswordMessage, verifyEmailMessage } from "./emails";
 import type { EmailTokensRepository } from "./emailTokens.repository";
 import { DUMMY_HASH, hashPassword, verifyPassword } from "./passwords";
 import { requireAuth } from "./session.middleware";
 import type { SessionsRepository } from "./sessions.repository";
-import { hashToken, newSessionToken } from "./tokens";
+import { startSession } from "./startSession";
 
 export interface AuthDeps {
   users: UsersRepository;
@@ -87,24 +87,6 @@ export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): 
     await mailer.send(verifyEmailMessage(user.email, `${config.APP_ORIGIN}/verify-email?token=${token}`));
   }
 
-  /** Creates a fresh session for `userId` and sets the cookie. */
-  async function startSession(req: Request, res: Response, userId: string) {
-    // SECURITY: session rotation. Signing in always gets a brand-new token and drops any
-    // previous one, so a token planted on this browser earlier ("session fixation") is useless.
-    if (req.sessionIdHash) await sessions.delete(req.sessionIdHash);
-
-    const token = newSessionToken();
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    await sessions.create({
-      idHash: hashToken(token),
-      userId,
-      expiresAt,
-      userAgent: req.get("user-agent") ?? "",
-      ip: req.ip ?? null,
-    });
-    setSessionCookie(res, token, expiresAt);
-  }
-
   router.post("/register", registerPerIp, async (req, res) => {
     // SECURITY: take `password` out explicitly. Spreading the whole input into the insert
     // would also send the plain-text password to the database. (TypeScript doesn't flag
@@ -112,7 +94,7 @@ export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): 
     const { password, ...profile } = parseOrThrow(registerSchema, req.body);
     try {
       const user = await users.create({ ...profile, password_hash: await hashPassword(password) });
-      await startSession(req, res, user.id);
+      await startSession(sessions, req, res, user.id);
       // A mail server problem must not break sign-up: log it; the user can resend later.
       await sendVerificationEmail(user).catch((err) => req.log.error({ err }, "verification email failed"));
       res.status(201).json({ user } satisfies MeResponse);
@@ -138,7 +120,7 @@ export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): 
       throw new HttpError(401, "invalid_credentials", "Invalid email or password.");
     }
 
-    await startSession(req, res, found.id);
+    await startSession(sessions, req, res, found.id);
     const { password_hash: _never, ...user } = found; // SECURITY: the hash never leaves the server
     res.json({ user } satisfies MeResponse);
   });

@@ -1,12 +1,46 @@
 import type { Group } from "@urconnections/shared";
 import type { AppDeps } from "../app";
 import type { MailMessage, Mailer } from "../lib/mailer";
+import type { GoogleOAuth, GoogleProfile } from "../modules/auth/google";
 
 /** A mailer that keeps messages in memory instead of sending them. Tests read `sent`. */
 export function fakeMailer(): { mailer: Mailer; sent: MailMessage[] } {
   const sent: MailMessage[] = [];
   return { sent, mailer: { send: async (message) => void sent.push(message) } };
 }
+
+/**
+ * A pretend Google. `profiles` maps an authorization code to the profile Google would
+ * return for it; unknown codes fail like a real invalid code. `exchanges` records each
+ * code exchange so tests can check the PKCE verifier was passed along.
+ */
+export function fakeGoogle(profiles: Record<string, GoogleProfile> = {}) {
+  const exchanges: { code: string; codeVerifier: string }[] = [];
+  const google: GoogleOAuth = {
+    authorizationUrl: (state, codeVerifier) => {
+      const url = new URL("https://accounts.google.test/auth");
+      url.searchParams.set("state", state);
+      url.searchParams.set("code_challenge", `challenge-of-${codeVerifier}`);
+      return url;
+    },
+    exchangeCode: async (code, codeVerifier) => {
+      exchanges.push({ code, codeVerifier });
+      const profile = profiles[code];
+      if (!profile) throw new Error("invalid_grant");
+      return profile;
+    },
+  };
+  return { google, exchanges };
+}
+
+/** A Google profile for tests; override any field. */
+export const googleProfile = (overrides: Partial<GoogleProfile> = {}): GoogleProfile => ({
+  sub: "109876543210987654321",
+  email: "ana@gmail.com",
+  emailVerified: true,
+  name: "Ana Google",
+  ...overrides,
+});
 
 /** A valid group for tests; override any field. */
 export const sampleGroup = (overrides: Partial<Group> = {}): Group => ({
@@ -67,6 +101,13 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       consume: async () => undefined,
     },
     mailer: fakeMailer().mailer,
+    // Google sign-in is off unless a test passes a fake Google (google.db.test.ts).
+    oauthAccounts: {
+      signInWithGoogle: async () => {
+        throw new Error("fake oauthAccounts.signInWithGoogle not implemented");
+      },
+    },
+    google: null,
     ...overrides,
   };
 }

@@ -60,4 +60,3 @@ jobs:
           # The web build only embeds these values; dummies are fine for a CI build.
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ci-placeholder
-          VITE_AUTH_REDIRECT_URL: http://localhost:5173

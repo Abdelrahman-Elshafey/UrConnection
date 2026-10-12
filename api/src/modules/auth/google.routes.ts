@@ -1,0 +1,99 @@
+import type { OAuthErrorCode } from "@urconnections/shared";
+import { Router, type Response } from "express";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
+import { config } from "../../config";
+import { clearGoogleOAuthCookie, readGoogleOAuthCookie, setGoogleOAuthCookie } from "./cookies";
+import type { GoogleOAuth } from "./google";
+import type { OAuthAccountsRepository } from "./oauthAccounts.repository";
+import type { SessionsRepository } from "./sessions.repository";
+import { startSession } from "./startSession";
+import { newSessionToken } from "./tokens";
+
+export interface GoogleDeps {
+  sessions: SessionsRepository;
+  oauthAccounts: OAuthAccountsRepository;
+  /** null when GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET aren't set: the routes then say so. */
+  google: GoogleOAuth | null;
+}
+
+/**
+ * GET /api/auth/google            → redirect to Google's account chooser
+ * GET /api/auth/google/callback   ← Google redirects back here; sign in, then go to the site
+ *
+ * Both are page navigations, not fetch() calls (the browser has to visit Google itself),
+ * so every outcome is a redirect: home on success, /login?error=<code> otherwise.
+ * See google.ts for the whole flow.
+ */
+export function googleRouter({ sessions, oauthAccounts, google }: GoogleDeps): Router {
+  const router = Router();
+
+  const toLogin = (res: Response, code: OAuthErrorCode) => res.redirect(`${config.APP_ORIGIN}/login?error=${code}`);
+
+  // One sign-in is two requests (start + callback), so this allows about 20 per 15 minutes per IP.
+  const perIp = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 40,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+    handler: (_req, res) => toLogin(res, "google_too_many"),
+  });
+  router.use(perIp);
+
+  // A redirect that signs someone in must never be cached by a browser or proxy.
+  router.use((_req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
+
+  router.get("/", (_req, res) => {
+    if (!google) return toLogin(res, "google_unavailable");
+
+    // SECURITY: two fresh random values per attempt (32 bytes each, like session tokens):
+    // - state: proves the callback belongs to a sign-in *this browser* started. Without it,
+    //   an attacker could send you a callback link carrying *their* code, and you'd end up
+    //   signed in to the attacker's account ("login CSRF") without noticing.
+    // - codeVerifier (PKCE): only its hash goes to Google now; the verifier itself goes
+    //   with the code exchange later. A stolen `code` (from logs, history, a malicious app)
+    //   is useless without it.
+    const state = newSessionToken();
+    const codeVerifier = newSessionToken();
+    setGoogleOAuthCookie(res, state, codeVerifier);
+    res.redirect(google.authorizationUrl(state, codeVerifier).toString());
+  });
+
+  router.get("/callback", async (req, res) => {
+    const saved = readGoogleOAuthCookie(req.cookies);
+    clearGoogleOAuthCookie(res); // single use, whatever happens next
+    if (!google) return toLogin(res, "google_unavailable");
+
+    // Express 5 parses the query string into plain strings (or arrays if repeated).
+    const { code, state, error } = req.query;
+    // The user pressed "Cancel" on Google's page (or Google refused): ?error=access_denied
+    if (typeof error === "string") return toLogin(res, error === "access_denied" ? "google_cancelled" : "google_failed");
+    // SECURITY: no cookie, or a state that doesn't match, means this browser didn't start
+    // this sign-in (or it took over 10 minutes). Plain !== is fine: state isn't a secret
+    // the attacker can learn by timing, it's a value only this browser's cookie holds.
+    if (typeof code !== "string" || typeof state !== "string" || !saved || state !== saved.state) {
+      return toLogin(res, "google_expired");
+    }
+
+    try {
+      const profile = await google.exchangeCode(code, saved.codeVerifier);
+      // SECURITY: only trust an email Google itself has verified. Otherwise anyone could
+      // create a Google account claiming someone else's address and take over their account here.
+      if (!profile.emailVerified) return toLogin(res, "google_unverified");
+
+      const { userId, outcome } = await oauthAccounts.signInWithGoogle(profile);
+      req.log.info({ userId, outcome }, "google sign-in");
+      await startSession(sessions, req, res, userId);
+      res.redirect(`${config.APP_ORIGIN}/`);
+    } catch (err) {
+      // A JSON error page would strand the user mid-navigation: log it, send them back.
+      req.log.error({ err }, "google sign-in failed");
+      toLogin(res, "google_failed");
+    }
+  });
+
+  return router;
+}

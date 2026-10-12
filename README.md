@@ -10,7 +10,7 @@ Find study and interest groups near you, or online. Browse groups by topic, coun
 - **Discover groups**: search, filter by topic / country / city / platform, with your country and city pre-selected from your location
 - **Create groups**: validated form; the meeting link must match the chosen platform
 - **Manage your groups**: only the creator can edit (title, description, topic, location) or delete a group; the link and platform stay fixed
-- **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies), email verification, forgot/reset password; Google sign-in returns in a later stage
+- **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies), email verification, forgot/reset password, and "Continue with Google" (OAuth 2.0 with PKCE, handled by our API)
 - **Profile**: edit your details and upload an avatar (compressed in the browser; JPEG/PNG/WebP only)
 - Light and dark mode (follows the system), responsive layout
 
@@ -27,8 +27,8 @@ Requirements: **Node.js 24** (LTS), npm, and **Docker Desktop** (running).
 
 ```bash
 npm install                      # installs every workspace (one lockfile at the root)
-cp web/.env.example web/.env     # then fill in your Supabase URL, key and redirect URL
-cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml
+cp web/.env.example web/.env     # then fill in your Supabase URL and key
+cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml (add Google keys for Google sign-in)
 npm run db:up                    # start Postgres (127.0.0.1:5433) and Mailpit in Docker
 npm run db:migrate               # create the tables
 npm run db:seed                  # optional: demo users and groups (log in as alice@example.com / Demo123!pass)

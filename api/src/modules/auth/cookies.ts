@@ -27,3 +27,31 @@ export function setSessionCookie(res: Response, token: string, expires: Date): v
 export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE, baseOptions);
 }
+
+// ── Google sign-in (Stage 9) ────────────────────────────────────────────────
+
+/**
+ * Holds `state` and the PKCE code verifier while the user is away on Google's page.
+ * SameSite=Lax is what makes this work: Google sends the browser back with a top-level
+ * GET navigation, and Lax cookies are sent on those (Strict ones would not be).
+ */
+export const GOOGLE_OAUTH_COOKIE = isProduction ? "__Host-google_oauth" : "google_oauth";
+export const GOOGLE_OAUTH_TTL_MS = 10 * 60 * 1000; // 10 minutes to pick an account
+
+export function setGoogleOAuthCookie(res: Response, state: string, codeVerifier: string): void {
+  // Both values are base64url (no "."), so one cookie can carry both.
+  res.cookie(GOOGLE_OAUTH_COOKIE, `${state}.${codeVerifier}`, { ...baseOptions, maxAge: GOOGLE_OAUTH_TTL_MS });
+}
+
+/** Reads and validates the cookie. undefined if it's missing or malformed. */
+export function readGoogleOAuthCookie(cookies: Record<string, unknown> | undefined): { state: string; codeVerifier: string } | undefined {
+  const value = cookies?.[GOOGLE_OAUTH_COOKIE];
+  if (typeof value !== "string" || value.length > 200) return undefined;
+  const [state, codeVerifier, extra] = value.split(".");
+  if (!state || !codeVerifier || extra !== undefined) return undefined;
+  return { state, codeVerifier };
+}
+
+export function clearGoogleOAuthCookie(res: Response): void {
+  res.clearCookie(GOOGLE_OAUTH_COOKIE, baseOptions);
+}

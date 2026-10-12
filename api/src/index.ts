@@ -1,9 +1,11 @@
 import { createApp } from "./app";
-import { config } from "./config";
+import { config, GOOGLE_REDIRECT_URI } from "./config";
 import { db } from "./db/db";
 import { checkDatabase, pool } from "./db/pool";
 import { createSmtpMailer } from "./lib/mailer";
 import { createEmailTokensRepository } from "./modules/auth/emailTokens.repository";
+import { createGoogleOAuth } from "./modules/auth/google";
+import { createOAuthAccountsRepository } from "./modules/auth/oauthAccounts.repository";
 import { createSessionsRepository } from "./modules/auth/sessions.repository";
 import { createGroupsRepository } from "./modules/groups/groups.repository";
 import { createUsersRepository } from "./modules/users/users.repository";
@@ -18,7 +20,13 @@ const app = createApp({
   sessions,
   emailTokens: createEmailTokensRepository(db),
   mailer: createSmtpMailer(config.SMTP_URL, config.MAIL_FROM),
+  oauthAccounts: createOAuthAccountsRepository(db),
+  google:
+    config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
+      ? createGoogleOAuth(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)
+      : null,
 });
+if (!config.GOOGLE_CLIENT_ID) logger.info("Google sign-in is off (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set)");
 
 // Housekeeping: delete expired sessions at startup and every 6 hours.
 // unref(): this timer alone shouldn't keep the process alive during shutdown.
