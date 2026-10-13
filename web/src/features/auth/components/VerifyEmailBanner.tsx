@@ -9,23 +9,19 @@ export default function VerifyEmailBanner() {
   if (!user || user.email_verified) return null;
 
   return (
-    <div role="status" className="w-full bg-[#0071e3]/5 border-b border-[#0071e3]/20 px-6 py-3">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium text-black dark:text-white">
+    <div role="status" className="w-full border-b border-accent/20 bg-accent/5 px-6 py-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium text-black dark:text-white">
         <span>
           Please confirm your email (<span className="font-bold">{user.email}</span>) to create groups.
         </span>
         {isSuccess ? (
-          <span className="font-bold text-[#0071e3]">New link sent. Check your inbox.</span>
+          <span className="font-bold text-accent">New link sent. Check your inbox.</span>
         ) : (
-          <button
-            onClick={() => mutate()}
-            disabled={isPending}
-            className="font-bold text-[#0071e3] underline underline-offset-4 disabled:opacity-50 cursor-pointer"
-          >
+          <button onClick={() => mutate()} disabled={isPending} className="font-bold text-accent underline underline-offset-4 disabled:opacity-50">
             {isPending ? "Sending…" : "Resend email"}
           </button>
         )}
-        {error && <span className="text-red-500 font-bold">{error.message}</span>}
+        {error && <span className="font-bold text-red-500">{error.message}</span>}
       </div>
     </div>
   );

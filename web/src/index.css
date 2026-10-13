@@ -1,6 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+/*
+ * Design tokens (audit D11). Tailwind v4 turns every --color-* variable declared in
+ * @theme into utilities: --color-accent gives bg-accent, text-accent, border-accent/20, ...
+ * Change a value here and the whole site follows. Named by role, not by look.
+ */
+@theme {
+  --color-accent: #0071e3;        /* the one brand blue: links, primary buttons, focus */
+  --color-accent-strong: #005bb5; /* accent on hover where brightness isn't enough */
+  --color-surface: #f5f5f7;       /* light grey band / card / input background */
+  --color-surface-dark: #111111;  /* the same role in dark mode */
+  --color-raised-dark: #1d1d1f;   /* dark nav, footer, pills: one step lighter than surface-dark */
+  --color-line-dark: #333336;     /* hairlines and hover borders in dark mode */
+}
+
 @layer base {
   :root {
     color-scheme: light dark;
@@ -10,7 +24,7 @@
 
   html, body {
     font-family: 'Inter', sans-serif;
-    @apply bg-white text-black dark:bg-[#000000] dark:text-white transition-colors duration-200 ease-in-out;
+    @apply bg-white text-black dark:bg-black dark:text-white transition-colors duration-200 ease-in-out;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -18,7 +32,7 @@
   /* Default border color. Transitions are opt-in per element (transition-* classes),
      not global — a transition on every node costs style recalc and fades colors in on load. */
   * {
-    @apply border-gray-100 dark:border-[#1d1d1f];
+    @apply border-gray-100 dark:border-raised-dark;
   }
 
   /* Universal interactive cursor */

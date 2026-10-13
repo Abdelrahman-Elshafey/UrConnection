@@ -13,7 +13,7 @@
 | B1 | L | [x] | `index.html` | `<link href="/src/style.css">` points to a file that doesn't exist (404 in dev). | Remove the tag. CSS is imported in `main.jsx`. |
 | B2 | H | [x] | `MainLayout.jsx` footer | Footer is `bg-black` in light mode, but the "Explore"/"Account" `<h4>`s are `text-black`, so they're invisible. There's also a stray `sm:text-` class. | Use `text-white` for the headings, or redesign the footer per the style guide (`#f5f5f7` light / `#1d1d1f` dark). |
 | B3 | H | [x] | `MainLayout.jsx` nav | "Sign In", "Profile", and "Sign Out" have `hidden sm:block`, so on mobile a logged-out user has no Sign In in the nav. The Create Group button text is `text-[8px]` on mobile. | Add a mobile menu, or keep the auth links visible at a small size. |
-| B4 | H | [~] | `GroupCard.jsx` | The delete (X) button shows on **every** card for everyone, including logged-out users on the home page. Only RLS prevents deletion, and non-owners just get an `alert` error. | Render delete only when `group.user_id === session.user.id`. Better: show it only on the profile page via a prop. Replace `window.confirm`. |
+| B4 | H | [x] | `GroupCard.jsx` | The delete (X) button shows on **every** card for everyone, including logged-out users on the home page. Only RLS prevents deletion, and non-owners just get an `alert` error. | Render delete only when `group.user_id === session.user.id`. Better: show it only on the profile page via a prop. Replace `window.confirm`. |
 | B5 | M | [x] | `lib/groupSchema.js` | The messages don't match the limits: `min(20)` says "min 50" and `max(200)` says "max 500". `min(1)` is redundant before `min(20)`. | Align the numbers and messages. Consider showing field error messages: CreateGroupForm only shows red borders and never shows `errors.*.message`. |
 | B6 | M | [x] | `AuthPage.jsx` | `clearFilterCache()` is called in the render body, which is a side effect during render and runs on every keystroke re-render. | Move it into an effect, or (better) into the sign-in/sign-out success path. |
 | B7 | M | [x] | `services/auth.service.js` `signOut` | `localStorage.clear()` and `sessionStorage.clear()` wipe **all** storage, including the IP location cache. The clearing also happens before the `error` check. | Remove only app keys (`uc_filter_cache`, …). Supabase already clears its own session key. Also clear the query cache (`queryClient.clear()` or remove `['session']`). |
@@ -39,7 +39,7 @@
 | B27 | L | [x] | `ProfilePage.jsx` success toast | The `setTimeout` is never cleared. Saving twice within 3s hides the second toast early. | Keep the timer id in a ref and clear it. Later, replace it with a shared `Toast` (Phase 2). |
 | B28 | L | [x] | sign-out | Only `['session']` is reset. User-scoped caches (`['groups','user',id]`) stay in memory for the next person on the same tab. | On `SIGNED_OUT` in `useAuthListener`, call `queryClient.removeQueries({ queryKey: ['groups','user'] })`, or `queryClient.clear()` and then set the session to null. |
 | B29 | L | [x] | `GroupList.jsx` | If the user clicks "Clear all" and later returns to `/`, the geo preset re-applies, because the cache was cleared and the `hasInitialized` ref resets on remount. The user's "Global" choice is forgotten. | Part of O1: remember "user cleared filters" in the same storage entry. |
-| B30 | L | [ ] | `MainLayout.jsx` footer | "Categories" links to `/` (nowhere specific), "Register" opens `/login` in **sign-in** mode, and the navbar links to `/profile` twice (avatar + text). | Fix while rebuilding the navbar/footer in Stage 11 (signup gets its own route when AuthPage is split, O3). |
+| B30 | L | [x] | `MainLayout.jsx` footer | "Categories" links to `/` (nowhere specific), "Register" opens `/login` in **sign-in** mode, and the navbar links to `/profile` twice (avatar + text). | Fix while rebuilding the navbar/footer in Stage 11 (signup gets its own route when AuthPage is split, O3). |
 
 ## S — Security / privacy
 
@@ -62,20 +62,20 @@
 
 | ID | Status | What is duplicated | Proposed abstraction |
 |---|---|---|---|
-| D1 | [ ] | The spinner (`w-12 h-12 border-[3px] border-[#0071e3]/20 border-t-[#0071e3] rounded-full animate-spin`) appears ~8 times. | `components/ui/Spinner.jsx` (size prop) + `FullPageLoader`. |
-| D2 | [ ] | The back button with chevron SVG ("Return to Explore", "Back to Explore", "Cancel and Return") appears 3 times. | `components/ui/BackLink.jsx`. |
-| D3 | [ ] | Input/select/textarea class strings, about 20 copies across AuthPage, CreateGroupForm, and ProfilePage, plus label classes and error `<p>`s. | `components/ui/form/{TextField,SelectField,TextAreaField,FieldLabel,FieldError}.jsx` that work with `register`. |
-| D4 | [ ] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
+| D1 | [x] | The spinner (`w-12 h-12 border-[3px] border-[#0071e3]/20 border-t-[#0071e3] rounded-full animate-spin`) appears ~8 times. | `components/ui/Spinner.jsx` (size prop) + `FullPageLoader`. |
+| D2 | [x] | The back button with chevron SVG ("Return to Explore", "Back to Explore", "Cancel and Return") appears 3 times. | `components/ui/BackLink.jsx`. |
+| D3 | [x] | Input/select/textarea class strings, about 20 copies across AuthPage, CreateGroupForm, and ProfilePage, plus label classes and error `<p>`s. | `components/ui/form/{TextField,SelectField,TextAreaField,FieldLabel,FieldError}.jsx` that work with `register`. |
+| D4 | [x] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
 | D5 | [x] | `TOPICS` is defined in both `CreateGroupForm` and `FilterBar` (with "All"). | `lib/topics.js` exporting `TOPICS`. FilterBar prepends "All". |
-| D6 | [ ] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
+| D6 | [x] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
 | D7 | [x] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
-| D8 | [ ] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
+| D8 | [x] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
 | D9 | [x] | The sign-out handler is duplicated in MainLayout and ProfilePage. | `useSignOut()` mutation hook: signs out, clears the cache, navigates. |
-| D10 | [ ] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
-| D11 | [ ] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
-| D12 | [ ] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
-| D13 | [ ] | `[city, country].filter(Boolean).join(", ")` (3×) and the owner check `user.id === group.user_id` (3×). | `formatLocation(place)` and `isOwner(user, group)` helpers (Stage 11). |
-| D14 | [ ] | Hand-written SVG paths (chevron, pencil, arrow, ✕, map pin) ~12×, although `react-icons` is already a dependency. | Use icons from `react-icons` (Stage 11). |
+| D10 | [x] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
+| D11 | [x] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
+| D12 | [x] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
+| D13 | [x] | `[city, country].filter(Boolean).join(", ")` (3×) and the owner check `user.id === group.user_id` (3×). | `formatLocation(place)` and `isOwner(user, group)` helpers (Stage 11). |
+| D14 | [x] | Hand-written SVG paths (chevron, pencil, arrow, ✕, map pin) ~12×, although `react-icons` is already a dependency. | Use icons from `react-icons` (Stage 11). |
 | D15 | [x] | `useCreateGroup` / `useUpdateGroup` had identical `onSuccess` (cache detail + invalidate lists). | `hooks/groupCache.ts` → `storeSavedGroup()`. |
 | D16 | [x] | `Omit<GroupListParams, "cursor" \| "limit">` written 3×; `isTopic` defined in a web hook while `isCountry`/`isPlatformKey` live in shared. | Shared `GroupFilters` type and `isTopic()`. |
 | D17 | [x] | API rate-limiter setup (headers, IP key, JSON 429) copied in auth, Google and users routes. | `api/src/lib/rateLimit.ts`: `limitRequests({ limit, windowMs, key })`, `byIp` / `byUser` / `byEmail`. |
@@ -102,13 +102,13 @@ Code that is more complex than the problem needs. Simplifying these removes whol
 |---|---|---|---|---|
 | O1 | [x] | `GroupList.jsx` + `useFilterCache.js` + `useUserLocation` | Filter state has **three sources of truth**: URL params, a sessionStorage cache with a 60-second TTL, and an async geo preset. Two `useEffect`s, a `hasInitialized` ref, two `eslint-disable`s, and a cache write on every change tie them together. | Keep the **URL as the only source of truth**. One `useGroupFilters()` hook: `filters = parse(searchParams)`, and `setFilter(key, value)`. To keep filters when the user clicks the logo, store the last search string in sessionStorage (no TTL) and have the nav/logo `Link` go to `/` + that string. Apply the geo preset only when there's no URL search **and** no stored search. |
 | O2 | [x] | `useUserLocation.js` | Double caching: localStorage **plus** React Query with `staleTime: Infinity`, `refetchOnMount: false`, and `refetchOnWindowFocus: false`. With `staleTime: Infinity` the last two flags do nothing. | Keep React Query and use `staleTime: Infinity, retry: 1` only. Keep localStorage as the cross-visit cache, and give it a TTL (S3). |
-| O3 | [~] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
+| O3 | [x] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
 | O4 | [x] | `ProfilePage.jsx` | `populateForm` in a `useCallback`, an effect that populates on edit, and an effect that resets the city using `watch()`. This causes B22 and the L4 warning. | `startEditing = () => { reset(fromUser(user)); setIsEditing(true) }`. Reset the city in the country select's `onChange` (same pattern as CreateGroupForm). Both effects go away. |
 | O5 | [x] | small wrappers | `getRedirectUrl()` wraps a single env read. `mutationFn: (x) => updateProfile(x)` and `({userId, file}) => uploadAvatar(userId, file)` are pass-through arrows. The `image/` type check is duplicated in `ProfileAvatar` and `compressImage`. | Use `const REDIRECT_URL = import.meta.env…` and `mutationFn: updateProfile`. Do validation in one place. |
 | O6 | [x] | `storage.service.js` | The extension varies with the uploaded file name, so both upload and remove need a `list()` + filter + `remove()` round-trip (3–4 network calls). | Always convert to WebP and save to the fixed path `<uid>/avatar.webp` with `upsert: true`. Upload is then 1 call and remove is 1 call. This also fixes S5's extension issue and makes the README's WebP claim true. |
 | O7 | [x] | `lib/countries.js` | 118 `.sort()` calls at module load, and the data is re-sorted again for `COUNTRY_LIST`. | Store the data pre-sorted (a one-off script), or as JSON. No runtime work. |
 | O8 | [x] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
-| O9 | [ ] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
+| O9 | [x] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
 | O10 | [x] | `GroupCard` / `GroupDetail` | `React.createElement(platformInfo.icon, {...})` plus `import React` just for it. `platforms.js` also has an unused `import React`. | Use `const Icon = platformInfo.icon; <Icon className=… />`, and drop the React imports (D8). |
 
 ## M — Modernization (newer React / React Router / TanStack / TypeScript features)
@@ -123,7 +123,7 @@ Found in the 2026-10-13 review: places where the libraries we already use now of
 | M4 | [x] | every page | One tab title ("UrConnections") for all pages. | React 19 `<title>` inside each page (`lib/pageTitle.ts`); React hoists it into `<head>`. |
 | M5 | [x] | `GroupDetail` ×2, `ProfilePage` | `<button onClick={() => navigate(...)}>` for plain navigation. | `<Link>`: real links (new tab, middle-click, announced as links). |
 | M6 | [x] | `App.jsx` | `@vercel/analytics` `<Analytics/>`. | Removed: v2 is self-hosted, the Vercel endpoint doesn't exist there. |
-| M7 | [ ] | UI kit (Stage 11) | `forwardRef` would be needed for inputs used with react-hook-form's `register`. | React 19 passes `ref` as a normal prop: plain function components. |
+| M7 | [x] | UI kit (Stage 11) | `forwardRef` would be needed for inputs used with react-hook-form's `register`. | React 19 passes `ref` as a normal prop: plain function components. |
 
 ## P — Performance (measured)
 
@@ -159,10 +159,10 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 
 | ID | Status | Issue | Fix |
 |---|---|---|---|
-| A1 | [ ] | No `<label>` in any form is linked to its input (no `htmlFor`/`id`). Screen readers don't announce field names, and clicking a label doesn't focus the field. | The shared form components (D3) should generate the `id` with `useId()` and wire `htmlFor`, `aria-invalid`, and `aria-describedby` to the error text. |
-| A2 | [ ] | FilterBar's search input and its 3 selects have no labels at all. The password show/hide buttons have no `aria-label`. | Add `aria-label`s ("Search groups", "Country", "City", "Platform", "Show password"). |
-| A3 | [ ] | Text at `text-[8px]` / `text-[10px]` on mobile (GroupCard description and location, footer links) is below readable size. | Use a 12px minimum for body text and 11px for uppercase micro-labels. |
-| A4 | [ ] | Topic pills don't expose the selected state. | Add `aria-pressed={currentTopic === topic}`. |
+| A1 | [x] | No `<label>` in any form is linked to its input (no `htmlFor`/`id`). Screen readers don't announce field names, and clicking a label doesn't focus the field. | The shared form components (D3) should generate the `id` with `useId()` and wire `htmlFor`, `aria-invalid`, and `aria-describedby` to the error text. |
+| A2 | [x] | FilterBar's search input and its 3 selects have no labels at all. The password show/hide buttons have no `aria-label`. | Add `aria-label`s ("Search groups", "Country", "City", "Platform", "Show password"). |
+| A3 | [x] | Text at `text-[8px]` / `text-[10px]` on mobile (GroupCard description and location, footer links) is below readable size. | Use a 12px minimum for body text and 11px for uppercase micro-labels. |
+| A4 | [x] | Topic pills don't expose the selected state. | Add `aria-pressed={currentTopic === topic}`. |
 
 ## L — Lint (`npm run lint`: 0 problems after Phase 0)
 
@@ -271,4 +271,15 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 ### Notes on the 2026-10-13 review (start of Stage 11)
 - **Verdict**: The API and shared package are lean. Its interfaces (`Storage`, `Mailer`, `GoogleOAuth`) each exist so tests run without real services, so none were cut. Nearly all the repetition is in the React components (D1–D14), which is what the Stage 11 UI kit is for.
 - **Done before the UI kit**: M1–M6, O8 (FilterBar takes `filters` / `onChange` / `onSearch` instead of 10 props), D15–D18. Home bundle 179.6 → 179.3 KB gzip.
-- **Open, for Stage 11**: D1–D4, D6, D8, D10–D14, M7, O3, O9, B30, A1–A4.
+- **Stage 11 then closed**: D1–D4, D6, D8, D10–D14, M7, O3, O9, B4, B30, A1–A4 (see the Stage 11 notes).
+
+### Notes on Stage 11 (TypeScript frontend + UI kit)
+- **All TypeScript**: Every `.jsx` file is now `.tsx`, `allowJs` is off, and there's no `any`. `GenealComponents/` became `components/layout/` (Navbar and Footer split out of MainLayout).
+- **UI kit** (`web/src/components/ui`): Button/ButtonLink (D10), Spinner/PageSpinner (D1), BackLink (D2), Field components (D3, A1), CountryCityFields via `useFormContext` (D4), Avatar (D6), PlatformBadge (D8), PageHero (D12), Notice, NotFound, ConfirmDialog on the native `<dialog>` and a Toast system (B4: no more `alert`/`confirm`). Icons come from `react-icons` (D14). `lib/format.ts` holds the shared helpers (D13). Colors are `@theme` tokens (D11).
+- **React 19**: `ref` is a plain prop, so the fields take react-hook-form's `register` ref without `forwardRef` (M7). `use(Context)` in `useToast`. `<title>` per page.
+- **O3**: `AuthPage` (one form, two schemas, a hidden `isLogin` field, manual loading state) became `LoginPage` + `SignupPage` on `/login` and `/signup`, using `useLogin` / `useRegister` mutations like every other form.
+- **O9**: Cards take `onDelete`. The page owns one `DeleteGroupDialog` (confirm + mutation + toast).
+- **Create vs edit**: These are separate forms now (each `useForm` typed from its own schema), sharing `GroupFormFields` + `GroupFormFrame`. The old shared component needed a mode switch across two schemas. `formResolver` types the create form's empty selects (`""`) without loosening the schema.
+- **Found while testing in a real browser** (headless Chrome over the DevTools protocol): unknown groups showed a spinner for seconds, because TanStack Query retried the 404 three times. `queryClient` now never retries 4xx. React Router also warned about a missing `HydrateFallback`; the root route now has `hydrateFallbackElement`.
+- **Small visual changes** from consolidating: auth pages use the shared left-aligned layout; buttons, inputs and spinners share one size scale; footer and card text is at least 12px (A3).
+- **Not done**: A mobile nav menu. On small screens the navbar shows the avatar (→ profile, which has Sign Out) and Create Group, and the footer has every account link.
