@@ -1,7 +1,8 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { PLATFORMS, getPlatform } from "../../../lib/platforms";
+import { pageTitle } from "../../../lib/pageTitle";
 import { COUNTRY_LIST, TOPICS, createGroupSchema, getCities, updateGroupSchema } from "@urconnections/shared";
 
 // Edit mode validates only the editable fields, all required (the form always sends all five).
@@ -11,11 +12,13 @@ const EMPTY = { title: "", topic: "", platform: "", description: "", meeting_lin
 
 const TEXT = {
   create: {
+    title: "Create a group",
     heading: ["Launch your", "Community."],
     intro: "Design a premium environment for focused growth and meaningful connections.",
     submit: "Launch Channel",
   },
   edit: {
+    title: "Edit group",
     heading: ["Edit your", "Community."],
     intro: "Update how your group is described. The platform and link stay as they are.",
     submit: "Save Changes",
@@ -75,6 +78,7 @@ export default function GroupForm({ mode, group, onSubmit, isPending, error, can
 
   return (
     <div className="w-full bg-white dark:bg-[#000000] min-h-screen pt-12 pb-25 px-4 transition-colors duration-200">
+      <title>{pageTitle(text.title)}</title>
       <div className="max-w-7xl mx-auto flex flex-col items-center">
         <Link
           to={cancelTo}

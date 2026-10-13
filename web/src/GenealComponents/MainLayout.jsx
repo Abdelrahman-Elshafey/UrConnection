@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router";
 import { useSignOut, useUser } from "../features/auth/hooks/useUser";
 import VerifyEmailBanner from "../features/auth/components/VerifyEmailBanner";
 

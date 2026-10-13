@@ -1,4 +1,5 @@
-import type { RequestHandler } from "express";
+import type { User } from "@urconnections/shared";
+import type { Request, RequestHandler } from "express";
 import { HttpError } from "../../lib/errors";
 import { clearSessionCookie, SESSION_COOKIE, SESSION_RENEW_BELOW_MS, SESSION_TTL_MS, setSessionCookie } from "./cookies";
 import type { SessionsRepository } from "./sessions.repository";
@@ -36,11 +37,24 @@ export function loadSession({ sessions }: { sessions: SessionsRepository }): Req
   };
 }
 
+/** 401: nobody is signed in (or the account was deleted while the request ran). */
+export const unauthenticated = () => new HttpError(401, "unauthenticated", "Please sign in");
+
 /** Put before any route that needs a signed-in user: 401 otherwise. */
 export const requireAuth: RequestHandler = (req, _res, next) => {
-  if (!req.user) return next(new HttpError(401, "unauthenticated", "Please sign in"));
+  if (!req.user) return next(unauthenticated());
   next();
 };
+
+/**
+ * The signed-in user inside a route. `req.user` is typed as optional (most routes are
+ * public), so instead of asserting `req.user!` and hoping requireAuth ran, this checks
+ * and lets TypeScript know the result is a User.
+ */
+export function signedInUser(req: Request): User {
+  if (!req.user) throw unauthenticated();
+  return req.user;
+}
 
 /** Put after requireAuth on actions that need a confirmed email address: 403 otherwise. */
 export const requireVerified: RequestHandler = (req, _res, next) => {

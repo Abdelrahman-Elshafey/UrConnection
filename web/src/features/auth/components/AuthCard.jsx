@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
+import { pageTitle } from "../../../lib/pageTitle";
 
 /** The centered, minimal layout shared by the small auth pages (verify, forgot, reset). */
 export default function AuthCard({ title, subtitle, children }) {
   return (
     <div className="min-h-screen bg-white dark:bg-[#000000] flex flex-col justify-center py-20 px-6">
+      <title>{pageTitle(title)}</title>
       <div className="max-w-md w-full mx-auto">
         <Link
           to="/"

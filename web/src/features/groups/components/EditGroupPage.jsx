@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router";
 import { useUser } from "../../auth/hooks/useUser";
 import { useGroup } from "../hooks/useGroup";
 import { useUpdateGroup } from "../hooks/useUpdateGroup";

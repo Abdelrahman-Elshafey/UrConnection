@@ -5,18 +5,14 @@ import { COUNTRY_LIST, TOPICS as GROUP_TOPICS, getCities } from "@urconnections/
 // "All" is a filter-only option, not a real topic.
 const TOPICS = ["All", ...GROUP_TOPICS];
 
-export default function FilterBar({
-  onSearch,
-  onTopicChange,
-  currentTopic,
-  onCountryChange,
-  onCityChange,
-  onPlatformChange,
-  currentCountry,
-  currentCity,
-  currentPlatform,
-  currentSearch,
-}) {
+/**
+ * The home page's search box and filters.
+ *   filters:  the current values (from the URL, see useGroupFilters)
+ *   onChange: (key, value) => void, one callback for every filter
+ *   onSearch: the search text was submitted (the page also scrolls to the results)
+ */
+export default function FilterBar({ filters, onChange, onSearch }) {
+  const { query: currentSearch, topic: currentTopic, country: currentCountry, city: currentCity, platform: currentPlatform } = filters;
   // Uncontrolled: the input keeps its own draft text; `key` below resets it
   // whenever the committed query in the URL changes (e.g. "Clear all").
   const searchInputRef = useRef(null);
@@ -81,7 +77,7 @@ export default function FilterBar({
             <select
               className="bg-gray-50 dark:bg-[#1d1d1f] text-[12px] md:text-[16px] lg:text-[18px] font-bold px-1 py-3 text-center rounded-3xl border border-transparent focus:border-[#0071e3] transition-all cursor-pointer text-black dark:text-white"
               value={currentCountry || ""}
-              onChange={(e) => onCountryChange(e.target.value)}
+              onChange={(e) => onChange("country", e.target.value)}
             >
               <option value="">Global</option>
               {COUNTRY_LIST.map((c) => (
@@ -95,7 +91,7 @@ export default function FilterBar({
               className={`bg-gray-50 dark:bg-[#1d1d1f] text-[12px] md:text-[16px] lg:text-[18px] font-bold px-0.5 py-3 text-center rounded-3xl border border-transparent focus:border-[#0071e3] transition-all cursor-pointer text-black dark:text-white ${!currentCountry ? "opacity-50 pointer-events-none" : " "}`}
               value={currentCity}
               disabled={!currentCountry}
-              onChange={(e) => onCityChange(e.target.value)}
+              onChange={(e) => onChange("city", e.target.value)}
             >
               <option value="">All Cities</option>
               {availableCities.map((c) => (
@@ -108,7 +104,7 @@ export default function FilterBar({
             <select
               className="bg-gray-50 dark:bg-[#1d1d1f] text-[12px] md:text-[16px] lg:text-[18px]  font-bold px-0.5 py-3 text-center rounded-3xl border border-transparent focus:border-[#0071e3] transition-all cursor-pointer text-black dark:text-white"
               value={currentPlatform}
-              onChange={(e) => onPlatformChange(e.target.value)}
+              onChange={(e) => onChange("platform", e.target.value)}
             >
               <option value="">All Platforms</option>
               {PLATFORMS.map((p) => (
@@ -123,7 +119,7 @@ export default function FilterBar({
             {TOPICS.map((topic) => (
               <button
                 key={topic}
-                onClick={() => onTopicChange(topic)}
+                onClick={() => onChange("topic", topic)}
                 className={`px-5 py-2 rounded-full text-[14px] md:text-[18px] lg:text-[22px] font-bold transition-all shrink-0 border border-transparent cursor-pointer ${
                   currentTopic === topic
                     ? "bg-black text-white dark:bg-white dark:text-black shadow-lg"

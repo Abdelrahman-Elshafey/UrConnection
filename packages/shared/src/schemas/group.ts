@@ -84,5 +84,7 @@ export type GroupListQuery = z.infer<typeof groupListQuerySchema>;
  * (Not z.input<>: with z.coerce, zod types the input as `unknown`, since coercion accepts anything.)
  */
 export type GroupListParams = Partial<Omit<GroupListQuery, "limit">> & { limit?: number };
+/** Just the filters (no paging): what the home page's filter bar controls and caches by. */
+export type GroupFilters = Omit<GroupListParams, "cursor" | "limit">;
 export type GroupListResponse = z.infer<typeof groupListResponseSchema>;
 export type MyGroupsResponse = z.infer<typeof myGroupsResponseSchema>;

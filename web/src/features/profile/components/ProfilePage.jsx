@@ -6,7 +6,8 @@ import { useMyGroups } from "../../groups/hooks/useMyGroups";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import GroupCard from "../../groups/components/GroupCard";
 import ProfileAvatar from "./ProfileAvatar";
-import { useNavigate } from "react-router-dom";
+import { pageTitle } from "../../../lib/pageTitle";
+import { Link } from "react-router";
 import { COUNTRY_LIST, getCities, profileSchema } from "@urconnections/shared";
 
 /* ─── Reusable input class string ─── */
@@ -19,7 +20,6 @@ const SELECT_CLS =
 export default function ProfilePage() {
   const { data: user, isLoading: isUserLoading } = useUser();
   const { mutate: signOut } = useSignOut();
-  const navigate = useNavigate();
 
   const { data: groups, isLoading: isGroupsLoading } = useMyGroups(!!user);
   const { mutate: updateProfile, isPending: isSaving } = useUpdateProfile();
@@ -109,6 +109,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#000000] py-10 px-6 transition-colors duration-200">
+      <title>{pageTitle("Your profile")}</title>
       <div className="max-w-7xl mx-auto">
         <div className="mb-10">
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-black dark:text-white tracking-tighter leading-[0.85] mb-6">
@@ -363,12 +364,12 @@ export default function ProfilePage() {
           ) : (
             <div className="bg-[#f5f5f7] dark:bg-[#111111] rounded-[40px] p-20 text-center">
               <p className="text-2xl font-bold text-gray-400 dark:text-gray-600 mb-8">You haven't created any groups yet.</p>
-              <button
-                onClick={() => navigate("/create")}
-                className="bg-[#0071e3] text-white px-10 py-5 rounded-full font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[#0071e3]/20 cursor-pointer"
+              <Link
+                to="/create"
+                className="inline-block bg-[#0071e3] text-white px-10 py-5 rounded-full font-bold text-lg hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-[#0071e3]/20"
               >
                 Launch your first channel
-              </button>
+              </Link>
             </div>
           )}
         </section>

@@ -1,6 +1,6 @@
 import type { User } from "@urconnections/shared";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { getMe, logout } from "../../../services/auth.service";
 import { groupKeys } from "../../groups/api/queryKeys";
 
