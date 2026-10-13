@@ -20,7 +20,7 @@ npm run lint        # ESLint for the whole repo (flat config at root). Keep it a
 npm run build       # production build -> web/dist/
 ```
 Port 5432 on this machine is taken by a native Windows Postgres, so the Docker one uses **5433**. Docker Desktop must be running (`docker info`); it does not auto-start after a reboot. An `ECONNREFUSED ...:5433` error almost always means Docker/Postgres is down: start Docker Desktop (`C:\Users\HP\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe`), then `npm run db:up`.
-Layout: `web/` = React app. Its data layer (`lib/`, `services/`, `features/*/hooks|api|utils`) is TS; components are still `.jsx` until Stage 11 (`allowJs`).
+Layout: `web/` = React app, all TypeScript (`allowJs` off). **Build pages from the UI kit in `web/src/components/ui`** (Button/ButtonLink, Field components with linked labels, CountryCityFields via `FormProvider`, Notice, ConfirmDialog, `useToast()`, Spinner/PageSpinner, Avatar, PlatformBadge, PageHero, BackLink, NotFound); colors are `@theme` tokens (`bg-accent`, `bg-surface`, …) in `index.css`. Layout: `components/layout` (Navbar, Footer). Pages set `<title>{pageTitle("…")}</title>`.
 `packages/shared/` = `@urconnections/shared` (TS source imported directly, no build step): topics, platforms (no UI), countries, and **zod schemas + inferred types** (`createGroupSchema`/`Group`, `loginSchema`, `signupSchema`, `profileSchema`). Validation rules live there, not in components.
 `api/` = `@urconnections/api`: Express 5 + TS run by `tsx`, `createApp(deps)` in `app.ts` (tests inject fakes), env validated in `config.ts` (`api/.env`, template `api/.env.example`), errors as `{ error: { code, message } }` via `HttpError`. DB: Kysely (`db` from `api/src/db/db.ts`), **hand-written** table types in `api/src/db/types.ts`, raw-SQL migrations in `api/src/db/migrations/` (never edit one that has run; add the next number and register it in `migrations/index.ts`). `tsx` does not type-check: always run `npm run typecheck`. React Query keys come from `features/groups/api/queryKeys.ts` (`groupKeys`) and `SESSION_QUERY_KEY`.
 **Data sources right now:** group reads (home list, detail), **auth** (register/login/logout/me, Google sign-in) and **profile edits** go to **our API** via `web/src/lib/apiClient.ts` (`apiGet` / `apiSend` / `apiSendNoContent`, responses validated with shared schemas; the session is an httpOnly cookie that JS never touches). **Groups are fully on our API** (list, detail, create, edit, delete, my groups). **Avatars** too: `PUT`/`DELETE /api/users/me/avatar` (multer → sharp → 512px WebP → Garage via `lib/storage.ts`); browsers load them from `/media/<key>` (Vite proxy → Garage website endpoint). **The web app no longer uses Supabase at all** (client and deps removed in Stage 10; v1 on `main` still does). Home filters: `useGroupFilters` (URL is the source of truth) + `useGroups` (infinite query).
@@ -54,11 +54,11 @@ The owner's goal is **learning**: explain the *why* of each new concept while im
 - Server state uses TanStack Query only. Don't fetch in `useEffect`. Route guards go in RR7 `loader`s, ideally through `queryClient.ensureQueryData`.
 - The global session key is `['session']` (value: `User | null`). Update it with `useSetUser` after login/register/profile changes; `useSignOut` sets it to null.
 - Select explicit columns, not `*`. Assume the client is compromised: security lives in Supabase RLS.
-- Style with Tailwind utilities in markup. Extract repeated UI into React components, not `@apply`.
+- Style with Tailwind utilities in markup. Extract repeated UI into React components (in `components/ui`), not `@apply`.
 - Design language: "Aspirational Minimalism" (Apple-like). Accent `#0071e3`, black/white with `#f5f5f7`/`#1d1d1f` bands, light and dark via `prefers-color-scheme` (Tailwind `dark:`). Typography is Inter with huge, tight headlines.
 
 ## Working conventions
 - Work on the `dev` branch. `main` is production.
-- Match the existing code style: double quotes in components, function components with default exports, and hooks named `useX` in `features/<feature>/hooks`.
+- Match the existing code style: double quotes, pages/feature components as default exports, UI-kit components as named exports, hooks named `useX` in `features/<feature>/hooks`. A `.tsx` file exports only components (React fast refresh): helpers go in `.ts` files.
 - After changes, run `npm run lint` and `npm run build`.
 - When you fix an audit item, update its status in `docs/CODE_AUDIT.md`.
