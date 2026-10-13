@@ -1,5 +1,5 @@
 // Public API of @urconnections/shared: code shared by web (and later api).
-export { TOPICS, type Topic } from "./topics";
+export { TOPICS, isTopic, type Topic } from "./topics";
 export {
   PLATFORMS,
   PLATFORM_KEYS,
@@ -23,6 +23,7 @@ export {
   type Group,
   type GroupListQuery,
   type GroupListParams,
+  type GroupFilters,
   type GroupListResponse,
 } from "./schemas/group";
 export {

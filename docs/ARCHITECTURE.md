@@ -45,6 +45,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
   src/lib/errors.ts         # HttpError(status, code, message, details?) + ErrorBody shape
   src/lib/validate.ts       # parseOrThrow(schema, input): typed value or 400 invalid_request with per-field details
+  src/lib/rateLimit.ts      # limitRequests({ limit, windowMs, key, onlyFailures, handler }) + byIp / byUser / byEmail, HOUR / MINUTE; JSON 429 by default
   src/lib/mailer.ts         # Mailer interface + createSmtpMailer (nodemailer; Mailpit in dev)
   src/lib/storage.ts        # Storage interface (put/delete) + createS3Storage (AWS SDK, path style) + enableWebsiteAccess + mediaUrl(key) = /media/<key>
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
@@ -60,7 +61,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/modules/auth/cookies.ts              # session cookie: sid / __Host-sid, httpOnly, SameSite=Lax, Secure in prod; TTL 30d, renew <15d; google_oauth cookie (state.verifier, 10 min)
   src/modules/auth/startSession.ts         # startSession(): new session row + cookie, drops the old one (rotation); used by every sign-in path
   src/modules/auth/sessions.repository.ts  # create / findValid (join users, DB clock) / extend / delete / deleteExpired
-  src/modules/auth/session.middleware.ts   # loadSession (cookie → req.user, sliding renewal), requireAuth (401), requireVerified (403)
+  src/modules/auth/session.middleware.ts   # loadSession (cookie → req.user, sliding renewal), requireAuth (401), requireVerified (403), signedInUser(req) (typed user or 401), unauthenticated()
   src/modules/auth/emailTokens.repository.ts  # issue (cancels older) / consume (one atomic UPDATE: unused + unexpired + purpose)
   src/modules/auth/emails.ts               # verifyEmailMessage / resetPasswordMessage (text + escaped HTML)
   src/modules/auth/google.ts               # GoogleOAuth interface + createGoogleOAuth (arctic: PKCE URL, code exchange) + parseGoogleClaims (iss/aud/email_verified)
@@ -96,14 +97,14 @@ web/                        # the React app (Vite)
   public/favicon.svg
   src/
     main.jsx                # QueryClientProvider (lib/queryClient) + ReactQueryDevtools + <App/>
-    App.jsx                 # createBrowserRouter route tree + loaders requireAuth / redirectIfAuth + <Analytics/>
+    App.jsx                 # createBrowserRouter route tree + loaders requireAuth / redirectIfAuth
     index.css               # Inter font @import, Tailwind, base layer (border color, cursor), --nav-height, .hide-scrollbar, .animate-fade-in
     vite-env.d.ts           # Vite client types (no VITE_* variables are used)
     GenealComponents/       # (sic, typo; renamed in Stage 11) app shell
-      RootLayout.jsx        # <ScrollToTop/> + <Outlet/>
+      RootLayout.jsx        # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + <Outlet/>
       MainLayout.jsx        # sticky nav + <Outlet/> + footer (all inline)
-      ScrollToTop.jsx       # scrolls to top on pathname change
     lib/
+      pageTitle.ts          # pageTitle(name?) → "name · UrConnections"; pages render <title>{pageTitle(...)}</title> (React 19 hoists it into <head>)
       queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus); also used by route loaders
       apiClient.ts          # apiGet / apiSend / apiSendNoContent: same-origin fetch (cookie sent), JSON or FormData body, ApiError, zod-validated JSON
       platforms.ts          # UI side of platforms: icon + Tailwind badge colors per PlatformKey; PLATFORMS, getPlatform(key)
@@ -124,15 +125,16 @@ web/                        # the React app (Vite)
         api/queryKeys.ts              # groupKeys factory: all / lists / list(filters) / mine / detail
         hooks/useGroups.ts            # useInfiniteQuery over getGroups: pages + fetchNextPage, keepPreviousData
         hooks/useGroupFilters.ts      # filters from/to the URL; saved search; one-time location preset
-        hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (enabled when signed in)
-        hooks/useUpdateGroup.ts       # PATCH → cache the group's detail + invalidate lists
-        hooks/useGroup.ts             # groupKeys.detail(id), via the API
-        hooks/useCreateGroup.ts       # POST → cache the new group's detail + invalidate lists (form shows errors)
+        hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (skipToken until signed in)
+        hooks/useUpdateGroup.ts       # PATCH → storeSavedGroup
+        hooks/groupCache.ts           # storeSavedGroup(queryClient, group): cache its detail + invalidate every group list
+        hooks/useGroup.ts             # groupKeys.detail(id), via the API (skipToken while there's no id)
+        hooks/useCreateGroup.ts       # POST → storeSavedGroup (form shows errors)
         hooks/useDeleteGroup.ts       # DELETE → remove detail, invalidate lists; alert() on error (toast in Stage 11)
         hooks/useUserLocation.ts      # ['userLocation']: ipapi.co, localStorage cache with 7-day TTL, never throws
         utils/savedSearch.ts          # read/save/clearSavedSearch(): last home search per tab ("" = user cleared filters)
         components/GroupList.jsx      # home page: FilterBar + server-filtered grid + Load more
-        components/FilterBar.jsx      # hero search (uncontrolled input) + sticky selects + topic pills
+        components/FilterBar.jsx      # hero search (uncontrolled input) + sticky selects + topic pills; props: filters, onChange(key, value), onSearch
         components/GroupCard.jsx      # card: badges, Connect / View Details; owner (user.id === group.user_id) also sees Edit + Delete
         components/GroupDetail.jsx    # /groups/:groupId; owner sees Edit Group / Delete Group
         components/GroupForm.jsx      # shared create/edit form (edit: platform + link read-only)
@@ -180,7 +182,7 @@ RootLayout (no path)
 ```
 - The loaders read the session through the cache: `queryClient.ensureQueryData(sessionQueryOptions)`, with the shared `queryClient` in `web/src/lib/queryClient.ts`.
 - There is no `errorElement`, no 404/catch-all route, and no `React.lazy`. Every page is bundled eagerly.
-- `<Analytics/>` (Vercel) renders next to `RouterProvider`.
+- `RootLayout` renders React Router's `<ScrollRestoration/>`. Each page sets its tab title with a React 19 `<title>` element (`lib/pageTitle.ts`).
 
 ## 3. Data layer
 
@@ -243,4 +245,3 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
 - Google Fonts (Inter, `@import` in CSS)
-- Vercel Analytics

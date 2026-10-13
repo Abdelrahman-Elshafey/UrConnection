@@ -17,3 +17,6 @@ export const TOPICS = [
 
 /** "Programming" | "Language" | ... derived from the array above. */
 export type Topic = (typeof TOPICS)[number];
+
+/** Type guard, like isCountry / isPlatformKey: after `isTopic(x)` is true, TS knows x is a Topic. */
+export const isTopic = (value: string): value is Topic => (TOPICS as readonly string[]).includes(value);

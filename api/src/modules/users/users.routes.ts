@@ -1,12 +1,12 @@
 import { AVATAR_MAX_BYTES, profileUpdateSchema, type MeResponse, type MyGroupsResponse } from "@urconnections/shared";
 import { Router, type RequestHandler } from "express";
-import { rateLimit } from "express-rate-limit";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
 import { HttpError } from "../../lib/errors";
+import { byUser, HOUR, limitRequests } from "../../lib/rateLimit";
 import type { Storage } from "../../lib/storage";
 import { parseOrThrow } from "../../lib/validate";
-import { requireAuth } from "../auth/session.middleware";
+import { requireAuth, signedInUser, unauthenticated } from "../auth/session.middleware";
 import type { GroupsRepository } from "../groups/groups.repository";
 import { InvalidImageError, toAvatarWebp } from "./avatarImage";
 import type { UsersRepository } from "./users.repository";
@@ -63,14 +63,11 @@ export function usersRouter({ users, groups, storage }: UsersDeps): Router {
   const router = Router();
 
   // Image processing costs CPU: cap uploads per user (created per app, so tests start fresh).
-  const avatarPerUser = rateLimit({
-    windowMs: 60 * 60 * 1000,
+  const avatarPerUser = limitRequests({
     limit: 20,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    keyGenerator: (req) => `user:${req.user?.id ?? ""}`,
-    handler: (_req, _res, next) =>
-      next(new HttpError(429, "too_many_requests", "Too many picture changes. Please try again later.")),
+    windowMs: HOUR,
+    key: byUser,
+    message: "Too many picture changes. Please try again later.",
   });
 
   /** Deletes an object that is no longer used. A failure only leaves an orphan file, so log and carry on. */
@@ -79,14 +76,14 @@ export function usersRouter({ users, groups, storage }: UsersDeps): Router {
 
   router.patch("/me", requireAuth, async (req, res) => {
     const patch = parseOrThrow(profileUpdateSchema, req.body);
-    const user = await users.updateProfile(req.user!.id, patch); // `!`: requireAuth guarantees it
-    if (!user) throw new HttpError(401, "unauthenticated", "Please sign in"); // account deleted meanwhile
+    const user = await users.updateProfile(signedInUser(req).id, patch);
+    if (!user) throw unauthenticated(); // account deleted meanwhile
     res.json({ user } satisfies MeResponse);
   });
 
   router.get("/me/groups", requireAuth, async (req, res) => {
     res.set("Cache-Control", "no-store"); // personal data: never cache
-    res.json({ items: await groups.listByOwner(req.user!.id) } satisfies MyGroupsResponse);
+    res.json({ items: await groups.listByOwner(signedInUser(req).id) } satisfies MyGroupsResponse);
   });
 
   // requireAuth runs before multer: an anonymous upload is refused before a byte is buffered.
@@ -105,7 +102,7 @@ export function usersRouter({ users, groups, storage }: UsersDeps): Router {
 
     // Order matters, so a failure never leaves the user pointing at a missing picture:
     // 1. store the new object  2. point the user at it  3. delete the old one.
-    const userId = req.user!.id;
+    const userId = signedInUser(req).id;
     const key = `avatars/${userId}/${randomUUID()}.webp`;
     await storage.put(key, webp, { contentType: "image/webp", cacheControl: AVATAR_CACHE_CONTROL });
 
@@ -115,15 +112,15 @@ export function usersRouter({ users, groups, storage }: UsersDeps): Router {
     });
     if (!result) {
       await deleteQuietly(key, req.log);
-      throw new HttpError(401, "unauthenticated", "Please sign in"); // account deleted meanwhile
+      throw unauthenticated(); // account deleted meanwhile
     }
     if (result.previousKey) await deleteQuietly(result.previousKey, req.log);
     res.json({ user: result.user } satisfies MeResponse);
   });
 
   router.delete("/me/avatar", requireAuth, async (req, res) => {
-    const result = await users.setAvatarKey(req.user!.id, null);
-    if (!result) throw new HttpError(401, "unauthenticated", "Please sign in");
+    const result = await users.setAvatarKey(signedInUser(req).id, null);
+    if (!result) throw unauthenticated();
     if (result.previousKey) await deleteQuietly(result.previousKey, req.log);
     res.json({ user: result.user } satisfies MeResponse);
   });

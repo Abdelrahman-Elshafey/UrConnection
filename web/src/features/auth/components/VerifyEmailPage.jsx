@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { useVerifyEmail } from "../hooks/useEmailFlows";
 import AuthCard, { buttonClass, Notice } from "./AuthCard";
 

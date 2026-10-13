@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { forgotPasswordSchema } from "@urconnections/shared";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useForgotPassword } from "../hooks/useEmailFlows";
 import AuthCard, { buttonClass, inputClass, Notice } from "./AuthCard";
 

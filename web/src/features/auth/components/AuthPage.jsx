@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { GOOGLE_SIGN_IN_URL, login, register as registerAccount } from "../../../services/auth.service";
 import { clearSavedSearch } from "../../groups/utils/savedSearch";
+import { pageTitle } from "../../../lib/pageTitle";
 import { useSetUser } from "../hooks/useUser";
 import { COUNTRY_LIST, getCities, loginSchema, oauthErrorMessage, signupSchema } from "@urconnections/shared";
 
@@ -80,6 +81,7 @@ export default function AuthPage() {
   return (
 
     <div className="min-h-screen bg-white dark:bg-[#000000] flex flex-col justify-center py-20 px-6 transition-colors duration-200">
+      <title>{pageTitle(isLogin ? "Sign in" : "Create account")}</title>
       <div className="absolute top-10 left-6 lg:left-20">
         <Link
           to="/"

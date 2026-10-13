@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { resetPasswordFormSchema } from "@urconnections/shared";
 import { useForm } from "react-hook-form";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { useResetPassword } from "../hooks/useEmailFlows";
 import AuthCard, { buttonClass, inputClass, Notice } from "./AuthCard";
 

@@ -3,6 +3,7 @@ import { useGroupFilters } from "../hooks/useGroupFilters";
 import { useGroups } from "../hooks/useGroups";
 import GroupCard from "./GroupCard";
 import FilterBar from "./FilterBar";
+import { pageTitle } from "../../../lib/pageTitle";
 
 export default function GroupList() {
   // Filters live in the URL (useGroupFilters); the API does the filtering (useGroups).
@@ -46,20 +47,14 @@ export default function GroupList() {
 
   return (
     <div className="w-full bg-white dark:bg-[#000000] min-h-screen transition-colors duration-200">
+      <title>{pageTitle()}</title>
       <FilterBar
+        filters={filters}
+        onChange={setFilter}
         onSearch={(val) => {
           setFilter("query", val);
           scrollToResults();
         }}
-        onTopicChange={(val) => setFilter("topic", val)}
-        currentTopic={filters.topic}
-        currentSearch={filters.query}
-        onCountryChange={(val) => setFilter("country", val)}
-        onCityChange={(val) => setFilter("city", val)}
-        onPlatformChange={(val) => setFilter("platform", val)}
-        currentCountry={filters.country}
-        currentCity={filters.city}
-        currentPlatform={filters.platform}
       />
 
       <div ref={scrollRef} className="max-w-350 mx-auto px-6 py-10 scroll-mt-24">

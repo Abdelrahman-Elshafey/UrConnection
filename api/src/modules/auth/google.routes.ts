@@ -1,7 +1,7 @@
 import type { OAuthErrorCode } from "@urconnections/shared";
 import { Router, type Response } from "express";
-import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { config } from "../../config";
+import { limitRequests, MINUTE } from "../../lib/rateLimit";
 import { clearGoogleOAuthCookie, readGoogleOAuthCookie, setGoogleOAuthCookie } from "./cookies";
 import type { GoogleOAuth } from "./google";
 import type { OAuthAccountsRepository } from "./oauthAccounts.repository";
@@ -30,15 +30,8 @@ export function googleRouter({ sessions, oauthAccounts, google }: GoogleDeps): R
   const toLogin = (res: Response, code: OAuthErrorCode) => res.redirect(`${config.APP_ORIGIN}/login?error=${code}`);
 
   // One sign-in is two requests (start + callback), so this allows about 20 per 15 minutes per IP.
-  const perIp = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 40,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
-    handler: (_req, res) => toLogin(res, "google_too_many"),
-  });
-  router.use(perIp);
+  // A page navigation can't show a JSON error, so this limiter redirects instead.
+  router.use(limitRequests({ limit: 40, windowMs: 15 * MINUTE, handler: (_req, res) => toLogin(res, "google_too_many") }));
 
   // A redirect that signs someone in must never be cached by a browser or proxy.
   router.use((_req, res, next) => {

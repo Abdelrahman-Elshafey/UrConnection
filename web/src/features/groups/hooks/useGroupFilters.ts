@@ -1,6 +1,6 @@
-import { TOPICS, isPlatformKey, type GroupListParams, type Topic } from "@urconnections/shared";
+import { isPlatformKey, isTopic, type GroupFilters } from "@urconnections/shared";
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { readSavedSearch, saveSearch } from "../utils/savedSearch";
 import { useUserLocation } from "./useUserLocation";
 
@@ -14,8 +14,6 @@ export interface HomeFilters {
 }
 
 export type FilterKey = keyof HomeFilters;
-
-const isTopic = (value: string): value is Topic => (TOPICS as readonly string[]).includes(value);
 
 /**
  * Home page filters with the URL as the single source of truth (audit O1).
@@ -43,7 +41,7 @@ export function useGroupFilters() {
 
   // What the API gets. Unknown values from a hand-edited URL (topic=Cooking) are dropped
   // here, so they show as "no filter" instead of producing a 400 from the API.
-  const apiParams: Omit<GroupListParams, "cursor" | "limit"> = {
+  const apiParams: GroupFilters = {
     ...(filters.query && { query: filters.query }),
     ...(isTopic(filters.topic) && { topic: filters.topic }),
     ...(filters.country && { country: filters.country }),

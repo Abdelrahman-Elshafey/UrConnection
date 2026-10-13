@@ -1,8 +1,9 @@
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router";
 import { useUser } from "../../auth/hooks/useUser";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 import { useGroup } from "../hooks/useGroup";
 import { getPlatform } from "../../../lib/platforms";
+import { pageTitle } from "../../../lib/pageTitle";
 
 export default function GroupDetail() {
   const { groupId } = useParams();
@@ -27,7 +28,7 @@ export default function GroupDetail() {
       <div className="flex justify-center p-20 bg-white dark:bg-[#000000] h-screen">
         <div className="text-center">
           <h2 className="text-4xl font-black text-black dark:text-white mb-4 tracking-tighter">Not Found</h2>
-          <button onClick={() => navigate("/")} className="text-[#0071e3] font-bold uppercase tracking-widest text-xs cursor-pointer">Return Home</button>
+          <Link to="/" className="text-[#0071e3] font-bold uppercase tracking-widest text-xs">Return Home</Link>
         </div>
       </div>
     );
@@ -54,16 +55,17 @@ export default function GroupDetail() {
 
   return (
     <div className="w-full bg-white dark:bg-[#000000] transition-colors duration-200">
+      <title>{pageTitle(title)}</title>
       {/* Immersive Hero Band */}
       <section className="w-full bg-[#f5f5f7] dark:bg-[#0a0a0a] pt-10 pb-10 px-6 relative overflow-hidden">
         <div className="max-w-7xl mx-auto relative z-10">
-          <button
-            onClick={() => navigate("/")}
-            className="mb-8 flex items-center gap-2 group text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center gap-2 group text-gray-400 hover:text-black dark:hover:text-white transition-colors"
           >
             <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Back to Explore</span>
-          </button>
+          </Link>
 
           <div className="flex flex-wrap items-center gap-2 mb-6">
             <span className="bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">

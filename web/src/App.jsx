@@ -2,7 +2,7 @@ import {
   createBrowserRouter,
   RouterProvider,
   redirect,
-} from "react-router-dom";
+} from "react-router";
 import MainLayout from "./GenealComponents/MainLayout";
 import GroupList from "./features/groups/components/GroupList";
 import CreateGroupForm from "./features/groups/components/CreateGroupForm";
@@ -14,7 +14,6 @@ import ForgotPasswordPage from "./features/auth/components/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/components/ResetPasswordPage";
 import ProfilePage from "./features/profile/components/ProfilePage";
 import RootLayout from "./GenealComponents/RootLayout";
-import { Analytics } from "@vercel/analytics/react";
 import { queryClient } from "./lib/queryClient";
 import { sessionQueryOptions } from "./features/auth/hooks/useUser";
 
@@ -85,12 +84,7 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return (
-    <>
-      <RouterProvider router={router} />
-      <Analytics />
-    </>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

@@ -39,6 +39,7 @@
 | B27 | L | [x] | `ProfilePage.jsx` success toast | The `setTimeout` is never cleared. Saving twice within 3s hides the second toast early. | Keep the timer id in a ref and clear it. Later, replace it with a shared `Toast` (Phase 2). |
 | B28 | L | [x] | sign-out | Only `['session']` is reset. User-scoped caches (`['groups','user',id]`) stay in memory for the next person on the same tab. | On `SIGNED_OUT` in `useAuthListener`, call `queryClient.removeQueries({ queryKey: ['groups','user'] })`, or `queryClient.clear()` and then set the session to null. |
 | B29 | L | [x] | `GroupList.jsx` | If the user clicks "Clear all" and later returns to `/`, the geo preset re-applies, because the cache was cleared and the `hasInitialized` ref resets on remount. The user's "Global" choice is forgotten. | Part of O1: remember "user cleared filters" in the same storage entry. |
+| B30 | L | [ ] | `MainLayout.jsx` footer | "Categories" links to `/` (nowhere specific), "Register" opens `/login` in **sign-in** mode, and the navbar links to `/profile` twice (avatar + text). | Fix while rebuilding the navbar/footer in Stage 11 (signup gets its own route when AuthPage is split, O3). |
 
 ## S — Security / privacy
 
@@ -73,6 +74,12 @@
 | D10 | [ ] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
 | D11 | [ ] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
 | D12 | [ ] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
+| D13 | [ ] | `[city, country].filter(Boolean).join(", ")` (3×) and the owner check `user.id === group.user_id` (3×). | `formatLocation(place)` and `isOwner(user, group)` helpers (Stage 11). |
+| D14 | [ ] | Hand-written SVG paths (chevron, pencil, arrow, ✕, map pin) ~12×, although `react-icons` is already a dependency. | Use icons from `react-icons` (Stage 11). |
+| D15 | [x] | `useCreateGroup` / `useUpdateGroup` had identical `onSuccess` (cache detail + invalidate lists). | `hooks/groupCache.ts` → `storeSavedGroup()`. |
+| D16 | [x] | `Omit<GroupListParams, "cursor" \| "limit">` written 3×; `isTopic` defined in a web hook while `isCountry`/`isPlatformKey` live in shared. | Shared `GroupFilters` type and `isTopic()`. |
+| D17 | [x] | API rate-limiter setup (headers, IP key, JSON 429) copied in auth, Google and users routes. | `api/src/lib/rateLimit.ts`: `limitRequests({ limit, windowMs, key })`, `byIp` / `byUser` / `byEmail`. |
+| D18 | [x] | `req.user!` 9× and the "account deleted meanwhile → 401" error 4× in API routes. | `signedInUser(req)` (typed, throws 401) and `unauthenticated()` in `session.middleware.ts`. |
 
 ## R — Violations of `.agents/rules`
 
@@ -100,9 +107,23 @@ Code that is more complex than the problem needs. Simplifying these removes whol
 | O5 | [x] | small wrappers | `getRedirectUrl()` wraps a single env read. `mutationFn: (x) => updateProfile(x)` and `({userId, file}) => uploadAvatar(userId, file)` are pass-through arrows. The `image/` type check is duplicated in `ProfileAvatar` and `compressImage`. | Use `const REDIRECT_URL = import.meta.env…` and `mutationFn: updateProfile`. Do validation in one place. |
 | O6 | [x] | `storage.service.js` | The extension varies with the uploaded file name, so both upload and remove need a `list()` + filter + `remove()` round-trip (3–4 network calls). | Always convert to WebP and save to the fixed path `<uid>/avatar.webp` with `upsert: true`. Upload is then 1 call and remove is 1 call. This also fixes S5's extension issue and makes the README's WebP claim true. |
 | O7 | [x] | `lib/countries.js` | 118 `.sort()` calls at module load, and the data is re-sorted again for `COUNTRY_LIST`. | Store the data pre-sorted (a one-off script), or as JSON. No runtime work. |
-| O8 | [ ] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
+| O8 | [x] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
 | O9 | [ ] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
 | O10 | [x] | `GroupCard` / `GroupDetail` | `React.createElement(platformInfo.icon, {...})` plus `import React` just for it. `platforms.js` also has an unused `import React`. | Use `const Icon = platformInfo.icon; <Icon className=… />`, and drop the React imports (D8). |
+
+## M — Modernization (newer React / React Router / TanStack / TypeScript features)
+
+Found in the 2026-10-13 review: places where the libraries we already use now offer a simpler built-in way.
+
+| ID | Status | Where | Before | Now |
+|---|---|---|---|---|
+| M1 | [x] | `ScrollToTop.jsx` | Effect calling `window.scrollTo(0, 0)` on every path change. | React Router's `<ScrollRestoration />` in `RootLayout` (also restores the position on Back). File deleted. |
+| M2 | [x] | 17 imports | `react-router-dom`, which in v7 only re-exports `react-router`. | Import from `react-router`; one dependency fewer. |
+| M3 | [x] | `useGroup`, `useMyGroups` | `enabled: !!id` plus `getGroupById(id!)`. | TanStack Query `skipToken`: no `!`, no separate flag to keep in sync. |
+| M4 | [x] | every page | One tab title ("UrConnections") for all pages. | React 19 `<title>` inside each page (`lib/pageTitle.ts`); React hoists it into `<head>`. |
+| M5 | [x] | `GroupDetail` ×2, `ProfilePage` | `<button onClick={() => navigate(...)}>` for plain navigation. | `<Link>`: real links (new tab, middle-click, announced as links). |
+| M6 | [x] | `App.jsx` | `@vercel/analytics` `<Analytics/>`. | Removed: v2 is self-hosted, the Vercel endpoint doesn't exist there. |
+| M7 | [ ] | UI kit (Stage 11) | `forwardRef` would be needed for inputs used with react-hook-form's `register`. | React 19 passes `ref` as a normal prop: plain function components. |
 
 ## P — Performance (measured)
 
@@ -246,3 +267,8 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **P2 (closed)**: `browser-image-compression` is gone (the server converts). The `@supabase/supabase-js` client and `web/.env` variables went too, since nothing in the web app uses them now. Home bundle: **248 → 180 KB gzip**, already under Stage 12's 190 KB target.
 - **Storage choice**: MinIO's community repo was archived in April 2026 and no longer publishes images. Garage (free, AGPL, self-hosted) was chosen for the S3 API. It runs behind a `Storage` interface, so plain files or a hosted S3 (R2/B2) would be one new implementation.
 - **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups.
+
+### Notes on the 2026-10-13 review (start of Stage 11)
+- **Verdict**: The API and shared package are lean. Its interfaces (`Storage`, `Mailer`, `GoogleOAuth`) each exist so tests run without real services, so none were cut. Nearly all the repetition is in the React components (D1–D14), which is what the Stage 11 UI kit is for.
+- **Done before the UI kit**: M1–M6, O8 (FilterBar takes `filters` / `onChange` / `onSearch` instead of 10 props), D15–D18. Home bundle 179.6 → 179.3 KB gzip.
+- **Open, for Stage 11**: D1–D4, D6, D8, D10–D14, M7, O3, O9, B30, A1–A4.

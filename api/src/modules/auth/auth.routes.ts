@@ -8,19 +8,19 @@ import {
   type MeResponse,
   type User,
 } from "@urconnections/shared";
-import { Router, type Request } from "express";
-import { ipKeyGenerator, rateLimit, type Options } from "express-rate-limit";
+import { Router } from "express";
 import { config } from "../../config";
 import { HttpError } from "../../lib/errors";
 import { logger } from "../../lib/logger";
 import type { Mailer } from "../../lib/mailer";
+import { byEmail, byUser, HOUR, limitRequests, MINUTE } from "../../lib/rateLimit";
 import { parseOrThrow } from "../../lib/validate";
 import { EmailTakenError, type UsersRepository } from "../users/users.repository";
 import { clearSessionCookie } from "./cookies";
 import { resetPasswordMessage, verifyEmailMessage } from "./emails";
 import type { EmailTokensRepository } from "./emailTokens.repository";
 import { DUMMY_HASH, hashPassword, verifyPassword } from "./passwords";
-import { requireAuth } from "./session.middleware";
+import { requireAuth, signedInUser } from "./session.middleware";
 import type { SessionsRepository } from "./sessions.repository";
 import { startSession } from "./startSession";
 
@@ -32,12 +32,6 @@ export interface AuthDeps {
 }
 
 const invalidLink = () => new HttpError(400, "invalid_token", "This link is invalid or has expired. Please request a new one.");
-
-/** A 429 in our usual error shape (instead of the library's plain-text default). */
-const tooMany: Options["handler"] = (_req, _res, next) =>
-  next(new HttpError(429, "too_many_requests", "Too many attempts. Please wait a few minutes and try again."));
-
-const emailKey = (req: Request) => String((req.body as { email?: unknown })?.email ?? "").trim().toLowerCase();
 
 /**
  * POST /api/auth/register   create an account and sign in
@@ -54,32 +48,17 @@ const emailKey = (req: Request) => String((req.body as { email?: unknown })?.ema
 export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): Router {
   const router = Router();
 
-  // SECURITY: rate limits make password guessing slow. Created per app instance, so
-  // every test gets fresh counters. (In-memory: fine for one server; several servers
-  // would need a shared store, e.g. Redis.)
-  const limits = {
-    window: 15 * 60 * 1000, // 15 minutes
-    common: { standardHeaders: "draft-8", legacyHeaders: false, handler: tooMany } as const,
-  };
-  // Per IP (or IPv6 /56 block): stops one machine hammering many accounts.
-  const loginPerIp = rateLimit({ ...limits.common, windowMs: limits.window, limit: 30, keyGenerator: (req) => ipKeyGenerator(req.ip ?? "") });
-  // Per email, counting only failures: stops a botnet guessing one account's password.
-  const loginPerEmail = rateLimit({
-    ...limits.common,
-    windowMs: limits.window,
-    limit: 10,
-    skipSuccessfulRequests: true,
-    keyGenerator: (req) => `email:${emailKey(req)}`,
-  });
-  const hour = 60 * 60 * 1000;
-  const perIp = (limit: number, windowMs = hour) =>
-    rateLimit({ ...limits.common, windowMs, limit, keyGenerator: (req) => ipKeyGenerator(req.ip ?? "") });
-  const registerPerIp = perIp(10);
+  // SECURITY: rate limits (see lib/rateLimit.ts). Per IP stops one machine hammering many
+  // accounts; per email (failures only) stops a botnet guessing one account's password.
+  const loginPerIp = limitRequests({ limit: 30, windowMs: 15 * MINUTE });
+  const loginPerEmail = limitRequests({ limit: 10, windowMs: 15 * MINUTE, key: byEmail, onlyFailures: true });
+  const registerPerIp = limitRequests({ limit: 10, windowMs: HOUR });
   // Emails cost money and can be used to annoy someone: cap them per IP and per address.
-  const forgotPerIp = perIp(10);
-  const forgotPerEmail = rateLimit({ ...limits.common, windowMs: hour, limit: 3, keyGenerator: (req) => `email:${emailKey(req)}` });
-  const resendPerUser = rateLimit({ ...limits.common, windowMs: hour, limit: 5, keyGenerator: (req) => `user:${req.user?.id ?? ""}` });
-  const tokenPerIp = perIp(30); // verify / reset attempts: stops guessing (hopeless anyway with 256-bit tokens)
+  const forgotPerIp = limitRequests({ limit: 10, windowMs: HOUR });
+  const forgotPerEmail = limitRequests({ limit: 3, windowMs: HOUR, key: byEmail });
+  const resendPerUser = limitRequests({ limit: 5, windowMs: HOUR, key: byUser });
+  // Verify / reset attempts: stops guessing (hopeless anyway with 256-bit tokens).
+  const tokenPerIp = limitRequests({ limit: 30, windowMs: HOUR });
 
   /** Emails a fresh verification link. */
   async function sendVerificationEmail(user: User) {
@@ -132,7 +111,8 @@ export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): 
   });
 
   router.post("/verify-email/request", requireAuth, resendPerUser, async (req, res) => {
-    if (!req.user!.email_verified) await sendVerificationEmail(req.user!);
+    const user = signedInUser(req);
+    if (!user.email_verified) await sendVerificationEmail(user);
     res.status(204).end();
   });
 

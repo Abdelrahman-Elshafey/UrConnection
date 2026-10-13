@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useUser } from "../../auth/hooks/useUser";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 import { getPlatform } from "../../../lib/platforms";
