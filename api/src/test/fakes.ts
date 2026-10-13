@@ -1,6 +1,7 @@
 import type { Group } from "@urconnections/shared";
 import type { AppDeps } from "../app";
 import type { MailMessage, Mailer } from "../lib/mailer";
+import type { Storage } from "../lib/storage";
 import type { GoogleOAuth, GoogleProfile } from "../modules/auth/google";
 
 /** A mailer that keeps messages in memory instead of sending them. Tests read `sent`. */
@@ -41,6 +42,18 @@ export const googleProfile = (overrides: Partial<GoogleProfile> = {}): GooglePro
   name: "Ana Google",
   ...overrides,
 });
+
+/** Storage in a Map instead of S3. Tests read `objects` to see what was stored or deleted. */
+export function fakeStorage(): { storage: Storage; objects: Map<string, { body: Buffer; contentType: string; cacheControl: string }> } {
+  const objects = new Map<string, { body: Buffer; contentType: string; cacheControl: string }>();
+  return {
+    objects,
+    storage: {
+      put: async (key, body, options) => void objects.set(key, { body, ...options }),
+      delete: async (key) => void objects.delete(key),
+    },
+  };
+}
 
 /** A valid group for tests; override any field. */
 export const sampleGroup = (overrides: Partial<Group> = {}): Group => ({
@@ -87,6 +100,7 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       findByEmail: async () => undefined,
       markEmailVerified: async () => undefined,
       setPasswordHash: async () => {},
+      setAvatarKey: async () => undefined,
     },
     sessions: {
       create: async () => {},
@@ -108,6 +122,7 @@ export function fakeDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       },
     },
     google: null,
+    storage: fakeStorage().storage,
     ...overrides,
   };
 }

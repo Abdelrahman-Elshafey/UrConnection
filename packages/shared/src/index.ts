@@ -28,6 +28,8 @@ export {
 export {
   profileSchema,
   profileUpdateSchema,
+  AVATAR_MAX_BYTES,
+  AVATAR_MIME_TYPES,
   type ProfileInput,
   type ProfileUpdate,
 } from "./schemas/profile";

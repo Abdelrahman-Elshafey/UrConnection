@@ -1,7 +1,7 @@
 # Development services. Start: `npm run db:up` · stop: `npm run db:down` · logs: `npm run db:logs`
 #
-# Only what the code uses today. Each later stage adds its own service:
-#   mailpit (Stage 8: catches outgoing email) is here · Stage 10 adds file storage for avatars.
+# Only what the code uses today: postgres, mailpit (Stage 8: catches outgoing email)
+# and garage (Stage 10: S3-compatible storage for avatars).
 # The production stack (Caddy, api, web, backups) lives in compose.prod.yml (Stage 13).
 
 name: urconnections
@@ -48,5 +48,34 @@ services:
       timeout: 3s
       retries: 15
 
+  # S3-compatible object storage for avatars (Stage 10). Garage is free, open-source
+  # software we run ourselves; the API uses the standard S3 API (AWS SDK), so a hosted S3
+  # (AWS, Cloudflare R2, Backblaze B2) could replace it by changing only api/.env.
+  garage:
+    image: dxflrs/garage:v2.4.1
+    restart: unless-stopped
+    # --single-node: set up a one-node cluster automatically (no manual "layout" commands).
+    # --default-bucket: create the bucket and an access key from the GARAGE_DEFAULT_* values.
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      # SECURITY: development-only values (they match api/.env.example). Never use them
+      # in production; Stage 13/14 generate real ones (openssl rand -hex 32).
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-7781370026fc6cf1c6e9f366ba34ad89a1d31ad0e50b023b426926dd68a24d63}
+      GARAGE_DEFAULT_BUCKET: ${S3_BUCKET:-urconnections}
+      GARAGE_DEFAULT_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-GK4b0db6514b57266c64047709fc50c580}
+      GARAGE_DEFAULT_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-168b2c3c8ac79d62faf63944027e3a0da0dbd05ad8bf3e233affbe82cabbc3da}
+    ports:
+      - "127.0.0.1:3900:3900" # S3 API: the Express API uploads and deletes here
+      - "127.0.0.1:3902:3902" # website endpoint: browsers read avatars here (via the Vite proxy)
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - garage:/var/lib/garage # objects + metadata survive container restarts
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
 volumes:
   pgdata:
+  garage:

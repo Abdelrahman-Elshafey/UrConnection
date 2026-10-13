@@ -1,10 +1,6 @@
 import { useRef, useState } from "react";
+import { AVATAR_MAX_BYTES, AVATAR_MIME_TYPES } from "@urconnections/shared";
 import { useUploadAvatar, useRemoveAvatar } from "../hooks/useAvatar";
-import { AVATAR_MIME_TYPES } from "../../../services/storage.service";
-
-// Avatar storage moves from Supabase to our API in Stage 10. Until then, uploading
-// is switched off (the Supabase upload needs a Supabase login, which no longer exists).
-const UPLOADS_ENABLED = false;
 
 /**
  * ProfileAvatar — A premium, interactive avatar component.
@@ -31,23 +27,27 @@ export default function ProfileAvatar({ user }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setError(null);
-    upload(
-      { userId: user.id, file },
-      {
-        onError: (err) => setError(err.message),
-      },
-    );
-
     // Reset so the same file can be re-selected
     e.target.value = "";
+
+    // Quick checks for a friendly message without a round trip. They're only UX:
+    // the API checks the real contents of the file, whatever the browser says.
+    if (!AVATAR_MIME_TYPES.includes(file.type)) {
+      setError("Please choose a JPEG, PNG or WebP image.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setError("That image is too large. The maximum is 5 MB.");
+      return;
+    }
+
+    setError(null);
+    upload(file, { onError: (err) => setError(err.message) });
   };
 
   const handleRemove = () => {
     setError(null);
-    remove(user.id, {
-      onError: (err) => setError(err.message),
-    });
+    remove(undefined, { onError: (err) => setError(err.message) });
   };
 
   return (
@@ -82,7 +82,7 @@ export default function ProfileAvatar({ user }) {
         )}
 
         {/* Hover overlay — only when idle */}
-        {UPLOADS_ENABLED && !isBusy && (
+        {!isBusy && (
           <button
             onClick={() => fileInputRef.current?.click()}
             className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer"
@@ -115,16 +115,12 @@ export default function ProfileAvatar({ user }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept={Object.keys(AVATAR_MIME_TYPES).join(",")}
+        accept={AVATAR_MIME_TYPES.join(",")}
         onChange={handleFileChange}
         className="hidden"
       />
 
-      {!UPLOADS_ENABLED && (
-        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">Photo upload is coming back soon.</p>
-      )}
-
-      {UPLOADS_ENABLED && avatarUrl && (
+      {avatarUrl && (
         <>
           <button
             onClick={handleRemove}

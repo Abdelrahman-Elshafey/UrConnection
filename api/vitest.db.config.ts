@@ -18,6 +18,8 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
       DATABASE_URL: "postgres://test:test@localhost:5432/test", // only to satisfy config.ts
+      S3_ACCESS_KEY_ID: "test", // never used: tests inject a fake storage
+      S3_SECRET_ACCESS_KEY: "test",
     },
   },
 });
