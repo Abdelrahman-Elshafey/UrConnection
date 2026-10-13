@@ -29,6 +29,13 @@ const envSchema = z.object({
   // "OAuth client ID" (type: Web application). Leave both empty to switch Google sign-in off.
   GOOGLE_CLIENT_ID: optionalString,
   GOOGLE_CLIENT_SECRET: optionalString,
+  // File storage (Stage 10): any S3-compatible service. Development: Garage from
+  // docker-compose.yml (the dev key and secret in api/.env.example match it).
+  S3_ENDPOINT: z.url().default("http://localhost:3900"),
+  S3_REGION: z.string().min(1).default("garage"),
+  S3_BUCKET: z.string().min(3).default("urconnections"),
+  S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required (see api/.env.example)"),
+  S3_SECRET_ACCESS_KEY: z.string().min(1, "S3_SECRET_ACCESS_KEY is required (see api/.env.example)"),
 }).refine((env) => !env.GOOGLE_CLIENT_ID === !env.GOOGLE_CLIENT_SECRET, {
   message: "Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither",
   path: ["GOOGLE_CLIENT_SECRET"],

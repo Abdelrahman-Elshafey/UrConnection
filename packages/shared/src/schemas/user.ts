@@ -11,7 +11,7 @@ export const userSchema = z.object({
   phone: z.string(),
   country: z.string(),
   city: z.string(),
-  avatar_url: z.string().nullable(), // null until avatars arrive (Stage 10)
+  avatar_url: z.string().nullable(), // e.g. "/media/avatars/<id>/<random>.webp"; null = no picture
   email_verified: z.boolean(), // verification emails arrive in Stage 8
   created_at: z.iso.datetime({ offset: true }),
 });

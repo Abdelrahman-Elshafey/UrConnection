@@ -19,3 +19,15 @@ export const profileUpdateSchema = profileSchema.partial();
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+
+// ── Avatars (Stage 10) ──────────────────────────────────────────────────────
+
+/** Largest upload the API accepts. It's re-encoded to a small WebP, so this only caps the input. */
+export const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Image types the profile page offers. The browser uses this list for the file picker;
+ * the API does NOT trust it (anyone can lie about a type): it checks the real format
+ * by decoding the file's contents.
+ */
+export const AVATAR_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;

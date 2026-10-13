@@ -12,10 +12,10 @@ import { googleRouter, type GoogleDeps } from "./modules/auth/google.routes";
 import { loadSession } from "./modules/auth/session.middleware";
 import { groupsRouter, type GroupsDeps } from "./modules/groups/groups.routes";
 import { healthRouter, type HealthDeps } from "./modules/health/health.routes";
-import { usersRouter } from "./modules/users/users.routes";
+import { usersRouter, type UsersDeps } from "./modules/users/users.routes";
 
 /** Everything the app needs from the outside world. Tests pass fakes. */
-export type AppDeps = HealthDeps & GroupsDeps & AuthDeps & GoogleDeps;
+export type AppDeps = HealthDeps & GroupsDeps & AuthDeps & GoogleDeps & UsersDeps;
 
 /**
  * Builds the Express app without starting it. index.ts calls listen();

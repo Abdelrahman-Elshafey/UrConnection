@@ -1,6 +1,7 @@
 import type { ProfileUpdate, User } from "@urconnections/shared";
 import { sql, type Kysely, type Selectable } from "kysely";
 import type { Database, UsersTable } from "../../db/types";
+import { mediaUrl } from "../../lib/storage";
 
 /** Postgres SQLSTATE for "unique constraint violated" (here: email already used). */
 const UNIQUE_VIOLATION = "23505";
@@ -31,6 +32,11 @@ export interface UsersRepository {
   /** Sets email_verified_at (once; later calls keep the first timestamp). */
   markEmailVerified(id: string): Promise<User | undefined>;
   setPasswordHash(id: string, passwordHash: string): Promise<void>;
+  /**
+   * Points the user at a new avatar object (or none: null) and returns the key it replaced,
+   * so the caller can delete that object. undefined if the user doesn't exist.
+   */
+  setAvatarKey(id: string, key: string | null): Promise<{ user: User; previousKey: string | null } | undefined>;
 }
 
 // SECURITY: password_hash is deliberately not in this list, so it can't end up in a response.
@@ -60,7 +66,7 @@ export function toUser(row: UserRow): User {
     phone: row.phone,
     country: row.country,
     city: row.city,
-    avatar_url: null, // Stage 10 turns avatar_key into a URL
+    avatar_url: row.avatar_key ? mediaUrl(row.avatar_key) : null, // the DB stores the key; clients get a URL
     email_verified: row.email_verified_at !== null,
     created_at: row.created_at.toISOString(),
   };
@@ -105,6 +111,22 @@ export function createUsersRepository(db: Kysely<Database>): UsersRepository {
 
     async setPasswordHash(id, passwordHash) {
       await db.updateTable("users").set({ password_hash: passwordHash }).where("id", "=", id).execute();
+    },
+
+    async setAvatarKey(id, key) {
+      return db.transaction().execute(async (trx) => {
+        // FOR UPDATE locks this user's row until the transaction ends, so two uploads at the
+        // same moment queue up: each sees the key the other wrote, and no object is forgotten.
+        const current = await trx.selectFrom("users").select("avatar_key").where("id", "=", id).forUpdate().executeTakeFirst();
+        if (!current) return undefined;
+        const row = await trx
+          .updateTable("users")
+          .set({ avatar_key: key })
+          .where("id", "=", id)
+          .returning(USER_COLUMNS)
+          .executeTakeFirstOrThrow();
+        return { user: toUser(row), previousKey: current.avatar_key };
+      });
     },
 
     async updateProfile(id, patch) {

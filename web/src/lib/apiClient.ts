@@ -58,19 +58,24 @@ export async function apiGet<S extends z.ZodType>(
   return schema.parse(await res.json());
 }
 
-type Method = "POST" | "PATCH" | "DELETE";
+type Method = "POST" | "PUT" | "PATCH" | "DELETE";
 
 function send(method: Method, path: string, body?: unknown): Promise<Response> {
+  // FormData (file uploads) is sent as multipart/form-data. Its Content-Type header must
+  // include a random "boundary" that separates the parts, so the browser has to set it:
+  // never set Content-Type yourself for FormData. Everything else is sent as JSON.
+  const isForm = body instanceof FormData;
   return fetch(path, {
     method,
-    headers: { Accept: "application/json", ...(body !== undefined && { "Content-Type": "application/json" }) },
+    headers: { Accept: "application/json", ...(body !== undefined && !isForm && { "Content-Type": "application/json" }) },
     credentials: "same-origin",
-    ...(body !== undefined && { body: JSON.stringify(body) }),
+    ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   });
 }
 
 /**
- * POST / PATCH / DELETE with an optional JSON body, validating the JSON response.
+ * POST / PUT / PATCH / DELETE with an optional body (JSON, or FormData for file uploads),
+ * validating the JSON response.
  * The browser adds the Origin header itself, which the API's CSRF check requires.
  */
 export async function apiSend<S extends z.ZodType>(method: Method, path: string, schema: S, body?: unknown): Promise<z.output<S>> {

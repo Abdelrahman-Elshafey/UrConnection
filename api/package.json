@@ -16,6 +16,7 @@
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
@@ -24,6 +25,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1150.0",
     "@urconnections/shared": "*",
     "arctic": "^3.7.0",
     "argon2": "^0.45.1",
@@ -32,10 +34,12 @@
     "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
     "kysely": "^0.29.6",
+    "multer": "^2.4.0",
     "nodemailer": "^10.1.0",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
+    "sharp": "^0.35.5",
     "zod": "^4.6.5"
   }
 }

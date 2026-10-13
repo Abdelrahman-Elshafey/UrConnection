@@ -3,6 +3,7 @@ import { config, GOOGLE_REDIRECT_URI } from "./config";
 import { db } from "./db/db";
 import { checkDatabase, pool } from "./db/pool";
 import { createSmtpMailer } from "./lib/mailer";
+import { createS3Storage } from "./lib/storage";
 import { createEmailTokensRepository } from "./modules/auth/emailTokens.repository";
 import { createGoogleOAuth } from "./modules/auth/google";
 import { createOAuthAccountsRepository } from "./modules/auth/oauthAccounts.repository";
@@ -13,6 +14,13 @@ import { logger } from "./lib/logger";
 
 // The real dependencies. Tests build the app with fakes instead.
 const sessions = createSessionsRepository(db);
+const storage = createS3Storage({
+  endpoint: config.S3_ENDPOINT,
+  region: config.S3_REGION,
+  bucket: config.S3_BUCKET,
+  accessKeyId: config.S3_ACCESS_KEY_ID,
+  secretAccessKey: config.S3_SECRET_ACCESS_KEY,
+});
 const app = createApp({
   checkDatabase,
   groups: createGroupsRepository(db),
@@ -21,12 +29,19 @@ const app = createApp({
   emailTokens: createEmailTokensRepository(db),
   mailer: createSmtpMailer(config.SMTP_URL, config.MAIL_FROM),
   oauthAccounts: createOAuthAccountsRepository(db),
+  storage,
   google:
     config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
       ? createGoogleOAuth(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)
       : null,
 });
 if (!config.GOOGLE_CLIENT_ID) logger.info("Google sign-in is off (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set)");
+
+// Let browsers read avatars through the bucket's website endpoint (idempotent, so on every start).
+// Not fatal: the site still works without storage, only pictures don't.
+storage
+  .enableWebsiteAccess()
+  .catch((err) => logger.warn({ err }, "could not reach file storage: avatars won't work (is Docker running? npm run db:up)"));
 
 // Housekeeping: delete expired sessions at startup and every 6 hours.
 // unref(): this timer alone shouldn't keep the process alive during shutdown.

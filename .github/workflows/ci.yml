@@ -56,7 +56,3 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://ci:ci@localhost:5432/urconnections_test
       - run: npm run build
-        env:
-          # The web build only embeds these values; dummies are fine for a CI build.
-          VITE_SUPABASE_URL: https://example.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ci-placeholder

@@ -11,7 +11,7 @@ Find study and interest groups near you, or online. Browse groups by topic, coun
 - **Create groups**: validated form; the meeting link must match the chosen platform
 - **Manage your groups**: only the creator can edit (title, description, topic, location) or delete a group; the link and platform stay fixed
 - **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies), email verification, forgot/reset password, and "Continue with Google" (OAuth 2.0 with PKCE, handled by our API)
-- **Profile**: edit your details and upload an avatar (compressed in the browser; JPEG/PNG/WebP only)
+- **Profile**: edit your details and upload an avatar (JPEG/PNG/WebP up to 5 MB; the API checks the real image, converts it to a 512px WebP and stores it in S3-compatible storage)
 - Light and dark mode (follows the system), responsive layout
 
 ## Tech stack
@@ -19,7 +19,7 @@ Find study and interest groups near you, or online. Browse groups by topic, coun
 |---|---|---|
 | Frontend | React 19, Vite, Tailwind CSS v4, React Router 7, TanStack Query, react-hook-form | same, fully in TypeScript |
 | Validation | zod schemas shared between packages (`packages/shared`) | the same schemas, also used by the API |
-| Backend | Supabase (Postgres, Auth, Storage) | Node.js + Express 5 API, Postgres (Kysely), own session auth (argon2id), S3-compatible file storage (chosen in Stage 10) |
+| Backend | Supabase (Postgres, Auth, Storage) | Node.js + Express 5 API, Postgres (Kysely), own session auth (argon2id), S3-compatible file storage (Garage in Docker) |
 | Hosting | Vercel | Docker Compose on a VPS behind Caddy (HTTPS) |
 
 ## Getting started
@@ -27,9 +27,8 @@ Requirements: **Node.js 24** (LTS), npm, and **Docker Desktop** (running).
 
 ```bash
 npm install                      # installs every workspace (one lockfile at the root)
-cp web/.env.example web/.env     # then fill in your Supabase URL and key
 cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml (add Google keys for Google sign-in)
-npm run db:up                    # start Postgres (127.0.0.1:5433) and Mailpit in Docker
+npm run db:up                    # start Postgres (127.0.0.1:5433), Mailpit and Garage (avatar storage) in Docker
 npm run db:migrate               # create the tables
 npm run db:seed                  # optional: demo users and groups (log in as alice@example.com / Demo123!pass)
 npm run dev                      # web on http://localhost:5173, API on http://localhost:3000
@@ -43,7 +42,7 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 | Command | What it does |
 |---|---|
 | `npm run dev` | start web (Vite) and api (Express) together |
-| `npm run db:up` / `db:down` / `db:logs` | start / stop / follow the Postgres container |
+| `npm run db:up` / `db:down` / `db:logs` | start / stop the dev containers (Postgres, Mailpit, Garage) / follow the Postgres log |
 | `npm run db:migrate` / `db:rollback` / `db:reset` | apply / undo the last / rebuild all migrations |
 | `npm run db:seed` | fill the database with demo data (development only) |
 | `npm test` | unit tests (API: Vitest + Supertest; no database needed) |

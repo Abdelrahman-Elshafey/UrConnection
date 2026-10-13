@@ -11,6 +11,8 @@ package-lock.json           # the only lockfile (don't delete: it pins every ver
 tsconfig.base.json          # shared strict TS settings (strict, noUncheckedIndexedAccess, bundler resolution)
 tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
 docker-compose.yml          # dev services: postgres:18-alpine on 127.0.0.1:5433 (volume pgdata) + mailpit (SMTP :1025, inbox http://localhost:8025)
+                            #   + garage v2.4.1 (S3 API :3900, website :3902; --single-node --default-bucket creates bucket + key; volume garage)
+docker/garage/garage.toml   # Garage dev config (sqlite metadata, replication 1, [s3_api] + [s3_web] root domains)
 vercel.json                 # {git.deploymentEnabled: false}: v2 branches never deploy to Vercel. Only v1 on `main` stays live there until Stage 16
 .github/workflows/ci.yml    # on push/PR: npm ci → lint → typecheck → test → build
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
@@ -44,6 +46,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/lib/errors.ts         # HttpError(status, code, message, details?) + ErrorBody shape
   src/lib/validate.ts       # parseOrThrow(schema, input): typed value or 400 invalid_request with per-field details
   src/lib/mailer.ts         # Mailer interface + createSmtpMailer (nodemailer; Mailpit in dev)
+  src/lib/storage.ts        # Storage interface (put/delete) + createS3Storage (AWS SDK, path style) + enableWebsiteAccess + mediaUrl(key) = /media/<key>
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
   src/middleware/originCheck.ts        # CSRF: non-GET requests must have Origin == APP_ORIGIN, else 403 forbidden_origin
   src/modules/health/health.routes.ts  # GET /api/health → 200 {ok,db:"up"} or 503 {ok:false,db:"down"}
@@ -68,8 +71,11 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/modules/auth/auth.routes.ts          # register / login / logout / me + verify-email(/request), forgot-password, reset-password; rate limits
   src/modules/auth/auth.db.test.ts         # full flow with real Postgres + argon2 (cookie flags, hashing, 409/401/429, expiry)
   src/modules/auth/emailFlows.db.test.ts   # verify + reset with a fake mailer: one-time, expiry, cancel, no enumeration, sign-out
-  src/modules/users/users.repository.ts    # findForLogin / create (EmailTakenError) / updateProfile; USER_COLUMNS never include password_hash
-  src/modules/users/users.routes.ts        # PATCH /api/users/me + GET /api/users/me/groups (requireAuth; "me" always from the session)
+  src/modules/users/users.repository.ts    # findForLogin / create (EmailTakenError) / updateProfile / setAvatarKey (FOR UPDATE, returns the old key); USER_COLUMNS never include password_hash; avatar_url = mediaUrl(avatar_key)
+  src/modules/users/users.routes.ts        # PATCH /api/users/me + GET /me/groups + PUT/DELETE /me/avatar (multer memory, 5 MB, 20/h per user; put new → set key → delete old)
+  src/modules/users/avatarImage.ts         # toAvatarWebp: real format must be jpeg/png/webp (no SVG), ≤50M pixels, rotate + 512×512 cover + WebP, EXIF dropped
+  src/modules/users/avatarImage.test.ts    # no DB: formats in, SVG/HTML/GIF/corrupt out, EXIF removed
+  src/modules/users/avatar.db.test.ts      # real Postgres + fake storage: upload, replace (old object deleted), SVG/HTML as .png, 413, 401/403, delete
 
 packages/shared/            # @urconnections/shared: TS source imported directly (no build step)
   src/index.ts              # public exports (import only from "@urconnections/shared")
@@ -84,28 +90,25 @@ packages/shared/            # @urconnections/shared: TS source imported directly
 
 web/                        # the React app (Vite)
   index.html                # Vite entry; title "UrConnections"
-  vite.config.ts            # react() + tailwindcss(); dev proxy /api → http://localhost:3000
+  vite.config.ts            # react() + tailwindcss(); dev proxy /api → http://localhost:3000, /media → Garage website :3902 (Host = <bucket>.web.garage.localhost)
   vercel.json               # SPA rewrite + security headers (CSP report-only). Vercel Root Directory must be `web` if deployed
-  .env.example              # required VITE_* vars (copy to web/.env, which is gitignored)
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; allowJs during the JS→TS migration
   public/favicon.svg
   src/
     main.jsx                # QueryClientProvider (lib/queryClient) + ReactQueryDevtools + <App/>
     App.jsx                 # createBrowserRouter route tree + loaders requireAuth / redirectIfAuth + <Analytics/>
     index.css               # Inter font @import, Tailwind, base layer (border color, cursor), --nav-height, .hide-scrollbar, .animate-fade-in
-    vite-env.d.ts           # types for import.meta.env.VITE_*
+    vite-env.d.ts           # Vite client types (no VITE_* variables are used)
     GenealComponents/       # (sic, typo; renamed in Stage 11) app shell
       RootLayout.jsx        # <ScrollToTop/> + <Outlet/>
       MainLayout.jsx        # sticky nav + <Outlet/> + footer (all inline)
       ScrollToTop.jsx       # scrolls to top on pathname change
     lib/
-      supabase.ts           # createClient(...); throws at startup if env vars are missing
       queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus); also used by route loaders
-      apiClient.ts          # apiGet / apiSend / apiSendNoContent: same-origin fetch (cookie sent), ApiError, zod-validated JSON
+      apiClient.ts          # apiGet / apiSend / apiSendNoContent: same-origin fetch (cookie sent), JSON or FormData body, ApiError, zod-validated JSON
       platforms.ts          # UI side of platforms: icon + Tailwind badge colors per PlatformKey; PLATFORMS, getPlatform(key)
     services/
       auth.service.ts       # our API: getMe, register, login, logout, updateProfile (no tokens in JS: the cookie is httpOnly)
-      storage.service.ts    # uploadAvatar / removeAvatar (bucket "Users-Pics"; jpeg/png/webp only; no remote worker)
     features/
       auth/
         components/AuthPage.jsx       # login + signup via our API; authResolver picks loginSchema/signupSchema; Google = link to /api/auth/google; shows ?error= via oauthErrorMessage
@@ -137,14 +140,15 @@ web/                        # the React app (Vite)
         components/CreateGroupForm.jsx # /create: GroupForm mode="create" → POST, then opens the new group
       profile/
         components/ProfilePage.jsx    # /profile: read/edit form (profileSchema) + the user's groups grid
-        components/ProfileAvatar.jsx  # avatar display; upload/remove switched off (UPLOADS_ENABLED) until Stage 10
-        hooks/useAvatar.ts            # useUploadAvatar, useRemoveAvatar → invalidate SESSION_QUERY_KEY
+        components/ProfileAvatar.jsx  # avatar display + upload/remove; quick type/size check (AVATAR_MIME_TYPES, AVATAR_MAX_BYTES) before sending
+        api/avatarApi.ts              # uploadAvatar(file) = PUT multipart, removeAvatar() = DELETE; both return the updated user
+        hooks/useAvatar.ts            # useUploadAvatar, useRemoveAvatar → the returned user goes into ['session'] (useSetUser)
         hooks/useUpdateProfile.ts     # PATCH /api/users/me → setQueryData(SESSION_QUERY_KEY, user)
 ```
 **TypeScript status:** `packages/shared` and the whole web data layer (`lib`, `services`, `hooks`, `api`, `utils`) are TS. Components (`.jsx`) are converted in Stage 11.
 
 ## API (Stage 3)
-- **Dev:** `npm run db:up` starts Postgres, then `npm run dev` runs web (:5173) and api (:3000) together. The browser calls `/api/*` on :5173, and Vite forwards it to :3000, so it's the same origin as production.
+- **Dev:** `npm run db:up` starts Postgres, Mailpit and Garage, then `npm run dev` runs web (:5173) and api (:3000) together. The browser calls `/api/*` on :5173, and Vite forwards it to :3000, so it's the same origin as production.
 - **Response contract:** success is plain JSON. Errors are always `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status. Throw `HttpError` in routes; Express 5 forwards async errors to `errorHandler`.
 - **Dependency injection:** `createApp(deps)` receives things like `checkDatabase`, so tests use fakes and never need a database or an open port.
 - **Endpoints so far:**
@@ -153,6 +157,7 @@ web/                        # the React app (Vite)
   - `GET /api/groups/:id`: one group; unknown or malformed id → 404
   - `POST /api/auth/register` → 201 `{ user }` + session cookie (409 email_taken, 400 policy) · `POST /api/auth/login` → 200 `{ user }` (401 invalid_credentials, 429) · `POST /api/auth/logout` → 204 · `GET /api/auth/me` → `{ user | null }` (no-store)
   - `PATCH /api/users/me` → `{ user }` (401 without a session) · `GET /api/users/me/groups` → `{ items }`
+  - `PUT /api/users/me/avatar` (multipart field `avatar`) → `{ user }` (400 invalid_image / invalid_upload, 413 file_too_large, 429) · `DELETE /api/users/me/avatar` → `{ user }`
   - `POST /api/auth/verify-email/request` (session) → 204 · `POST /api/auth/verify-email` `{ token }` → 204 (400 invalid_token) · `POST /api/auth/forgot-password` `{ email }` → always 202 `{ message }` · `POST /api/auth/reset-password` `{ token, password }` → 204, all sessions ended
   - `POST /api/groups` → 201 group (owner = session user; a body `user_id` is ignored; **403 email_not_verified** without a verified email) · `PATCH /api/groups/:id` → group (title, description, topic, country, city; meeting_link/platform → 400) · `DELETE /api/groups/:id` → 204. Writes need a session (401). **Not your group → 404**, the same as a missing one.
 - **Pagination:** cursor = id of the last item. uuidv7 ids sort by creation time, so the next page is `where id < cursor order by id desc limit n+1` (the extra row says whether more exist).
@@ -218,7 +223,7 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 6. **Route guards** (`requireAuth` / `redirectIfAuth` in `App.jsx`) read `['session']` through `ensureQueryData`, so `/me` is called once.
 7. **Email flows (Stage 8):** links carry a 32-byte token; only `sha256(token)` is stored in `email_tokens` (verify 24 h, reset 1 h). `consume` is one atomic `UPDATE … WHERE unused AND unexpired AND purpose … RETURNING user_id`, so a link works once even under races, and issuing a new one deletes the older ones. Sign-up sends a verify email (a mail failure doesn't fail sign-up). Forgot-password replies 202 *before* looking anything up (same text and timing for every email). Reset sets the hash, deletes **all** the user's sessions and marks the email verified. Creating groups requires `email_verified` (`requireVerified`).
 8. **Google sign-in (Stage 9):** the Google button is a plain link to `GET /api/auth/google`. The API makes `state` and a PKCE verifier (32 random bytes each), keeps them in the 10-minute httpOnly `google_oauth` cookie (SameSite=Lax, so it survives Google's top-level redirect back), and redirects to Google (`openid email profile`, `prompt=select_account`). `/callback` clears the cookie, checks `state`, exchanges `code` + verifier for an ID token (arctic, server to server), checks `iss`/`aud`/`email_verified`, then `signInWithGoogle` picks the user: linked `sub` → same **verified** email (link) → same **unverified** email (Google proves ownership: password removed, sessions ended, email verified; pre-hijack defence) → new user without password. Then `startSession` and a redirect to `/`. Any failure redirects to `/login?error=<code>`; the codes and messages are `OAUTH_ERROR_MESSAGES` in packages/shared.
-9. **Not yet on the API:** avatar upload (Stage 10).
+9. **Avatars (Stage 10):** `PUT /api/users/me/avatar` → multer (memory, 5 MB) → `toAvatarWebp` (real format must be JPEG/PNG/WebP, ≤ 50 M pixels, 512×512 WebP, EXIF dropped) → `storage.put("avatars/<uid>/<uuid>.webp", Cache-Control: immutable)` → `setAvatarKey` (row lock, returns the old key) → delete the old object. A new key per upload = a new URL, so browsers may cache forever. Browsers read `/media/<key>`: Vite (later Caddy) proxies to Garage's read-only website endpoint, which the API enables at startup (`PutBucketWebsite`).
 
 ### Home page filter flow (`GroupList` → `useGroupFilters` + `useGroups`)
 - **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true`; changing country clears city).
@@ -235,7 +240,7 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - Feedback is a mix of `alert()`, `window.confirm()`, inline error boxes, and one hand-rolled toast in ProfilePage.
 
 ## 5. External services
-- Supabase (auth, Postgres, storage)
+- Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
 - Google Fonts (Inter, `@import` in CSS)
 - Vercel Analytics
