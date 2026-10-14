@@ -13,7 +13,7 @@
 | B1 | L | [x] | `index.html` | `<link href="/src/style.css">` points to a file that doesn't exist (404 in dev). | Remove the tag. CSS is imported in `main.jsx`. |
 | B2 | H | [x] | `MainLayout.jsx` footer | Footer is `bg-black` in light mode, but the "Explore"/"Account" `<h4>`s are `text-black`, so they're invisible. There's also a stray `sm:text-` class. | Use `text-white` for the headings, or redesign the footer per the style guide (`#f5f5f7` light / `#1d1d1f` dark). |
 | B3 | H | [x] | `MainLayout.jsx` nav | "Sign In", "Profile", and "Sign Out" have `hidden sm:block`, so on mobile a logged-out user has no Sign In in the nav. The Create Group button text is `text-[8px]` on mobile. | Add a mobile menu, or keep the auth links visible at a small size. |
-| B4 | H | [~] | `GroupCard.jsx` | The delete (X) button shows on **every** card for everyone, including logged-out users on the home page. Only RLS prevents deletion, and non-owners just get an `alert` error. | Render delete only when `group.user_id === session.user.id`. Better: show it only on the profile page via a prop. Replace `window.confirm`. |
+| B4 | H | [x] | `GroupCard.jsx` | The delete (X) button shows on **every** card for everyone, including logged-out users on the home page. Only RLS prevents deletion, and non-owners just get an `alert` error. | Render delete only when `group.user_id === session.user.id`. Better: show it only on the profile page via a prop. Replace `window.confirm`. |
 | B5 | M | [x] | `lib/groupSchema.js` | The messages don't match the limits: `min(20)` says "min 50" and `max(200)` says "max 500". `min(1)` is redundant before `min(20)`. | Align the numbers and messages. Consider showing field error messages: CreateGroupForm only shows red borders and never shows `errors.*.message`. |
 | B6 | M | [x] | `AuthPage.jsx` | `clearFilterCache()` is called in the render body, which is a side effect during render and runs on every keystroke re-render. | Move it into an effect, or (better) into the sign-in/sign-out success path. |
 | B7 | M | [x] | `services/auth.service.js` `signOut` | `localStorage.clear()` and `sessionStorage.clear()` wipe **all** storage, including the IP location cache. The clearing also happens before the `error` check. | Remove only app keys (`uc_filter_cache`, …). Supabase already clears its own session key. Also clear the query cache (`queryClient.clear()` or remove `['session']`). |
@@ -39,6 +39,7 @@
 | B27 | L | [x] | `ProfilePage.jsx` success toast | The `setTimeout` is never cleared. Saving twice within 3s hides the second toast early. | Keep the timer id in a ref and clear it. Later, replace it with a shared `Toast` (Phase 2). |
 | B28 | L | [x] | sign-out | Only `['session']` is reset. User-scoped caches (`['groups','user',id]`) stay in memory for the next person on the same tab. | On `SIGNED_OUT` in `useAuthListener`, call `queryClient.removeQueries({ queryKey: ['groups','user'] })`, or `queryClient.clear()` and then set the session to null. |
 | B29 | L | [x] | `GroupList.jsx` | If the user clicks "Clear all" and later returns to `/`, the geo preset re-applies, because the cache was cleared and the `hasInitialized` ref resets on remount. The user's "Global" choice is forgotten. | Part of O1: remember "user cleared filters" in the same storage entry. |
+| B30 | L | [x] | `MainLayout.jsx` footer | "Categories" links to `/` (nowhere specific), "Register" opens `/login` in **sign-in** mode, and the navbar links to `/profile` twice (avatar + text). | Fix while rebuilding the navbar/footer in Stage 11 (signup gets its own route when AuthPage is split, O3). |
 
 ## S — Security / privacy
 
@@ -61,18 +62,24 @@
 
 | ID | Status | What is duplicated | Proposed abstraction |
 |---|---|---|---|
-| D1 | [ ] | The spinner (`w-12 h-12 border-[3px] border-[#0071e3]/20 border-t-[#0071e3] rounded-full animate-spin`) appears ~8 times. | `components/ui/Spinner.jsx` (size prop) + `FullPageLoader`. |
-| D2 | [ ] | The back button with chevron SVG ("Return to Explore", "Back to Explore", "Cancel and Return") appears 3 times. | `components/ui/BackLink.jsx`. |
-| D3 | [ ] | Input/select/textarea class strings, about 20 copies across AuthPage, CreateGroupForm, and ProfilePage, plus label classes and error `<p>`s. | `components/ui/form/{TextField,SelectField,TextAreaField,FieldLabel,FieldError}.jsx` that work with `register`. |
-| D4 | [ ] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
+| D1 | [x] | The spinner (`w-12 h-12 border-[3px] border-[#0071e3]/20 border-t-[#0071e3] rounded-full animate-spin`) appears ~8 times. | `components/ui/Spinner.jsx` (size prop) + `FullPageLoader`. |
+| D2 | [x] | The back button with chevron SVG ("Return to Explore", "Back to Explore", "Cancel and Return") appears 3 times. | `components/ui/BackLink.jsx`. |
+| D3 | [x] | Input/select/textarea class strings, about 20 copies across AuthPage, CreateGroupForm, and ProfilePage, plus label classes and error `<p>`s. | `components/ui/form/{TextField,SelectField,TextAreaField,FieldLabel,FieldError}.jsx` that work with `register`. |
+| D4 | [x] | The country→city linked selects (CreateGroupForm, ProfilePage, FilterBar) and the "reset city when country changes" logic. | `LocationSelects` component + `getCitiesFor(country)` helper. |
 | D5 | [x] | `TOPICS` is defined in both `CreateGroupForm` and `FilterBar` (with "All"). | `lib/topics.js` exporting `TOPICS`. FilterBar prepends "All". |
-| D6 | [ ] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
+| D6 | [x] | Avatar/initials logic exists in both `MainLayout` and `ProfileAvatar`. `user?.user_metadata?.x` is repeated everywhere. | `components/ui/Avatar.jsx` + `lib/user.js` `getProfile(user)` → `{displayName, initials, avatarUrl, phone, country, city}`. |
 | D7 | [x] | Query keys are string literals scattered across hooks. | `features/groups/api/queryKeys.js` (`groupKeys.all`, `.list(filters)`, `.byUser(id)`, `.detail(id)`) and `authKeys.session`. |
-| D8 | [ ] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
+| D8 | [x] | Platform badges (`React.createElement(platformInfo.icon …)`) appear in both GroupCard and GroupDetail. | `PlatformBadge` component (`const Icon = info.icon; <Icon/>`). |
 | D9 | [x] | The sign-out handler is duplicated in MainLayout and ProfilePage. | `useSignOut()` mutation hook: signs out, clears the cache, navigates. |
-| D10 | [ ] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
-| D11 | [ ] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
-| D12 | [ ] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
+| D10 | [x] | Primary CTA pill (`bg-[#0071e3] text-white rounded-full font-bold hover:brightness-110 active:scale-95 …`) appears 6+ times. | `components/ui/Button.jsx` with `variant` (primary / dark / ghost / danger) and `size`. |
+| D11 | [x] | Hard-coded palette hex values everywhere. | Tailwind v4 `@theme` tokens in `index.css` (`--color-accent`, `--color-surface`, `--color-surface-dark`, …). |
+| D12 | [x] | The page hero headline pattern ("Your **Profile.**", "Launch your **Community.**", "Find your **Connections.**"). | `PageHero` component (`title`, `accent`, `subtitle`). |
+| D13 | [x] | `[city, country].filter(Boolean).join(", ")` (3×) and the owner check `user.id === group.user_id` (3×). | `formatLocation(place)` and `isOwner(user, group)` helpers (Stage 11). |
+| D14 | [x] | Hand-written SVG paths (chevron, pencil, arrow, ✕, map pin) ~12×, although `react-icons` is already a dependency. | Use icons from `react-icons` (Stage 11). |
+| D15 | [x] | `useCreateGroup` / `useUpdateGroup` had identical `onSuccess` (cache detail + invalidate lists). | `hooks/groupCache.ts` → `storeSavedGroup()`. |
+| D16 | [x] | `Omit<GroupListParams, "cursor" \| "limit">` written 3×; `isTopic` defined in a web hook while `isCountry`/`isPlatformKey` live in shared. | Shared `GroupFilters` type and `isTopic()`. |
+| D17 | [x] | API rate-limiter setup (headers, IP key, JSON 429) copied in auth, Google and users routes. | `api/src/lib/rateLimit.ts`: `limitRequests({ limit, windowMs, key })`, `byIp` / `byUser` / `byEmail`. |
+| D18 | [x] | `req.user!` 9× and the "account deleted meanwhile → 401" error 4× in API routes. | `signedInUser(req)` (typed, throws 401) and `unauthenticated()` in `session.middleware.ts`. |
 
 ## R — Violations of `.agents/rules`
 
@@ -80,9 +87,9 @@
 |---|---|---|---|
 | R1 | [x] | No direct supabase calls outside services/api | `useUser` now goes through `auth.service`. `useGroup.js` still calls `supabase` directly. |
 | R2 | [x] | Select only needed columns | `groupsApi.getGroups`, `getUserGroups`, and `useGroup` use `select('*')`. |
-| R3 | [~] | Loaders + `ensureQueryData` | Auth loaders now use `ensureQueryData` (B9). There's still no data prefetch for `/groups/:id`. |
-| R4 | [ ] | `errorElement` on routes | None. There's also no 404 route. |
-| R5 | [ ] | Lazy loading / code-splitting | None. `countries.js` (large) and every page ship in the main chunk. |
+| R3 | [x] | Loaders + `ensureQueryData` | Auth loaders now use `ensureQueryData` (B9). There's still no data prefetch for `/groups/:id`. |
+| R4 | [x] | `errorElement` on routes | None. There's also no 404 route. |
+| R5 | [x] | Lazy loading / code-splitting | None. `countries.js` (large) and every page ship in the main chunk. |
 | R6 | [ ] | Supabase TS types | The project is JS. The rules mention `auth.service.ts` / `createClient<Database>`. Decide: migrate to TS, or use JSDoc + generated types. |
 | R7 | [ ] | Theme toggle (style guide §5) | Only system preference, no manual override. |
 | R8 | [ ] | Social proof, member count on cards (style guide §5–6) | Not implemented. There's no members concept in the data model. |
@@ -95,14 +102,28 @@ Code that is more complex than the problem needs. Simplifying these removes whol
 |---|---|---|---|---|
 | O1 | [x] | `GroupList.jsx` + `useFilterCache.js` + `useUserLocation` | Filter state has **three sources of truth**: URL params, a sessionStorage cache with a 60-second TTL, and an async geo preset. Two `useEffect`s, a `hasInitialized` ref, two `eslint-disable`s, and a cache write on every change tie them together. | Keep the **URL as the only source of truth**. One `useGroupFilters()` hook: `filters = parse(searchParams)`, and `setFilter(key, value)`. To keep filters when the user clicks the logo, store the last search string in sessionStorage (no TTL) and have the nav/logo `Link` go to `/` + that string. Apply the geo preset only when there's no URL search **and** no stored search. |
 | O2 | [x] | `useUserLocation.js` | Double caching: localStorage **plus** React Query with `staleTime: Infinity`, `refetchOnMount: false`, and `refetchOnWindowFocus: false`. With `staleTime: Infinity` the last two flags do nothing. | Keep React Query and use `staleTime: Infinity, retry: 1` only. Keep localStorage as the cross-visit cache, and give it a TTL (S3). |
-| O3 | [~] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
+| O3 | [x] | `AuthPage.jsx` | One form and one schema serve two modes. An `isLogin` boolean lives **both** in React state and inside the form values, and a `superRefine` if/else chain branches on it. The page is 340+ lines. | `LoginForm` + `SignupForm`, each with its own small schema (`loginSchema`, and `signupSchema` with `.refine` for the password match). The page only toggles between them. Use zod 4's `z.email()`; `z.string().email` and `z.ZodIssueCode` are deprecated in v4. |
 | O4 | [x] | `ProfilePage.jsx` | `populateForm` in a `useCallback`, an effect that populates on edit, and an effect that resets the city using `watch()`. This causes B22 and the L4 warning. | `startEditing = () => { reset(fromUser(user)); setIsEditing(true) }`. Reset the city in the country select's `onChange` (same pattern as CreateGroupForm). Both effects go away. |
 | O5 | [x] | small wrappers | `getRedirectUrl()` wraps a single env read. `mutationFn: (x) => updateProfile(x)` and `({userId, file}) => uploadAvatar(userId, file)` are pass-through arrows. The `image/` type check is duplicated in `ProfileAvatar` and `compressImage`. | Use `const REDIRECT_URL = import.meta.env…` and `mutationFn: updateProfile`. Do validation in one place. |
 | O6 | [x] | `storage.service.js` | The extension varies with the uploaded file name, so both upload and remove need a `list()` + filter + `remove()` round-trip (3–4 network calls). | Always convert to WebP and save to the fixed path `<uid>/avatar.webp` with `upsert: true`. Upload is then 1 call and remove is 1 call. This also fixes S5's extension issue and makes the README's WebP claim true. |
 | O7 | [x] | `lib/countries.js` | 118 `.sort()` calls at module load, and the data is re-sorted again for `COUNTRY_LIST`. | Store the data pre-sorted (a one-off script), or as JSON. No runtime work. |
-| O8 | [ ] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
-| O9 | [ ] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
+| O8 | [x] | `FilterBar.jsx` props | Ten props (5 values + 5 callbacks), plus a local `search` copy synced by an effect (L3). | `<FilterBar filters={filters} onChange={setFilter} />`. Make the search input uncontrolled with `defaultValue` and `key={filters.query}`. |
+| O9 | [x] | `GroupCard.jsx` | Every card calls `useDeleteGroup()`, creating one mutation observer per card even when `canDelete` is false (always on the home page). | Pass `onDelete` from the parent (ProfilePage owns the mutation), or render a tiny `<DeleteGroupButton id>` only when `canDelete`. |
 | O10 | [x] | `GroupCard` / `GroupDetail` | `React.createElement(platformInfo.icon, {...})` plus `import React` just for it. `platforms.js` also has an unused `import React`. | Use `const Icon = platformInfo.icon; <Icon className=… />`, and drop the React imports (D8). |
+
+## M — Modernization (newer React / React Router / TanStack / TypeScript features)
+
+Found in the 2026-10-13 review: places where the libraries we already use now offer a simpler built-in way.
+
+| ID | Status | Where | Before | Now |
+|---|---|---|---|---|
+| M1 | [x] | `ScrollToTop.jsx` | Effect calling `window.scrollTo(0, 0)` on every path change. | React Router's `<ScrollRestoration />` in `RootLayout` (also restores the position on Back). File deleted. |
+| M2 | [x] | 17 imports | `react-router-dom`, which in v7 only re-exports `react-router`. | Import from `react-router`; one dependency fewer. |
+| M3 | [x] | `useGroup`, `useMyGroups` | `enabled: !!id` plus `getGroupById(id!)`. | TanStack Query `skipToken`: no `!`, no separate flag to keep in sync. |
+| M4 | [x] | every page | One tab title ("UrConnections") for all pages. | React 19 `<title>` inside each page (`lib/pageTitle.ts`); React hoists it into `<head>`. |
+| M5 | [x] | `GroupDetail` ×2, `ProfilePage` | `<button onClick={() => navigate(...)}>` for plain navigation. | `<Link>`: real links (new tab, middle-click, announced as links). |
+| M6 | [x] | `App.jsx` | `@vercel/analytics` `<Analytics/>`. | Removed: v2 is self-hosted, the Vercel endpoint doesn't exist there. |
+| M7 | [x] | UI kit (Stage 11) | `forwardRef` would be needed for inputs used with react-hook-form's `register`. | React 19 passes `ref` as a normal prop: plain function components. |
 
 ## P — Performance (measured)
 
@@ -124,24 +145,24 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 
 | ID | Status | Issue | Fix | Expected gain |
 |---|---|---|---|---|
-| P1 | [ ] | No code splitting (R5). | `React.lazy` (or RR7 `lazy:` route property) for `/create`, `/profile`, `/login`, `/groups/:id`. | About **46 KB gzip (~20%) off the home page** (zod + RHF + image compression). Smaller first parse on mobile. |
+| P1 | [x] | No code splitting (R5). | `React.lazy` (or RR7 `lazy:` route property) for `/create`, `/profile`, `/login`, `/groups/:id`. | About **46 KB gzip (~20%) off the home page** (zod + RHF + image compression). Smaller first parse on mobile. |
 | P2 | [x] | `browser-image-compression` is imported statically by `storage.service`. | `const { default: imageCompression } = await import("browser-image-compression")` inside `uploadAvatar`. | 19.7 KB gzip leaves even the profile chunk until someone actually uploads. |
 | P3 | [x] | React Query defaults: `staleTime: 0` + `refetchOnWindowFocus: true`. **The entire `groups` table is re-downloaded on every tab focus and every return to `/`.** | Set `staleTime: 60_000` (and `refetchOnWindowFocus: false`) as defaults in `lib/queryClient.js`. Mutations already invalidate. | Removes most redundant Supabase requests. |
 | P4 | [x] | `getGroups()` fetches **all rows, all columns**, and filters on the client (R2, B12). This scales linearly with the table, both in payload and in render time. | Short term: explicit column list. Medium term: server-side filters (`.eq` / `.ilike`) + `.range()` pagination, keyed by `groupKeys.list(filters)` with `placeholderData: keepPreviousData`. Add DB indexes on `(country, city)`, `topic`, `platform`. | Constant payload per page instead of the whole table. |
 | P5 | [x] | `index.css`: `* { transition-colors duration-300 }` puts a transition on **every element**. That's extra style work on every hover and re-render, and colors visibly "fade in" on first paint. | Delete the global rule. Elements that need it already have `transition-*` classes. | Cheaper style recalc, no flash on load. |
-| P6 | [ ] | `transition-all` on cards and buttons (GroupCard has `hover:scale-105 transition-all` + shadow change), and `backdrop-blur-2xl` on **two** stacked sticky bars. | Use `transition-transform` / `transition-colors` explicitly, and `blur-md` or a single blurred header. | Smoother scrolling on low-end phones. |
-| P7 | [ ] | Inter is loaded via a CSS `@import` from Google Fonts. That's a render-blocking chain (CSS → font CSS → font files) and a third-party request (privacy, plus CSP S8). | Self-host it with `@fontsource-variable/inter` (one variable woff2 file, `font-display: swap`), or at minimum `<link rel="preconnect">` + `<link>` in `index.html`. | Faster first text paint, no third-party font request. |
+| P6 | [x] | `transition-all` on cards and buttons (GroupCard has `hover:scale-105 transition-all` + shadow change), and `backdrop-blur-2xl` on **two** stacked sticky bars. | Use `transition-transform` / `transition-colors` explicitly, and `blur-md` or a single blurred header. | Smoother scrolling on low-end phones. |
+| P7 | [x] | Inter is loaded via a CSS `@import` from Google Fonts. That's a render-blocking chain (CSS → font CSS → font files) and a third-party request (privacy, plus CSP S8). | Self-host it with `@fontsource-variable/inter` (one variable woff2 file, `font-display: swap`), or at minimum `<link rel="preconnect">` + `<link>` in `index.html`. | Faster first text paint, no third-party font request. |
 | P8 | [x] | `GroupList` recomputes the filter and lowercases every field on every render (including while the location is being detected). | Pure `filterGroups()` + `useMemo([groups, filters])`. This disappears if P4 moves filtering to the server. | Minor now, matters as the table grows. |
-| P9 | [ ] | Avatar `<img>`s have no `width`/`height`/`loading`/`decoding` attributes. | Add `width height loading="lazy" decoding="async"`, which matters in the group grids. | No layout shift. |
+| P9 | [x] | Avatar `<img>`s have no `width`/`height`/`loading`/`decoding` attributes. | Add `width height loading="lazy" decoding="async"`, which matters in the group grids. | No layout shift. |
 
 ## A — Accessibility
 
 | ID | Status | Issue | Fix |
 |---|---|---|---|
-| A1 | [ ] | No `<label>` in any form is linked to its input (no `htmlFor`/`id`). Screen readers don't announce field names, and clicking a label doesn't focus the field. | The shared form components (D3) should generate the `id` with `useId()` and wire `htmlFor`, `aria-invalid`, and `aria-describedby` to the error text. |
-| A2 | [ ] | FilterBar's search input and its 3 selects have no labels at all. The password show/hide buttons have no `aria-label`. | Add `aria-label`s ("Search groups", "Country", "City", "Platform", "Show password"). |
-| A3 | [ ] | Text at `text-[8px]` / `text-[10px]` on mobile (GroupCard description and location, footer links) is below readable size. | Use a 12px minimum for body text and 11px for uppercase micro-labels. |
-| A4 | [ ] | Topic pills don't expose the selected state. | Add `aria-pressed={currentTopic === topic}`. |
+| A1 | [x] | No `<label>` in any form is linked to its input (no `htmlFor`/`id`). Screen readers don't announce field names, and clicking a label doesn't focus the field. | The shared form components (D3) should generate the `id` with `useId()` and wire `htmlFor`, `aria-invalid`, and `aria-describedby` to the error text. |
+| A2 | [x] | FilterBar's search input and its 3 selects have no labels at all. The password show/hide buttons have no `aria-label`. | Add `aria-label`s ("Search groups", "Country", "City", "Platform", "Show password"). |
+| A3 | [x] | Text at `text-[8px]` / `text-[10px]` on mobile (GroupCard description and location, footer links) is below readable size. | Use a 12px minimum for body text and 11px for uppercase micro-labels. |
+| A4 | [x] | Topic pills don't expose the selected state. | Add `aria-pressed={currentTopic === topic}`. |
 
 ## L — Lint (`npm run lint`: 0 problems after Phase 0)
 
@@ -195,7 +216,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 ### Notes on Stage 2 (typed data layer, see MASTER_PLAN.md)
 - **R1/R2**: `useGroup` now goes through `groupsApi.getGroupById`. Every query selects an explicit column list (`GROUP_COLUMNS`).
 - **D7**: `features/groups/api/queryKeys.ts` (`groupKeys.all / list / byUser / byUserRoot / detail`). The detail key moved under `['groups', …]`.
-- **O7**: Countries are stored pre-sorted in `packages/shared/src/countries.ts`, with `getCities()` / `isCountry()` helpers.
+- **O7**: Countries are stored pre-sorted (since Stage 12 split into `countryNames.ts` + `cities.ts`), with `getCities()` / `isCountry()` helpers.
 - **H5**: `hooks/useFilterCache.js` became `features/groups/utils/filterCache.ts`.
 - **O3 `[~]`**: Separate shared `loginSchema` / `signupSchema` (AuthPage picks one per submit via `authResolver`). Splitting AuthPage into LoginForm/SignupForm components is Stage 11.
 - New: shared schemas tightened validation (`topic`/`platform` are enums, `meeting_link` must be http(s), title/description trimmed), matching the DB CHECK constraints.
@@ -246,3 +267,32 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **P2 (closed)**: `browser-image-compression` is gone (the server converts). The `@supabase/supabase-js` client and `web/.env` variables went too, since nothing in the web app uses them now. Home bundle: **248 → 180 KB gzip**, already under Stage 12's 190 KB target.
 - **Storage choice**: MinIO's community repo was archived in April 2026 and no longer publishes images. Garage (free, AGPL, self-hosted) was chosen for the S3 API. It runs behind a `Storage` interface, so plain files or a hosted S3 (R2/B2) would be one new implementation.
 - **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups.
+
+### Notes on the 2026-10-13 review (start of Stage 11)
+- **Verdict**: The API and shared package are lean. Its interfaces (`Storage`, `Mailer`, `GoogleOAuth`) each exist so tests run without real services, so none were cut. Nearly all the repetition is in the React components (D1–D14), which is what the Stage 11 UI kit is for.
+- **Done before the UI kit**: M1–M6, O8 (FilterBar takes `filters` / `onChange` / `onSearch` instead of 10 props), D15–D18. Home bundle 179.6 → 179.3 KB gzip.
+- **Stage 11 then closed**: D1–D4, D6, D8, D10–D14, M7, O3, O9, B4, B30, A1–A4 (see the Stage 11 notes).
+
+### Notes on Stage 11 (TypeScript frontend + UI kit)
+- **All TypeScript**: Every `.jsx` file is now `.tsx`, `allowJs` is off, and there's no `any`. `GenealComponents/` became `components/layout/` (Navbar and Footer split out of MainLayout).
+- **UI kit** (`web/src/components/ui`): Button/ButtonLink (D10), Spinner/PageSpinner (D1), BackLink (D2), Field components (D3, A1), CountryCityFields via `useFormContext` (D4), Avatar (D6), PlatformBadge (D8), PageHero (D12), Notice, NotFound, ConfirmDialog on the native `<dialog>` and a Toast system (B4: no more `alert`/`confirm`). Icons come from `react-icons` (D14). `lib/format.ts` holds the shared helpers (D13). Colors are `@theme` tokens (D11).
+- **React 19**: `ref` is a plain prop, so the fields take react-hook-form's `register` ref without `forwardRef` (M7). `use(Context)` in `useToast`. `<title>` per page.
+- **O3**: `AuthPage` (one form, two schemas, a hidden `isLogin` field, manual loading state) became `LoginPage` + `SignupPage` on `/login` and `/signup`, using `useLogin` / `useRegister` mutations like every other form.
+- **O9**: Cards take `onDelete`. The page owns one `DeleteGroupDialog` (confirm + mutation + toast).
+- **Create vs edit**: These are separate forms now (each `useForm` typed from its own schema), sharing `GroupFormFields` + `GroupFormFrame`. The old shared component needed a mode switch across two schemas. `formResolver` types the create form's empty selects (`""`) without loosening the schema.
+- **Found while testing in a real browser** (headless Chrome over the DevTools protocol): unknown groups showed a spinner for seconds, because TanStack Query retried the 404 three times. `queryClient` now never retries 4xx. React Router also warned about a missing `HydrateFallback`; the root route now has `hydrateFallbackElement`.
+- **Small visual changes** from consolidating: auth pages use the shared left-aligned layout; buttons, inputs and spinners share one size scale; footer and card text is at least 12px (A3).
+- **Not done**: A mobile nav menu. On small screens the navbar shows the avatar (→ profile, which has Sign Out) and Create Group, and the footer has every account link.
+
+### Notes on Stage 12 (frontend performance)
+- **P1/R5 code splitting**: every page except the home page is an RR7 `lazy` route (its own chunk, 0.3–2.7 KB gzip each). Home now loads `index` + one shared vendor chunk = **166.3 KB gzip** (was 179.0; target ≤ 190). The audit's 46 KB estimate assumed zod would leave the home page, but `apiClient` validates every response with zod, so it stays (23.9 KB). What left: react-hook-form + resolvers (≈ 10.6 KB) and all non-home pages. Per-package gzip on home, measured with a temporary one-chunk-per-package build: react-dom 59.4 · react-router 31.9 · zod 23.9 · countries 13.7 · react-icons 11.1 · TanStack Query 10.8 · app ≈ 14.
+- **R4 errors**: `RouteError` as `errorElement` on the root route (full page) and on a pathless route inside `MainLayout` (navbar stays). A lazy chunk that fails to download (a deploy while the tab was open) shows "A new version is available" with a Reload button (`isChunkLoadError`).
+- **R3 prefetch**: `/groups/:groupId` has a loader that starts `GET /api/groups/:id` in parallel with the GroupDetail chunk (`groupDetailQuery` shared with `useGroup`).
+- **P7**: Inter is self-hosted with `@fontsource-variable/inter` (one variable woff2 per alphabet, `unicode-range`, `font-display: swap`). No request to Google any more. This was the biggest single win.
+- **P6**: `transition-all` → `transition` (colors, opacity, shadow, transform; no layout properties) everywhere; both sticky bars `backdrop-blur-2xl` → `backdrop-blur-md` with 80% instead of 70% background.
+- **P9**: avatar `<img>` has `width`/`height`, `loading="lazy"`, `decoding="async"`.
+- **Also**: a thin page-loading bar (`useNavigation`, shown after 150 ms), because a lazy page keeps the old page on screen while its chunk downloads.
+- **Lighthouse (mobile, production build via `vite preview` + local API, 3 runs each)**: home 81–88 → **96** (FCP 2.9 → 2.1 s, LCP 3.2–3.8 → 2.3 s, CLS 0.002, TBT ≤ 20 ms); group detail 89 → **95** (FCP 2.9 → 2.2 s, LCP 3.0 → 2.4–2.5 s).
+- **Checked in headless Chrome**: home, detail via card click (loads only its chunk), /login, /signup, /profile redirect when signed out, sign-in then profile / create / edit, unknown URL and unknown group → Not Found, a 404 on the CreateGroupPage chunk → "new version" page with the navbar still shown. No console errors. Remaining third-party request: ipapi.co (location).
+- **City lists on demand** (follow-up in the same stage): `packages/shared` now has `countryNames.ts` (the 118 names, in `index.ts`) and `cities.ts` (all city lists, its own entry `@urconnections/shared/cities`, *not* re-exported from `index.ts`, because a static import anywhere would pull it back into the main bundle). The web loads it with `import()` through `useCities` (`lib/cities.ts`) only once a country is set; while it loads, a select offers just its current city, so deep links and the edit form never show a blank city. Location detection imports it only when ipapi returned a country. Home JS: **166.3 → 151.3 KB gzip**; the cities chunk is 13.8 KB. Lighthouse home is unchanged (96, LCP 2.4 s): a first visit still fetches the chunk in the background after location detection, but it's off the critical path.
+- **Not done / option for later**: zod/mini or skipping response validation (−≈ 20 KB). Not needed for the target.

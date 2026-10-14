@@ -5,12 +5,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"], // import.meta.env, asset imports, ...
-
-    // Migration mode: .js/.jsx files are allowed next to .ts/.tsx but not
-    // type-checked yet. Stage 11 sets allowJs to false once everything is TS.
-    "allowJs": true,
-    "checkJs": false
+    "types": ["vite/client"] // import.meta.env, asset imports, ...
   },
   "include": ["src"]
 }
