@@ -8,7 +8,9 @@ export {
   type Platform,
   type PlatformKey,
 } from "./platforms";
-export { COUNTRIES_CITIES, COUNTRY_LIST, getCities, isCountry, type Country } from "./countries";
+// Country names only. The city lists are a separate entry point, "@urconnections/shared/cities"
+// (see cities.ts for why).
+export { COUNTRY_LIST, isCountry, type Country } from "./countryNames";
 export {
   createGroupSchema,
   updateGroupSchema,

@@ -43,7 +43,7 @@ export default function ProfileAvatar({ user }: { user: User }) {
           <button
             onClick={() => fileInput.current?.click()}
             aria-label="Change profile picture"
-            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-all duration-300 hover:bg-black/40 hover:opacity-100 focus-visible:bg-black/40 focus-visible:opacity-100"
+            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition duration-300 hover:bg-black/40 hover:opacity-100 focus-visible:bg-black/40 focus-visible:opacity-100"
           >
             <FiCamera aria-hidden className="h-8 w-8 text-white drop-shadow-lg" />
           </button>

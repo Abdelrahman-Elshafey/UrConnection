@@ -11,6 +11,7 @@
     "dev": "concurrently -n web,api -c blue,green \"npm:dev:web\" \"npm:dev:api\"",
     "dev:web": "npm run dev -w @urconnections/web",
     "dev:api": "npm run dev -w @urconnections/api",
+    "stop:dev": "node scripts/stop-dev.js",
     "build": "npm run build -w @urconnections/web",
     "preview": "npm run preview -w @urconnections/web",
     "test": "npm run test --workspaces --if-present",

@@ -12,7 +12,7 @@ export default function Navbar() {
   const { mutate: signOut } = useSignOut();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/70 backdrop-blur-2xl transition-all duration-300 dark:border-raised-dark dark:bg-raised-dark/70">
+    <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md transition-colors duration-300 dark:border-raised-dark dark:bg-raised-dark/80">
       <div className="mx-auto flex h-(--nav-height) max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="mr-4 text-xl font-extrabold tracking-tighter text-black transition-opacity hover:opacity-70 dark:text-white sm:text-3xl">
           UrConnections

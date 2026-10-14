@@ -1,8 +1,14 @@
-// Countries and their cities, stored pre-sorted (audit O7: no runtime sorting).
-// Originally generated from web/src/lib/countries.js (Stage 2). Edit this file directly,
-// and keep each city list sorted.
+// The cities of every country, each list stored pre-sorted (audit O7: no runtime sorting).
+// Edit this file directly, and keep each city list sorted.
+//
+// Its own entry point, "@urconnections/shared/cities", NOT exported from index.ts: the website
+// loads it with a dynamic import() only once a country is picked (Stage 12), so the ≈ 13 KB gzip
+// stays out of the home page bundle. (If index.ts exported it, every page would include it.)
+import { isCountry, type Country } from "./countryNames";
 
-export const COUNTRIES_CITIES = {
+// `satisfies Record<Country, …>`: TypeScript checks that every country in COUNTRY_LIST has a
+// city list here, and that there's no entry for a country missing from COUNTRY_LIST.
+export const CITIES_BY_COUNTRY = {
   "Afghanistan": [
     "Aybak", "Baghlan", "Balkh", "Farah", "Gardez", "Ghazni", "Herat", "Jalalabad", "Kabul",
     "Kandahar", "Khost", "Kunduz", "Lashkar Gah", "Maymana", "Mazar-i-Sharif", "Pul-e-Khumri",
@@ -607,16 +613,8 @@ export const COUNTRIES_CITIES = {
     "Bulawayo", "Chinhoyi", "Chitungwiza", "Epworth", "Gweru", "Harare", "Kadoma", "Kwekwe",
     "Marondera", "Masvingo", "Mutare", "Norton",
   ],
-} as const satisfies Record<string, readonly string[]>;
-
-export type Country = keyof typeof COUNTRIES_CITIES;
-
-/** All country names, alphabetical. */
-export const COUNTRY_LIST = Object.keys(COUNTRIES_CITIES) as Country[];
-
-/** Type guard: narrows any string to a known Country. */
-export const isCountry = (value: string): value is Country => Object.hasOwn(COUNTRIES_CITIES, value);
+} as const satisfies Record<Country, readonly string[]>;
 
 /** Cities for a country, or an empty list for unknown / empty input. */
 export const getCities = (country: string | null | undefined): readonly string[] =>
-  country && isCountry(country) ? COUNTRIES_CITIES[country] : [];
+  country && isCountry(country) ? CITIES_BY_COUNTRY[country] : [];

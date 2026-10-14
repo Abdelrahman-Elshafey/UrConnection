@@ -6,7 +6,8 @@
 ## 1. Folder map
 
 ```
-package.json                # npm workspaces root: ["web", "api", "packages/*"]; scripts dev (web+api), test, lint, typecheck, db:up/down/logs
+package.json                # npm workspaces root: ["web", "api", "packages/*"]; scripts dev (web+api), stop:dev, test, lint, typecheck, db:up/down/logs
+scripts/stop-dev.js         # npm run stop:dev [-- ports]: stops leftover node servers on 3000/5173/4173 (Windows: taskkill /T, whole tree); other programs are left alone
 package-lock.json           # the only lockfile (don't delete: it pins every version)
 tsconfig.base.json          # shared strict TS settings (strict, noUncheckedIndexedAccess, bundler resolution)
 tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
@@ -82,7 +83,8 @@ packages/shared/            # @urconnections/shared: TS source imported directly
   src/index.ts              # public exports (import only from "@urconnections/shared")
   src/topics.ts             # TOPICS (as const) + Topic type
   src/platforms.ts          # PLATFORMS: key, label, linkPattern (RegExp), placeholder; PLATFORM_KEYS/MAP, isPlatformKey
-  src/countries.ts          # COUNTRIES_CITIES (stored pre-sorted), COUNTRY_LIST, getCities(), isCountry()
+  src/countryNames.ts       # COUNTRY_LIST (literal, alphabetical), Country type, isCountry(): exported from index.ts
+  src/cities.ts             # CITIES_BY_COUNTRY (pre-sorted, `satisfies Record<Country, …>`), getCities(): its OWN entry "@urconnections/shared/cities", not in index.ts, so the web can load it on demand
   src/schemas/group.ts      # createGroupSchema (input), updateGroupSchema (strict: EDITABLE_GROUP_FIELDS only), groupSchema,
                             # groupListQuerySchema, groupListResponseSchema, myGroupsResponseSchema; matching types
   src/schemas/auth.ts       # login/register/signup/password + verifyEmail, forgotPassword(+Response), resetPassword(+Form) schemas
@@ -96,12 +98,13 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json
   public/favicon.svg
   src/
-    main.tsx                # StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
-    App.tsx                 # createBrowserRouter route tree; loaders requireAuth / redirectIfAuth; hydrateFallbackElement; "*" → NotFound
-    index.css               # Inter @import, Tailwind, @theme color tokens (accent, surface, …), base layer, .hide-scrollbar, .animate-fade-in
+    main.tsx                # self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
+    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → NotFound
+    index.css               # Tailwind, @theme tokens (--font-sans = Inter Variable, colors accent, surface, …), base layer, .hide-scrollbar, .animate-fade-in, .nav-progress
     vite-env.d.ts           # Vite client types (no VITE_* variables are used)
     components/
-      layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + <Outlet/>
+      layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
+      layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
       layout/MainLayout.tsx # Navbar + VerifyEmailBanner + <Outlet/> + Footer
       layout/Navbar.tsx     # sticky bar: logo, avatar + Profile (one link), Sign Out, Create Group
       layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup)
@@ -125,6 +128,8 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
       queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus, no retry on 4xx); also used by route loaders
       formResolver.ts       # formResolver(schema): zodResolver whose form values may also be "" (empty selects before a choice)
       format.ts             # formatLocation(place), isOwner(user, group), initialOf(user)
+      cities.ts             # useCities(country): downloads the cities chunk via import() + React Query on first use (undefined while loading); cityOptions(cities, current)
+      routeErrors.ts        # isChunkLoadError(error): a lazy page's file failed to download (usually a new deploy)
       pageTitle.ts          # pageTitle(name?) → "name · UrConnections"; pages render <title>{pageTitle(...)}</title> (React 19 hoists it into <head>)
       platforms.ts          # UI side of platforms: icon + Tailwind badge colors per PlatformKey; PLATFORMS, getPlatform(key)
     services/
@@ -148,7 +153,7 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
         hooks/useGroups.ts            # useInfiniteQuery over getGroups: pages + fetchNextPage, keepPreviousData
         hooks/useGroupFilters.ts      # filters from/to the URL; saved search; one-time location preset
         hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (skipToken until signed in)
-        hooks/useGroup.ts             # groupKeys.detail(id), via the API (skipToken while there's no id)
+        hooks/useGroup.ts             # groupDetailQuery(id) (queryOptions, shared with the route loader) + useGroup (skipToken while there's no id)
         hooks/useCreateGroup.ts       # POST → storeSavedGroup
         hooks/useUpdateGroup.ts       # PATCH → storeSavedGroup
         hooks/groupCache.ts           # storeSavedGroup(queryClient, group): cache its detail + invalidate every group list
@@ -193,23 +198,25 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
 ## 2. Routing (`web/src/App.tsx`)
 
 ```
-RootLayout (no path)
+RootLayout (no path)                    errorElement: RouteError (full page)
 ├── "/"  MainLayout
-│   ├── index              GroupList
-│   ├── groups/:groupId    GroupDetail
-│   ├── groups/:groupId/edit  EditGroupPage  loader: requireAuth
-│   ├── create             CreateGroupPage   loader: requireAuth  (redirect /login if no session)
-│   ├── profile            ProfilePage       loader: requireAuth
-│   └── *                  NotFound          (any other address)
-├── "login"                LoginPage         loader: redirectIfAuth (redirect / if session)
-├── "signup"               SignupPage        loader: redirectIfAuth
-├── "verify-email"         VerifyEmailPage   (public: the link may be opened in another browser)
-├── "forgot-password"      ForgotPasswordPage
-└── "reset-password"       ResetPasswordPage
+│   └── (pathless)                      errorElement: RouteError (inside MainLayout: navbar stays)
+│       ├── index              GroupList         (eager: in the main bundle)
+│       ├── groups/:groupId    GroupDetail       lazy · loader: prefetchGroup
+│       ├── groups/:groupId/edit  EditGroupPage  lazy · loader: requireAuth
+│       ├── create             CreateGroupPage   lazy · loader: requireAuth  (redirect /login if no session)
+│       ├── profile            ProfilePage       lazy · loader: requireAuth
+│       └── *                  NotFound          (any other address)
+├── "login"                LoginPage         lazy · loader: redirectIfAuth (redirect / if session)
+├── "signup"               SignupPage        lazy · loader: redirectIfAuth
+├── "verify-email"         VerifyEmailPage   lazy (public: the link may be opened in another browser)
+├── "forgot-password"      ForgotPasswordPage  lazy
+└── "reset-password"       ResetPasswordPage   lazy
 ```
-- The loaders read the session through the cache: `queryClient.ensureQueryData(sessionQueryOptions)`, with the shared `queryClient` in `web/src/lib/queryClient.ts`.
-- `hydrateFallbackElement: <PageSpinner/>` on the root route shows a spinner while loaders run on the first page load.
-- Unknown addresses render `NotFound` (`*` route). There is no `errorElement` and no `React.lazy` yet (Stage 12): every page is bundled eagerly.
+- **Code splitting (Stage 12):** `lazy: page(() => import(...))` gives every page except the home page its own JS chunk, downloaded on first visit. React Router runs a route's `loader` and its `lazy()` in parallel. Home stays eager because almost every visit starts there.
+- The loaders read the session through the cache: `queryClient.ensureQueryData(sessionQueryOptions)`, with the shared `queryClient` in `web/src/lib/queryClient.ts`. `prefetchGroup` starts `GET /api/groups/:id` (`prefetchQuery(groupDetailQuery(id))`, never throws) while the GroupDetail chunk downloads.
+- `hydrateFallbackElement: <PageSpinner/>` on the root route shows a spinner while loaders and lazy pages load on the first page load. On later navigations the current page stays visible and `RootLayout` shows a thin progress bar (after 150 ms).
+- Unknown addresses render `NotFound` (`*` route). Errors (a loader throws, a chunk fails to download, a render crash) render `RouteError`.
 - `RootLayout` renders React Router's `<ScrollRestoration/>`. Each page sets its tab title with a React 19 `<title>` element (`lib/pageTitle.ts`).
 
 ## 3. Data layer
@@ -256,7 +263,7 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 9. **Avatars (Stage 10):** `PUT /api/users/me/avatar` → multer (memory, 5 MB) → `toAvatarWebp` (real format must be JPEG/PNG/WebP, ≤ 50 M pixels, 512×512 WebP, EXIF dropped) → `storage.put("avatars/<uid>/<uuid>.webp", Cache-Control: immutable)` → `setAvatarKey` (row lock, returns the old key) → delete the old object. A new key per upload = a new URL, so browsers may cache forever. Browsers read `/media/<key>`: Vite (later Caddy) proxies to Garage's read-only website endpoint, which the API enables at startup (`PutBucketWebsite`).
 
 ### Home page filter flow (`GroupList` → `useGroupFilters` + `useGroups`)
-- **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true`; changing country clears city).
+- **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true` + `preventScrollReset: true`, so a filter change keeps the scroll position; changing country clears city).
 - Every URL change is also saved as the tab's **saved search** (`utils/savedSearch.ts`, sessionStorage, no expiry). On a visit to `/` without params: a saved search is restored; a saved `""` (user cleared) stays empty; otherwise the detected location is applied once.
 - `useGroups(apiParams)` = `useInfiniteQuery` keyed by the filters. The server filters and paginates; **Load more** calls `fetchNextPage`. `keepPreviousData` keeps old results visible while new filters load.
 - The saved search is cleared on sign-in and sign-out.
@@ -273,4 +280,4 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 ## 5. External services
 - Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
-- Google Fonts (Inter, `@import` in CSS)
+- No font CDN: Inter is self-hosted since Stage 12 (`@fontsource-variable/inter`, files served with the build)

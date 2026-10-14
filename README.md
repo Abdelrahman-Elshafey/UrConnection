@@ -39,9 +39,12 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 
 **Troubleshooting:** `Can't reach Postgres at localhost:5433` (or `ECONNREFUSED`) means the database container isn't running, usually because Docker Desktop isn't started (it doesn't start by itself after a reboot unless you enable *Settings → General → Start Docker Desktop when you sign in*). Start Docker Desktop, then run `npm run db:up`.
 
+**`Port 3000 is already in use`** (API) or **`Port 5173 is already in use`** (Vite) means a dev server from an earlier run is still running in the background, often after a terminal was closed. Run `npm run stop:dev`, then start again. Both servers refuse to start on a taken port on purpose: Vite would otherwise move to 5174, where the API's CSRF check rejects every sign-in and save.
+
 | Command | What it does |
 |---|---|
 | `npm run dev` | start web (Vite) and api (Express) together |
+| `npm run stop:dev` | stop dev servers left running in the background (ports 3000, 5173, 4173; only `node` processes). One port: `npm run stop:dev -- 3000` |
 | `npm run db:up` / `db:down` / `db:logs` | start / stop the dev containers (Postgres, Mailpit, Garage) / follow the Postgres log |
 | `npm run db:migrate` / `db:rollback` / `db:reset` | apply / undo the last / rebuild all migrations |
 | `npm run db:seed` | fill the database with demo data (development only) |
@@ -56,7 +59,7 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 ```
 web/              React app (Vite)
 api/              Express 5 API (TypeScript): auth (sessions, argon2id), /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
-packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries
+packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries (+ `/cities` entry, loaded on demand)
 docker-compose.yml  development services (Postgres, Mailpit)
 docs/             architecture, code audit, master plan, security runbook
 supabase/         v1 database security SQL (RLS, constraints, storage policies)

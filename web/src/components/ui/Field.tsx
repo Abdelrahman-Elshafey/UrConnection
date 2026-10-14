@@ -27,7 +27,7 @@ interface FieldOwnProps {
 
 const controlClass = (invalid: boolean, onSurface = false) =>
   cx(
-    "w-full rounded-2xl border-2 px-6 py-4 text-lg font-bold text-black outline-none transition-all dark:text-white",
+    "w-full rounded-2xl border-2 px-6 py-4 text-lg font-bold text-black outline-none transition dark:text-white",
     "placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50",
     onSurface ? "bg-white dark:bg-black" : "bg-surface dark:bg-surface-dark",
     invalid ? "border-red-500/50" : "border-transparent focus:border-accent",

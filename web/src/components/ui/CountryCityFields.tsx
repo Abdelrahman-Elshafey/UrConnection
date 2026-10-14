@@ -1,5 +1,6 @@
-import { COUNTRY_LIST, getCities } from "@urconnections/shared";
+import { COUNTRY_LIST } from "@urconnections/shared";
 import { useFormContext, useWatch } from "react-hook-form";
+import { cityOptions, useCities } from "../../lib/cities";
 import { SelectField } from "./Field";
 
 interface CountryCityFieldsProps {
@@ -26,7 +27,9 @@ interface CountryCity {
 export function CountryCityFields({ countryLabel = "Country", cityLabel = "City", optional = false, onSurface }: CountryCityFieldsProps) {
   const { register, setValue, control, formState } = useFormContext<CountryCity>();
   const country = useWatch({ control, name: "country" });
-  const cities = getCities(country);
+  const city = useWatch({ control, name: "city" });
+  // Loaded on demand (lib/cities.ts); until then the current city stays selectable.
+  const cities = cityOptions(useCities(country), city);
   const suffix = optional ? " (optional)" : "";
 
   return (

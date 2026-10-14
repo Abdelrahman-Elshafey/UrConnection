@@ -6,6 +6,11 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    // strictPort: if 5173 is taken (usually an old dev server still running), stop with an
+    // error instead of quietly moving to 5174. On another port the API's CSRF check
+    // (APP_ORIGIN = http://localhost:5173) would reject every sign-in and save.
+    // Fix: npm run stop:dev, then start again.
+    strictPort: true,
     // In development, forward /api/* to the Express API. The browser only ever talks to
     // localhost:5173, so dev behaves like production (one origin, Caddy routes /api):
     // no CORS setup, and cookies just work.
@@ -20,5 +25,10 @@ export default defineConfig({
         headers: { Host: "urconnections.web.garage.localhost" },
       },
     },
+  },
+  // `vite preview` (the production build, port 4173) reuses the proxy above. Same rule:
+  // fail on a taken port rather than serve from another one.
+  preview: {
+    strictPort: true,
   },
 });
