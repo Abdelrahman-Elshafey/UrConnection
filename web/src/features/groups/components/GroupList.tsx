@@ -78,7 +78,9 @@ export default function GroupList() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 place-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* justify-items-center, not place-items-center: cards keep the default align "stretch",
+            so every card in a row is as tall as the tallest one. */}
+        <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {groups.map((group) => (
             <GroupCard key={group.id} group={group} onDelete={setToDelete} />
           ))}
