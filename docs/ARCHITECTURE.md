@@ -6,7 +6,8 @@
 ## 1. Folder map
 
 ```
-package.json                # npm workspaces root: ["web", "api", "packages/*"]; scripts dev (web+api), test, lint, typecheck, db:up/down/logs
+package.json                # npm workspaces root: ["web", "api", "packages/*"]; scripts dev (web+api), stop:dev, test, lint, typecheck, db:up/down/logs
+scripts/stop-dev.js         # npm run stop:dev [-- ports]: stops leftover node servers on 3000/5173/4173 (Windows: taskkill /T, whole tree); other programs are left alone
 package-lock.json           # the only lockfile (don't delete: it pins every version)
 tsconfig.base.json          # shared strict TS settings (strict, noUncheckedIndexedAccess, bundler resolution)
 tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
@@ -45,6 +46,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/lib/logger.ts         # pino (pretty in dev, JSON in prod, silent in tests); redacts auth/cookie headers
   src/lib/errors.ts         # HttpError(status, code, message, details?) + ErrorBody shape
   src/lib/validate.ts       # parseOrThrow(schema, input): typed value or 400 invalid_request with per-field details
+  src/lib/rateLimit.ts      # limitRequests({ limit, windowMs, key, onlyFailures, handler }) + byIp / byUser / byEmail, HOUR / MINUTE; JSON 429 by default
   src/lib/mailer.ts         # Mailer interface + createSmtpMailer (nodemailer; Mailpit in dev)
   src/lib/storage.ts        # Storage interface (put/delete) + createS3Storage (AWS SDK, path style) + enableWebsiteAccess + mediaUrl(key) = /media/<key>
   src/middleware/errorHandler.ts       # notFound (JSON 404) + errorHandler (HttpError / bad JSON / 500 without details in prod)
@@ -60,7 +62,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
   src/modules/auth/cookies.ts              # session cookie: sid / __Host-sid, httpOnly, SameSite=Lax, Secure in prod; TTL 30d, renew <15d; google_oauth cookie (state.verifier, 10 min)
   src/modules/auth/startSession.ts         # startSession(): new session row + cookie, drops the old one (rotation); used by every sign-in path
   src/modules/auth/sessions.repository.ts  # create / findValid (join users, DB clock) / extend / delete / deleteExpired
-  src/modules/auth/session.middleware.ts   # loadSession (cookie → req.user, sliding renewal), requireAuth (401), requireVerified (403)
+  src/modules/auth/session.middleware.ts   # loadSession (cookie → req.user, sliding renewal), requireAuth (401), requireVerified (403), signedInUser(req) (typed user or 401), unauthenticated()
   src/modules/auth/emailTokens.repository.ts  # issue (cancels older) / consume (one atomic UPDATE: unused + unexpired + purpose)
   src/modules/auth/emails.ts               # verifyEmailMessage / resetPasswordMessage (text + escaped HTML)
   src/modules/auth/google.ts               # GoogleOAuth interface + createGoogleOAuth (arctic: PKCE URL, code exchange) + parseGoogleClaims (iss/aud/email_verified)
@@ -81,71 +83,101 @@ packages/shared/            # @urconnections/shared: TS source imported directly
   src/index.ts              # public exports (import only from "@urconnections/shared")
   src/topics.ts             # TOPICS (as const) + Topic type
   src/platforms.ts          # PLATFORMS: key, label, linkPattern (RegExp), placeholder; PLATFORM_KEYS/MAP, isPlatformKey
-  src/countries.ts          # COUNTRIES_CITIES (stored pre-sorted), COUNTRY_LIST, getCities(), isCountry()
+  src/countryNames.ts       # COUNTRY_LIST (literal, alphabetical), Country type, isCountry(): exported from index.ts
+  src/cities.ts             # CITIES_BY_COUNTRY (pre-sorted, `satisfies Record<Country, …>`), getCities(): its OWN entry "@urconnections/shared/cities", not in index.ts, so the web can load it on demand
   src/schemas/group.ts      # createGroupSchema (input), updateGroupSchema (strict: EDITABLE_GROUP_FIELDS only), groupSchema,
                             # groupListQuerySchema, groupListResponseSchema, myGroupsResponseSchema; matching types
   src/schemas/auth.ts       # login/register/signup/password + verifyEmail, forgotPassword(+Response), resetPassword(+Form) schemas
   src/schemas/user.ts       # userSchema (API user, never a hash) + meResponseSchema ({ user | null }); User type
   src/schemas/profile.ts    # profileFields (display_name, phone, country, city) → profileSchema (form) + profileUpdateSchema (PATCH)
 
-web/                        # the React app (Vite)
-  index.html                # Vite entry; title "UrConnections"
+web/                        # the React app (Vite), 100% TypeScript (allowJs off since Stage 11)
+  index.html                # Vite entry (/src/main.tsx); default title "UrConnections"
   vite.config.ts            # react() + tailwindcss(); dev proxy /api → http://localhost:3000, /media → Garage website :3902 (Host = <bucket>.web.garage.localhost)
-  vercel.json               # SPA rewrite + security headers (CSP report-only). Vercel Root Directory must be `web` if deployed
-  tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; allowJs during the JS→TS migration
+  vercel.json               # v1-era SPA rewrite + security headers (reference until they move to Caddy in Stage 13; v2 never deploys to Vercel)
+  tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json
   public/favicon.svg
   src/
-    main.jsx                # QueryClientProvider (lib/queryClient) + ReactQueryDevtools + <App/>
-    App.jsx                 # createBrowserRouter route tree + loaders requireAuth / redirectIfAuth + <Analytics/>
-    index.css               # Inter font @import, Tailwind, base layer (border color, cursor), --nav-height, .hide-scrollbar, .animate-fade-in
+    main.tsx                # self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
+    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → NotFound
+    index.css               # Tailwind, @theme tokens (--font-sans = Inter Variable, colors accent, surface, …), base layer, .hide-scrollbar, .animate-fade-in, .nav-progress
     vite-env.d.ts           # Vite client types (no VITE_* variables are used)
-    GenealComponents/       # (sic, typo; renamed in Stage 11) app shell
-      RootLayout.jsx        # <ScrollToTop/> + <Outlet/>
-      MainLayout.jsx        # sticky nav + <Outlet/> + footer (all inline)
-      ScrollToTop.jsx       # scrolls to top on pathname change
+    components/
+      layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
+      layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
+      layout/MainLayout.tsx # Navbar + VerifyEmailBanner + <Outlet/> + Footer
+      layout/Navbar.tsx     # sticky bar: logo, avatar + Profile (one link), Sign Out, Create Group
+      layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup)
+      ui/                   # the UI kit (Stage 11). Pages build on these; no raw button/input styling in pages
+        cx.ts               # cx(...classes): join truthy class names
+        buttonClass.ts      # buttonClass({ variant: primary|dark|outline|danger, size: xs|sm|md|lg|xl, block })
+        Button.tsx          # Button (loading spinner, type="button" by default) + ButtonLink (router Link styled as a button)
+        Spinner.tsx         # Spinner (sm|md|lg, accent|current) + PageSpinner (full page, optional label)
+        Field.tsx           # TextField, PasswordField (show/hide), SelectField, TextAreaField, ReadOnlyField: useId label wiring, aria-invalid/-describedby
+        CountryCityFields.tsx  # linked country → city selects for any react-hook-form form (useFormContext; country change clears city)
+        Notice.tsx          # info / error message box (role status / alert)
+        BackLink.tsx        # "‹ Back to …" link
+        Avatar.tsx          # picture or initial (sm | lg)
+        PlatformBadge.tsx   # platform pill with icon + colors (getPlatform)
+        PageHero.tsx        # huge two-line headline ("Your / Profile.") + intro
+        NotFound.tsx        # "Not Found" page body (also the "*" route)
+        ConfirmDialog.tsx   # native <dialog> + showModal(): focus trap, Escape, backdrop click
+        toast/              # ToastProvider (aria-live region, 3.5 s) + useToast() (React 19 use(context)) + toastContext
     lib/
-      queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus); also used by route loaders
       apiClient.ts          # apiGet / apiSend / apiSendNoContent: same-origin fetch (cookie sent), JSON or FormData body, ApiError, zod-validated JSON
+      queryClient.ts        # shared QueryClient (staleTime 60s, no refetch on focus, no retry on 4xx); also used by route loaders
+      formResolver.ts       # formResolver(schema): zodResolver whose form values may also be "" (empty selects before a choice)
+      format.ts             # formatLocation(place), isOwner(user, group), initialOf(user)
+      cities.ts             # useCities(country): downloads the cities chunk via import() + React Query on first use (undefined while loading); cityOptions(cities, current)
+      routeErrors.ts        # isChunkLoadError(error): a lazy page's file failed to download (usually a new deploy)
+      pageTitle.ts          # pageTitle(name?) → "name · UrConnections"; pages render <title>{pageTitle(...)}</title> (React 19 hoists it into <head>)
       platforms.ts          # UI side of platforms: icon + Tailwind badge colors per PlatformKey; PLATFORMS, getPlatform(key)
     services/
-      auth.service.ts       # our API: getMe, register, login, logout, updateProfile (no tokens in JS: the cookie is httpOnly)
+      auth.service.ts       # our API: getMe, register, login, logout, updateProfile, email flows, GOOGLE_SIGN_IN_URL (no tokens in JS: the cookie is httpOnly)
     features/
       auth/
-        components/AuthPage.jsx       # login + signup via our API; authResolver picks loginSchema/signupSchema; Google = link to /api/auth/google; shows ?error= via oauthErrorMessage
         hooks/useUser.ts              # SESSION_QUERY_KEY, sessionQueryOptions (GET /api/auth/me), useUser, useSetUser, useSignOut
+        hooks/useSignIn.ts            # useLogin, useRegister: set the session cache, clear the saved search, go home
         hooks/useEmailFlows.ts        # useVerifyEmail, useResendVerification, useForgotPassword, useResetPassword
-        components/AuthCard.jsx       # shared centered layout + Notice + input/button classes for the small auth pages
-        components/VerifyEmailPage.jsx   # /verify-email?token=: button-triggered (scanners and StrictMode can't use the token up)
-        components/ForgotPasswordPage.jsx # /forgot-password
-        components/ResetPasswordPage.jsx  # /reset-password?token=
-        components/VerifyEmailBanner.jsx  # under the nav for signed-in, unverified users; Resend email
+        components/AuthLayout.tsx     # centered layout of every account page (BackLink, headline, tab title)
+        components/LoginPage.tsx      # /login: email + password; shows ?error= from Google (oauthErrorMessage)
+        components/SignupPage.tsx     # /signup: signupSchema; FormProvider for CountryCityFields; confirmPassword never sent
+        components/GoogleSignIn.tsx   # "Or continue with" + plain <a href="/api/auth/google">
+        components/VerifyEmailPage.tsx   # /verify-email?token=: button-triggered (scanners and StrictMode can't use the token up)
+        components/ForgotPasswordPage.tsx # /forgot-password
+        components/ResetPasswordPage.tsx  # /reset-password?token=
+        components/VerifyEmailBanner.tsx  # under the nav for signed-in, unverified users; Resend email
       groups/
         api/groupsApi.ts              # all via our API: getGroups, getGroupById, getMyGroups, createGroup, updateGroup, deleteGroup
         api/queryKeys.ts              # groupKeys factory: all / lists / list(filters) / mine / detail
         hooks/useGroups.ts            # useInfiniteQuery over getGroups: pages + fetchNextPage, keepPreviousData
         hooks/useGroupFilters.ts      # filters from/to the URL; saved search; one-time location preset
-        hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (enabled when signed in)
-        hooks/useUpdateGroup.ts       # PATCH → cache the group's detail + invalidate lists
-        hooks/useGroup.ts             # groupKeys.detail(id), via the API
-        hooks/useCreateGroup.ts       # POST → cache the new group's detail + invalidate lists (form shows errors)
-        hooks/useDeleteGroup.ts       # DELETE → remove detail, invalidate lists; alert() on error (toast in Stage 11)
+        hooks/useMyGroups.ts          # groupKeys.mine(): GET /api/users/me/groups (skipToken until signed in)
+        hooks/useGroup.ts             # groupDetailQuery(id) (queryOptions, shared with the route loader) + useGroup (skipToken while there's no id)
+        hooks/useCreateGroup.ts       # POST → storeSavedGroup
+        hooks/useUpdateGroup.ts       # PATCH → storeSavedGroup
+        hooks/groupCache.ts           # storeSavedGroup(queryClient, group): cache its detail + invalidate every group list
+        hooks/useDeleteGroup.ts       # DELETE → remove detail, invalidate lists (errors shown by the caller)
         hooks/useUserLocation.ts      # ['userLocation']: ipapi.co, localStorage cache with 7-day TTL, never throws
         utils/savedSearch.ts          # read/save/clearSavedSearch(): last home search per tab ("" = user cleared filters)
-        components/GroupList.jsx      # home page: FilterBar + server-filtered grid + Load more
-        components/FilterBar.jsx      # hero search (uncontrolled input) + sticky selects + topic pills
-        components/GroupCard.jsx      # card: badges, Connect / View Details; owner (user.id === group.user_id) also sees Edit + Delete
-        components/GroupDetail.jsx    # /groups/:groupId; owner sees Edit Group / Delete Group
-        components/GroupForm.jsx      # shared create/edit form (edit: platform + link read-only)
-        components/EditGroupPage.jsx  # /groups/:groupId/edit (requireAuth); non-owners see Not Found
-        components/CreateGroupForm.jsx # /create: GroupForm mode="create" → POST, then opens the new group
+        components/GroupList.tsx      # home page: FilterBar + server-filtered grid + Load more; owns the DeleteGroupDialog
+        components/FilterBar.tsx      # hero + <search> form + sticky selects (aria-labels) + topic pills (aria-pressed); props: filters, onChange, onSearch
+        components/GroupCard.tsx      # card: badges, Connect / View Details; owner sees Edit + Delete (onDelete prop, no mutation per card)
+        components/GroupDetail.tsx    # /groups/:groupId; owner sees Edit Group / Delete Group
+        components/DeleteGroupDialog.tsx  # ConfirmDialog + useDeleteGroup + toast; opened with a group, null = closed
+        components/GroupFormFrame.tsx # page around the create/edit forms: hero, back link, error, grid, submit
+        components/GroupFormFields.tsx  # topic, title, country/city, description (useFormContext) + a slot for the platform/link row
+        components/CreateGroupPage.tsx  # /create: createGroupSchema via formResolver; platform change clears the link
+        components/EditGroupPage.tsx  # /groups/:groupId/edit (requireAuth): non-owners see Not Found; platform + link read-only
       profile/
-        components/ProfilePage.jsx    # /profile: read/edit form (profileSchema) + the user's groups grid
-        components/ProfileAvatar.jsx  # avatar display + upload/remove; quick type/size check (AVATAR_MIME_TYPES, AVATAR_MAX_BYTES) before sending
+        components/ProfilePage.tsx    # /profile: Account Information section + "Your Groups" grid (DeleteGroupDialog)
+        components/ProfileDetails.tsx # read view ⇄ edit form (profileSchema); form filled only on "Edit" (B22); toast on save
+        components/ProfileAvatar.tsx  # picture + upload/remove with toasts; quick type/size check (AVATAR_MIME_TYPES, AVATAR_MAX_BYTES)
         api/avatarApi.ts              # uploadAvatar(file) = PUT multipart, removeAvatar() = DELETE; both return the updated user
         hooks/useAvatar.ts            # useUploadAvatar, useRemoveAvatar → the returned user goes into ['session'] (useSetUser)
         hooks/useUpdateProfile.ts     # PATCH /api/users/me → setQueryData(SESSION_QUERY_KEY, user)
 ```
-**TypeScript status:** `packages/shared` and the whole web data layer (`lib`, `services`, `hooks`, `api`, `utils`) are TS. Components (`.jsx`) are converted in Stage 11.
+**TypeScript status:** everything is TypeScript (`allowJs: false`), strict, with no `any`.
 
 ## API (Stage 3)
 - **Dev:** `npm run db:up` starts Postgres, Mailpit and Garage, then `npm run dev` runs web (:5173) and api (:3000) together. The browser calls `/api/*` on :5173, and Vite forwards it to :3000, so it's the same origin as production.
@@ -163,24 +195,29 @@ web/                        # the React app (Vite)
 - **Pagination:** cursor = id of the last item. uuidv7 ids sort by creation time, so the next page is `where id < cursor order by id desc limit n+1` (the extra row says whether more exist).
 - **Database workflow:** `npm run db:up` (container) → `npm run db:migrate` (tables) → `npm run db:seed` (demo data). `npm run db:reset` rebuilds from scratch. `npm run test:db` runs the DB tests in the separate `urconnections_test` database, so dev data is never touched.
 
-## 2. Routing (`web/src/App.jsx`)
+## 2. Routing (`web/src/App.tsx`)
 
 ```
-RootLayout (no path)
+RootLayout (no path)                    errorElement: RouteError (full page)
 ├── "/"  MainLayout
-│   ├── index              GroupList
-│   ├── groups/:groupId    GroupDetail
-│   ├── groups/:groupId/edit  EditGroupPage  loader: requireAuth
-│   ├── create             CreateGroupForm   loader: requireAuth  (redirect /login if no session)
-│   └── profile            ProfilePage       loader: requireAuth
-├── "login"                AuthPage          loader: redirectIfAuth (redirect / if session)
-├── "verify-email"         VerifyEmailPage   (public: the link may be opened in another browser)
-├── "forgot-password"      ForgotPasswordPage
-└── "reset-password"       ResetPasswordPage
+│   └── (pathless)                      errorElement: RouteError (inside MainLayout: navbar stays)
+│       ├── index              GroupList         (eager: in the main bundle)
+│       ├── groups/:groupId    GroupDetail       lazy · loader: prefetchGroup
+│       ├── groups/:groupId/edit  EditGroupPage  lazy · loader: requireAuth
+│       ├── create             CreateGroupPage   lazy · loader: requireAuth  (redirect /login if no session)
+│       ├── profile            ProfilePage       lazy · loader: requireAuth
+│       └── *                  NotFound          (any other address)
+├── "login"                LoginPage         lazy · loader: redirectIfAuth (redirect / if session)
+├── "signup"               SignupPage        lazy · loader: redirectIfAuth
+├── "verify-email"         VerifyEmailPage   lazy (public: the link may be opened in another browser)
+├── "forgot-password"      ForgotPasswordPage  lazy
+└── "reset-password"       ResetPasswordPage   lazy
 ```
-- The loaders read the session through the cache: `queryClient.ensureQueryData(sessionQueryOptions)`, with the shared `queryClient` in `web/src/lib/queryClient.ts`.
-- There is no `errorElement`, no 404/catch-all route, and no `React.lazy`. Every page is bundled eagerly.
-- `<Analytics/>` (Vercel) renders next to `RouterProvider`.
+- **Code splitting (Stage 12):** `lazy: page(() => import(...))` gives every page except the home page its own JS chunk, downloaded on first visit. React Router runs a route's `loader` and its `lazy()` in parallel. Home stays eager because almost every visit starts there.
+- The loaders read the session through the cache: `queryClient.ensureQueryData(sessionQueryOptions)`, with the shared `queryClient` in `web/src/lib/queryClient.ts`. `prefetchGroup` starts `GET /api/groups/:id` (`prefetchQuery(groupDetailQuery(id))`, never throws) while the GroupDetail chunk downloads.
+- `hydrateFallbackElement: <PageSpinner/>` on the root route shows a spinner while loaders and lazy pages load on the first page load. On later navigations the current page stays visible and `RootLayout` shows a thin progress bar (after 150 ms).
+- Unknown addresses render `NotFound` (`*` route). Errors (a loader throws, a chunk fails to download, a render crash) render `RouteError`.
+- `RootLayout` renders React Router's `<ScrollRestoration/>`. Each page sets its tab title with a React 19 `<title>` element (`lib/pageTitle.ts`).
 
 ## 3. Data layer
 
@@ -215,32 +252,32 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - RLS, constraints, and bucket policies are defined in `supabase/migrations/` (Phase 1). Check `docs/SUPABASE.md` to see whether they have been applied.
 
 ### Auth flow (own API, Stage 6)
-1. **Sign up / sign in:** `AuthPage` → `register()` / `login()` → API validates (shared schemas), hashes or verifies the password with argon2id, creates a `sessions` row holding only `sha256(token)`, and sets the token in an **httpOnly, SameSite=Lax** cookie (`sid`; `__Host-sid` + Secure in production). The response's `user` goes into `['session']` via `useSetUser`.
+1. **Sign up / sign in:** `SignupPage` / `LoginPage` → `useRegister` / `useLogin` → `register()` / `login()` → API validates (shared schemas), hashes or verifies the password with argon2id, creates a `sessions` row holding only `sha256(token)`, and sets the token in an **httpOnly, SameSite=Lax** cookie (`sid`; `__Host-sid` + Secure in production). The response's `user` goes into `['session']` via `useSetUser`.
 2. **Every request:** `loadSession` hashes the cookie token, looks up a non-expired session joined with its user (DB clock), and sets `req.user`. Under 15 days left → extended to 30 days and the cookie re-sent (sliding expiry). `requireAuth` → 401 without a user.
 3. **CSRF:** SameSite=Lax cookie + `originCheck`: every non-GET request needs `Origin === APP_ORIGIN` (403 otherwise). The Vite proxy and Caddy keep it same-origin.
 4. **Abuse limits:** login 30 / 15 min per IP (IPv6 /56) and 10 failed attempts / 15 min per email; register 10 / hour per IP → 429. One generic 401 message plus a dummy argon2 check for unknown emails, so neither text nor timing reveals which emails exist. Register does reveal it (409, a documented trade-off until Stage 8).
 5. **Login rotates the session** (the old token is deleted). **Logout** deletes the row, so a copied cookie stops working. Expired sessions are cleaned at API start and every 6 h.
-6. **Route guards** (`requireAuth` / `redirectIfAuth` in `App.jsx`) read `['session']` through `ensureQueryData`, so `/me` is called once.
+6. **Route guards** (`requireAuth` / `redirectIfAuth` in `App.tsx`) read `['session']` through `ensureQueryData`, so `/me` is called once.
 7. **Email flows (Stage 8):** links carry a 32-byte token; only `sha256(token)` is stored in `email_tokens` (verify 24 h, reset 1 h). `consume` is one atomic `UPDATE … WHERE unused AND unexpired AND purpose … RETURNING user_id`, so a link works once even under races, and issuing a new one deletes the older ones. Sign-up sends a verify email (a mail failure doesn't fail sign-up). Forgot-password replies 202 *before* looking anything up (same text and timing for every email). Reset sets the hash, deletes **all** the user's sessions and marks the email verified. Creating groups requires `email_verified` (`requireVerified`).
 8. **Google sign-in (Stage 9):** the Google button is a plain link to `GET /api/auth/google`. The API makes `state` and a PKCE verifier (32 random bytes each), keeps them in the 10-minute httpOnly `google_oauth` cookie (SameSite=Lax, so it survives Google's top-level redirect back), and redirects to Google (`openid email profile`, `prompt=select_account`). `/callback` clears the cookie, checks `state`, exchanges `code` + verifier for an ID token (arctic, server to server), checks `iss`/`aud`/`email_verified`, then `signInWithGoogle` picks the user: linked `sub` → same **verified** email (link) → same **unverified** email (Google proves ownership: password removed, sessions ended, email verified; pre-hijack defence) → new user without password. Then `startSession` and a redirect to `/`. Any failure redirects to `/login?error=<code>`; the codes and messages are `OAUTH_ERROR_MESSAGES` in packages/shared.
 9. **Avatars (Stage 10):** `PUT /api/users/me/avatar` → multer (memory, 5 MB) → `toAvatarWebp` (real format must be JPEG/PNG/WebP, ≤ 50 M pixels, 512×512 WebP, EXIF dropped) → `storage.put("avatars/<uid>/<uuid>.webp", Cache-Control: immutable)` → `setAvatarKey` (row lock, returns the old key) → delete the old object. A new key per upload = a new URL, so browsers may cache forever. Browsers read `/media/<key>`: Vite (later Caddy) proxies to Garage's read-only website endpoint, which the API enables at startup (`PutBucketWebsite`).
 
 ### Home page filter flow (`GroupList` → `useGroupFilters` + `useGroups`)
-- **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true`; changing country clears city).
+- **The URL is the only source of truth:** `?query&topic&country&city&platform`. `useGroupFilters` reads it into `filters` (for the UI) and `apiParams` (unknown values dropped), and `setFilter` / `clearFilters` write it (`replace: true` + `preventScrollReset: true`, so a filter change keeps the scroll position; changing country clears city).
 - Every URL change is also saved as the tab's **saved search** (`utils/savedSearch.ts`, sessionStorage, no expiry). On a visit to `/` without params: a saved search is restored; a saved `""` (user cleared) stays empty; otherwise the detected location is applied once.
 - `useGroups(apiParams)` = `useInfiniteQuery` keyed by the filters. The server filters and paginates; **Load more** calls `fetchNextPage`. `keepPreviousData` keeps old results visible while new filters load.
 - The saved search is cleared on sign-in and sign-out.
 - **Ownership (Stage 7):** every group has exactly one owner (`groups.user_id`, NOT NULL, FK to users). Create/edit/delete go through the API, which takes the owner from the session and checks it inside the SQL. The UI only *shows* Edit/Delete to the owner.
 
-## 4. UI conventions (current reality)
-- All styling is inline Tailwind class strings, and many are long and duplicated: inputs, labels, spinners, back buttons, CTA pills. Only `ProfilePage` extracts `INPUT_CLS`/`SELECT_CLS` constants.
-- Colors are hard-coded hex values: `#0071e3` (accent), `#f5f5f7`, `#111111`, `#1d1d1f`, `#0a0a0a`, `#333336`. There are no theme tokens (Tailwind v4 `@theme` is unused).
-- Dark mode uses the `dark:` variant, driven by the system preference. There's no manual toggle, although the style guide asks for one.
-- Icons are inline `<svg>` paths (chevron, X, pin, camera, check, pencil) plus `react-icons` for platforms and Google.
-- Feedback is a mix of `alert()`, `window.confirm()`, inline error boxes, and one hand-rolled toast in ProfilePage.
+## 4. UI conventions (Stage 11)
+- **Build pages from `components/ui`.** Buttons are `Button`/`ButtonLink` (variants + sizes), form controls are the `Field` components, messages are `Notice`, confirmations are `ConfirmDialog`, results are `useToast()`. Don't restyle raw `<button>`/`<input>` in pages.
+- **Forms:** react-hook-form + `zodResolver(sharedSchema)` (`formResolver` when selects start at `""`). Spread `{...register("x")}` into a Field and pass `error={errors.x?.message}`. Forms with `CountryCityFields` (or other shared field groups) wrap the `<form>` in `<FormProvider {...form}>`.
+- **Accessibility:** every field has a linked label (`useId` in `Field`), errors are linked with `aria-describedby`, icon-only buttons have `aria-label`, toggles use `aria-pressed`, minimum text size 11–12px.
+- **Colors** are `@theme` tokens in `index.css` (`accent`, `accent-strong`, `surface`, `surface-dark`, `raised-dark`, `line-dark`), used as `bg-accent`, `text-accent`, `border-line-dark`, ... Dark mode uses the `dark:` variant (system preference; no manual toggle yet).
+- **Icons** come from `react-icons` (`fi` = Feather for UI, `fa`/`fa6`/`si` for brands), with `aria-hidden` when next to text.
+- **Tab titles:** each page renders `<title>{pageTitle("…")}</title>`.
 
 ## 5. External services
 - Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
-- Google Fonts (Inter, `@import` in CSS)
-- Vercel Analytics
+- No font CDN: Inter is self-hosted since Stage 12 (`@fontsource-variable/inter`, files served with the build)

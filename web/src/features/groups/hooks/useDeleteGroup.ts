@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteGroup } from "../api/groupsApi";
 import { groupKeys } from "../api/queryKeys";
 
+/** Delete your own group. Errors are shown by the caller (DeleteGroupDialog shows a toast). */
 export function useDeleteGroup() {
   const queryClient = useQueryClient();
 
@@ -10,9 +11,7 @@ export function useDeleteGroup() {
     onSuccess: (_data, id) => {
       // Drop the deleted group's detail first, so the invalidation below doesn't refetch it.
       queryClient.removeQueries({ queryKey: groupKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: groupKeys.all });
+      void queryClient.invalidateQueries({ queryKey: groupKeys.all });
     },
-    // Replaced by a toast in Stage 11 (UI kit).
-    onError: (err) => alert(err.message),
   });
 }

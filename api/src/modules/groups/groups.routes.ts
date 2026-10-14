@@ -9,7 +9,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { HttpError } from "../../lib/errors";
 import { parseOrThrow } from "../../lib/validate";
-import { requireAuth, requireVerified } from "../auth/session.middleware";
+import { requireAuth, requireVerified, signedInUser } from "../auth/session.middleware";
 import type { GroupsRepository } from "./groups.repository";
 
 export interface GroupsDeps {
@@ -57,29 +57,30 @@ export function groupsRouter({ groups }: GroupsDeps): Router {
     const input = parseOrThrow(createGroupSchema, req.body);
     // SECURITY: the owner is whoever is signed in. A `user_id` in the body is ignored
     // (zod drops unknown keys), so nobody can create groups in someone else's name.
-    const group: Group = await groups.create(req.user!.id, input);
+    const group: Group = await groups.create(signedInUser(req).id, input);
     res.status(201).json(group);
   });
 
   router.patch("/:id", requireAuth, async (req, res) => {
     const id = groupId(req);
+    const ownerId = signedInUser(req).id;
     const patch = parseOrThrow(updateGroupSchema, req.body);
 
     // Load the caller's own group (someone else's → not found), apply the changes, then
     // validate the *whole* result with the same rules as creating a group.
-    const current = await groups.getOwned(id, req.user!.id);
+    const current = await groups.getOwned(id, ownerId);
     if (!current) throw notFound();
     const merged = parseOrThrow(createGroupSchema, { ...current, ...patch });
 
     // Ownership is checked again inside the UPDATE itself (WHERE id AND user_id).
     const { title, description, topic, country, city } = merged;
-    const updated = await groups.updateOwned(id, req.user!.id, { title, description, topic, country, city });
+    const updated = await groups.updateOwned(id, ownerId, { title, description, topic, country, city });
     if (!updated) throw notFound(); // deleted in between
     res.json(updated);
   });
 
   router.delete("/:id", requireAuth, async (req, res) => {
-    const deleted = await groups.deleteOwned(groupId(req), req.user!.id);
+    const deleted = await groups.deleteOwned(groupId(req), signedInUser(req).id);
     if (!deleted) throw notFound();
     res.status(204).end();
   });

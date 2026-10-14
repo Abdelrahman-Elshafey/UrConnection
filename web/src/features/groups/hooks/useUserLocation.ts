@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { COUNTRY_LIST, getCities, isCountry } from "@urconnections/shared";
+import { COUNTRY_LIST, isCountry } from "@urconnections/shared";
 
 const LOCATION_STORAGE_KEY = "ur_connections_user_location";
 const LOCATION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // re-detect weekly (people move)
@@ -53,9 +53,13 @@ function findMatchingCountry(apiCountry: string | undefined): string {
 }
 
 /** Finds a matching city within the country's city list. */
-function findMatchingCity(country: string, apiCity: string | undefined): string {
-  const cities = getCities(country);
-  if (!apiCity || cities.length === 0) return "";
+async function findMatchingCity(country: string, apiCity: string | undefined): Promise<string> {
+  if (!country || !apiCity) return "";
+  // The city lists are their own chunk (Stage 12): only download them when there's a city to match.
+  // If that download fails, keep the detected country and just leave the city empty.
+  const citiesModule = await import("@urconnections/shared/cities").catch(() => null);
+  const cities = citiesModule?.getCities(country) ?? [];
+  if (cities.length === 0) return "";
 
   // Direct match
   if (cities.includes(apiCity)) return apiCity;
@@ -98,7 +102,7 @@ async function fetchLocation(): Promise<UserLocation> {
     const data = (await response.json()) as IpApiResponse;
 
     const country = findMatchingCountry(data.country_name);
-    const result: UserLocation = { country, city: findMatchingCity(country, data.city) };
+    const result: UserLocation = { country, city: await findMatchingCity(country, data.city) };
 
     // 3. Cache for future visits
     localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ ...result, savedAt: Date.now() }));

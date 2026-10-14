@@ -1,5 +1,5 @@
 // Public API of @urconnections/shared: code shared by web (and later api).
-export { TOPICS, type Topic } from "./topics";
+export { TOPICS, isTopic, type Topic } from "./topics";
 export {
   PLATFORMS,
   PLATFORM_KEYS,
@@ -8,7 +8,9 @@ export {
   type Platform,
   type PlatformKey,
 } from "./platforms";
-export { COUNTRIES_CITIES, COUNTRY_LIST, getCities, isCountry, type Country } from "./countries";
+// Country names only. The city lists are a separate entry point, "@urconnections/shared/cities"
+// (see cities.ts for why).
+export { COUNTRY_LIST, isCountry, type Country } from "./countryNames";
 export {
   createGroupSchema,
   updateGroupSchema,
@@ -23,6 +25,7 @@ export {
   type Group,
   type GroupListQuery,
   type GroupListParams,
+  type GroupFilters,
   type GroupListResponse,
 } from "./schemas/group";
 export {

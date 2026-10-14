@@ -1,16 +1,14 @@
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import type { GroupListParams } from "@urconnections/shared";
+import type { GroupFilters } from "@urconnections/shared";
 import { getGroups } from "../api/groupsApi";
 import { groupKeys } from "../api/queryKeys";
-
-type GroupFiltersParams = Omit<GroupListParams, "cursor" | "limit">;
 
 /**
  * Groups matching `filters`, loaded page by page ("Load more").
  * useInfiniteQuery keeps every loaded page and knows how to fetch the next one
  * from the previous page's nextCursor.
  */
-export function useGroups(filters: GroupFiltersParams) {
+export function useGroups(filters: GroupFilters) {
   const query = useInfiniteQuery({
     queryKey: groupKeys.list(filters),
     queryFn: ({ pageParam }) => getGroups({ ...filters, ...(pageParam ? { cursor: pageParam } : {}) }),
