@@ -7,10 +7,10 @@ import {
   PLATFORMS,
   TOPICS,
   createGroupSchema,
-  getCities,
   isCountry,
   type CreateGroupInput,
 } from "@urconnections/shared";
+import { getCities } from "@urconnections/shared/cities";
 import { sql } from "kysely";
 import { isProduction } from "../config";
 import { exitWithDatabaseError } from "./connectionHelp";

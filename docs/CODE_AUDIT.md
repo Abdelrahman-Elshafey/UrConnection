@@ -87,9 +87,9 @@
 |---|---|---|---|
 | R1 | [x] | No direct supabase calls outside services/api | `useUser` now goes through `auth.service`. `useGroup.js` still calls `supabase` directly. |
 | R2 | [x] | Select only needed columns | `groupsApi.getGroups`, `getUserGroups`, and `useGroup` use `select('*')`. |
-| R3 | [~] | Loaders + `ensureQueryData` | Auth loaders now use `ensureQueryData` (B9). There's still no data prefetch for `/groups/:id`. |
-| R4 | [ ] | `errorElement` on routes | None. There's also no 404 route. |
-| R5 | [ ] | Lazy loading / code-splitting | None. `countries.js` (large) and every page ship in the main chunk. |
+| R3 | [x] | Loaders + `ensureQueryData` | Auth loaders now use `ensureQueryData` (B9). There's still no data prefetch for `/groups/:id`. |
+| R4 | [x] | `errorElement` on routes | None. There's also no 404 route. |
+| R5 | [x] | Lazy loading / code-splitting | None. `countries.js` (large) and every page ship in the main chunk. |
 | R6 | [ ] | Supabase TS types | The project is JS. The rules mention `auth.service.ts` / `createClient<Database>`. Decide: migrate to TS, or use JSDoc + generated types. |
 | R7 | [ ] | Theme toggle (style guide §5) | Only system preference, no manual override. |
 | R8 | [ ] | Social proof, member count on cards (style guide §5–6) | Not implemented. There's no members concept in the data model. |
@@ -145,15 +145,15 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 
 | ID | Status | Issue | Fix | Expected gain |
 |---|---|---|---|---|
-| P1 | [ ] | No code splitting (R5). | `React.lazy` (or RR7 `lazy:` route property) for `/create`, `/profile`, `/login`, `/groups/:id`. | About **46 KB gzip (~20%) off the home page** (zod + RHF + image compression). Smaller first parse on mobile. |
+| P1 | [x] | No code splitting (R5). | `React.lazy` (or RR7 `lazy:` route property) for `/create`, `/profile`, `/login`, `/groups/:id`. | About **46 KB gzip (~20%) off the home page** (zod + RHF + image compression). Smaller first parse on mobile. |
 | P2 | [x] | `browser-image-compression` is imported statically by `storage.service`. | `const { default: imageCompression } = await import("browser-image-compression")` inside `uploadAvatar`. | 19.7 KB gzip leaves even the profile chunk until someone actually uploads. |
 | P3 | [x] | React Query defaults: `staleTime: 0` + `refetchOnWindowFocus: true`. **The entire `groups` table is re-downloaded on every tab focus and every return to `/`.** | Set `staleTime: 60_000` (and `refetchOnWindowFocus: false`) as defaults in `lib/queryClient.js`. Mutations already invalidate. | Removes most redundant Supabase requests. |
 | P4 | [x] | `getGroups()` fetches **all rows, all columns**, and filters on the client (R2, B12). This scales linearly with the table, both in payload and in render time. | Short term: explicit column list. Medium term: server-side filters (`.eq` / `.ilike`) + `.range()` pagination, keyed by `groupKeys.list(filters)` with `placeholderData: keepPreviousData`. Add DB indexes on `(country, city)`, `topic`, `platform`. | Constant payload per page instead of the whole table. |
 | P5 | [x] | `index.css`: `* { transition-colors duration-300 }` puts a transition on **every element**. That's extra style work on every hover and re-render, and colors visibly "fade in" on first paint. | Delete the global rule. Elements that need it already have `transition-*` classes. | Cheaper style recalc, no flash on load. |
-| P6 | [ ] | `transition-all` on cards and buttons (GroupCard has `hover:scale-105 transition-all` + shadow change), and `backdrop-blur-2xl` on **two** stacked sticky bars. | Use `transition-transform` / `transition-colors` explicitly, and `blur-md` or a single blurred header. | Smoother scrolling on low-end phones. |
-| P7 | [ ] | Inter is loaded via a CSS `@import` from Google Fonts. That's a render-blocking chain (CSS → font CSS → font files) and a third-party request (privacy, plus CSP S8). | Self-host it with `@fontsource-variable/inter` (one variable woff2 file, `font-display: swap`), or at minimum `<link rel="preconnect">` + `<link>` in `index.html`. | Faster first text paint, no third-party font request. |
+| P6 | [x] | `transition-all` on cards and buttons (GroupCard has `hover:scale-105 transition-all` + shadow change), and `backdrop-blur-2xl` on **two** stacked sticky bars. | Use `transition-transform` / `transition-colors` explicitly, and `blur-md` or a single blurred header. | Smoother scrolling on low-end phones. |
+| P7 | [x] | Inter is loaded via a CSS `@import` from Google Fonts. That's a render-blocking chain (CSS → font CSS → font files) and a third-party request (privacy, plus CSP S8). | Self-host it with `@fontsource-variable/inter` (one variable woff2 file, `font-display: swap`), or at minimum `<link rel="preconnect">` + `<link>` in `index.html`. | Faster first text paint, no third-party font request. |
 | P8 | [x] | `GroupList` recomputes the filter and lowercases every field on every render (including while the location is being detected). | Pure `filterGroups()` + `useMemo([groups, filters])`. This disappears if P4 moves filtering to the server. | Minor now, matters as the table grows. |
-| P9 | [ ] | Avatar `<img>`s have no `width`/`height`/`loading`/`decoding` attributes. | Add `width height loading="lazy" decoding="async"`, which matters in the group grids. | No layout shift. |
+| P9 | [x] | Avatar `<img>`s have no `width`/`height`/`loading`/`decoding` attributes. | Add `width height loading="lazy" decoding="async"`, which matters in the group grids. | No layout shift. |
 
 ## A — Accessibility
 
@@ -216,7 +216,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 ### Notes on Stage 2 (typed data layer, see MASTER_PLAN.md)
 - **R1/R2**: `useGroup` now goes through `groupsApi.getGroupById`. Every query selects an explicit column list (`GROUP_COLUMNS`).
 - **D7**: `features/groups/api/queryKeys.ts` (`groupKeys.all / list / byUser / byUserRoot / detail`). The detail key moved under `['groups', …]`.
-- **O7**: Countries are stored pre-sorted in `packages/shared/src/countries.ts`, with `getCities()` / `isCountry()` helpers.
+- **O7**: Countries are stored pre-sorted (since Stage 12 split into `countryNames.ts` + `cities.ts`), with `getCities()` / `isCountry()` helpers.
 - **H5**: `hooks/useFilterCache.js` became `features/groups/utils/filterCache.ts`.
 - **O3 `[~]`**: Separate shared `loginSchema` / `signupSchema` (AuthPage picks one per submit via `authResolver`). Splitting AuthPage into LoginForm/SignupForm components is Stage 11.
 - New: shared schemas tightened validation (`topic`/`platform` are enums, `meeting_link` must be http(s), title/description trimmed), matching the DB CHECK constraints.
@@ -283,3 +283,16 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Found while testing in a real browser** (headless Chrome over the DevTools protocol): unknown groups showed a spinner for seconds, because TanStack Query retried the 404 three times. `queryClient` now never retries 4xx. React Router also warned about a missing `HydrateFallback`; the root route now has `hydrateFallbackElement`.
 - **Small visual changes** from consolidating: auth pages use the shared left-aligned layout; buttons, inputs and spinners share one size scale; footer and card text is at least 12px (A3).
 - **Not done**: A mobile nav menu. On small screens the navbar shows the avatar (→ profile, which has Sign Out) and Create Group, and the footer has every account link.
+
+### Notes on Stage 12 (frontend performance)
+- **P1/R5 code splitting**: every page except the home page is an RR7 `lazy` route (its own chunk, 0.3–2.7 KB gzip each). Home now loads `index` + one shared vendor chunk = **166.3 KB gzip** (was 179.0; target ≤ 190). The audit's 46 KB estimate assumed zod would leave the home page, but `apiClient` validates every response with zod, so it stays (23.9 KB). What left: react-hook-form + resolvers (≈ 10.6 KB) and all non-home pages. Per-package gzip on home, measured with a temporary one-chunk-per-package build: react-dom 59.4 · react-router 31.9 · zod 23.9 · countries 13.7 · react-icons 11.1 · TanStack Query 10.8 · app ≈ 14.
+- **R4 errors**: `RouteError` as `errorElement` on the root route (full page) and on a pathless route inside `MainLayout` (navbar stays). A lazy chunk that fails to download (a deploy while the tab was open) shows "A new version is available" with a Reload button (`isChunkLoadError`).
+- **R3 prefetch**: `/groups/:groupId` has a loader that starts `GET /api/groups/:id` in parallel with the GroupDetail chunk (`groupDetailQuery` shared with `useGroup`).
+- **P7**: Inter is self-hosted with `@fontsource-variable/inter` (one variable woff2 per alphabet, `unicode-range`, `font-display: swap`). No request to Google any more. This was the biggest single win.
+- **P6**: `transition-all` → `transition` (colors, opacity, shadow, transform; no layout properties) everywhere; both sticky bars `backdrop-blur-2xl` → `backdrop-blur-md` with 80% instead of 70% background.
+- **P9**: avatar `<img>` has `width`/`height`, `loading="lazy"`, `decoding="async"`.
+- **Also**: a thin page-loading bar (`useNavigation`, shown after 150 ms), because a lazy page keeps the old page on screen while its chunk downloads.
+- **Lighthouse (mobile, production build via `vite preview` + local API, 3 runs each)**: home 81–88 → **96** (FCP 2.9 → 2.1 s, LCP 3.2–3.8 → 2.3 s, CLS 0.002, TBT ≤ 20 ms); group detail 89 → **95** (FCP 2.9 → 2.2 s, LCP 3.0 → 2.4–2.5 s).
+- **Checked in headless Chrome**: home, detail via card click (loads only its chunk), /login, /signup, /profile redirect when signed out, sign-in then profile / create / edit, unknown URL and unknown group → Not Found, a 404 on the CreateGroupPage chunk → "new version" page with the navbar still shown. No console errors. Remaining third-party request: ipapi.co (location).
+- **City lists on demand** (follow-up in the same stage): `packages/shared` now has `countryNames.ts` (the 118 names, in `index.ts`) and `cities.ts` (all city lists, its own entry `@urconnections/shared/cities`, *not* re-exported from `index.ts`, because a static import anywhere would pull it back into the main bundle). The web loads it with `import()` through `useCities` (`lib/cities.ts`) only once a country is set; while it loads, a select offers just its current city, so deep links and the edit form never show a blank city. Location detection imports it only when ipapi returned a country. Home JS: **166.3 → 151.3 KB gzip**; the cities chunk is 13.8 KB. Lighthouse home is unchanged (96, LCP 2.4 s): a first visit still fetches the chunk in the background after location detection, but it's off the critical path.
+- **Not done / option for later**: zod/mini or skipping response validation (−≈ 20 KB). Not needed for the target.

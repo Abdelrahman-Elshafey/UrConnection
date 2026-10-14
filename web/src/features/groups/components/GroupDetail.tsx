@@ -74,7 +74,7 @@ export default function GroupDetail() {
                 href={meeting_link}
                 target="_blank"
                 rel="noreferrer"
-                className="group inline-flex items-center gap-6 rounded-full bg-accent px-12 py-6 text-lg font-bold text-white shadow-2xl shadow-accent/30 transition-all hover:brightness-110"
+                className="group inline-flex items-center gap-6 rounded-full bg-accent px-12 py-6 text-lg font-bold text-white shadow-2xl shadow-accent/30 transition hover:brightness-110"
               >
                 Connect now
                 <FiArrowRight aria-hidden className="h-6 w-6 transition-transform group-hover:translate-x-2" />

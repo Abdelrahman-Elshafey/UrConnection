@@ -53,7 +53,20 @@ const cleanSessions = () =>
 void cleanSessions();
 setInterval(cleanSessions, 6 * 60 * 60 * 1000).unref();
 
-const server = app.listen(config.PORT, () => {
+// Express 5 calls this callback on success AND on failure (with the error), so check it:
+// otherwise a failed start would still log "listening".
+const server = app.listen(config.PORT, (err?: NodeJS.ErrnoException) => {
+  if (err?.code === "EADDRINUSE") {
+    // The port is taken: almost always an API from an earlier run that is still running in
+    // the background (e.g. its terminal was closed). Say so plainly instead of a stack trace.
+    logger.error(
+      `Port ${config.PORT} is already in use, probably by an API that is still running from before.
+` +
+        "  Stop it:  npm run stop:dev   (then start again)",
+    );
+    process.exit(1);
+  }
+  if (err) throw err;
   logger.info(`API listening on http://localhost:${config.PORT} (${config.NODE_ENV})`);
 });
 

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /*
@@ -7,6 +6,11 @@
  * Change a value here and the whole site follows. Named by role, not by look.
  */
 @theme {
+  /* Inter is self-hosted (main.tsx imports @fontsource-variable/inter, audit P7): one
+     variable-weight file per alphabet, served from our own origin. "Inter Variable" is the
+     name that package registers; system fonts fill in until it has loaded (font-display: swap). */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
   --color-accent: #0071e3;        /* the one brand blue: links, primary buttons, focus */
   --color-accent-strong: #005bb5; /* accent on hover where brightness isn't enough */
   --color-surface: #f5f5f7;       /* light grey band / card / input background */
@@ -23,7 +27,7 @@
   }
 
   html, body {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
     @apply bg-white text-black dark:bg-black dark:text-white transition-colors duration-200 ease-in-out;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -64,4 +68,21 @@
 
 .animate-fade-in {
   animation: fade-in 0.4s ease-out both;
+}
+
+/* Page-loading bar (RootLayout). transform + opacity only: the browser can animate those
+   without recalculating layout (audit P6). The 150ms delay hides it on quick navigations. */
+@keyframes nav-progress {
+  0% { opacity: 1; transform: scaleX(0); }
+  100% { opacity: 1; transform: scaleX(0.9); }
+}
+
+.nav-progress {
+  opacity: 0;
+  transform-origin: left;
+  animation: nav-progress 8s cubic-bezier(0.1, 0.8, 0.2, 1) 150ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress { animation: none; opacity: 1; transform: scaleX(0.6); }
 }

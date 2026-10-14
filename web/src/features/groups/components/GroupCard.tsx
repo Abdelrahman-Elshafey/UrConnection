@@ -12,7 +12,7 @@ interface GroupCardProps {
 }
 
 const cardLink =
-  "mx-auto rounded-full px-6 py-2 text-center text-sm font-bold text-black transition-all duration-200 hover:bg-black hover:text-white hover:shadow-lg dark:text-gray-400 dark:hover:bg-white dark:hover:text-black md:text-base";
+  "mx-auto rounded-full px-6 py-2 text-center text-sm font-bold text-black transition duration-200 hover:bg-black hover:text-white hover:shadow-lg dark:text-gray-400 dark:hover:bg-white dark:hover:text-black md:text-base";
 
 /** One group in a grid. The owner also sees Delete (top right) and Edit (bottom right) (the API refuses everyone else anyway). */
 export default function GroupCard({ group, onDelete }: GroupCardProps) {
@@ -22,7 +22,7 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
   const owner = isOwner(user, group);
 
   return (
-    <article className="group relative flex min-w-70 max-w-70 flex-col overflow-hidden rounded-4xl border border-gray-200 bg-surface px-6 pb-3 pt-6 shadow-lg transition-all duration-200 hover:scale-105 hover:border-gray-300 hover:shadow-2xl dark:border-black dark:bg-surface-dark dark:hover:border-line-dark">
+    <article className="group relative flex min-w-70 max-w-70 flex-col overflow-hidden rounded-4xl border border-gray-200 bg-surface px-6 pb-3 pt-6 shadow-lg transition duration-200 hover:scale-105 hover:border-gray-300 hover:shadow-2xl dark:border-black dark:bg-surface-dark dark:hover:border-line-dark">
       {/* One line, always: badges that don't fit truncate instead of wrapping, so every card's
           header has the same height (owner or not, short or long platform name). */}
       <div className="mb-8 flex items-center gap-2">

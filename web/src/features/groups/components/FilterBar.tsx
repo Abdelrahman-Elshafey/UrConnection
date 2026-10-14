@@ -1,7 +1,8 @@
-import { COUNTRY_LIST, TOPICS, getCities } from "@urconnections/shared";
+import { COUNTRY_LIST, TOPICS } from "@urconnections/shared";
 import { useRef, type ComponentProps } from "react";
 import { cx } from "../../../components/ui/cx";
 import { PageHero } from "../../../components/ui/PageHero";
+import { cityOptions, useCities } from "../../../lib/cities";
 import { PLATFORMS } from "../../../lib/platforms";
 import type { FilterKey, HomeFilters } from "../hooks/useGroupFilters";
 
@@ -23,7 +24,7 @@ function FilterSelect({ className, ...props }: ComponentProps<"select"> & { "ari
     <select
       {...props}
       className={cx(
-        "rounded-3xl border border-transparent bg-gray-50 px-1 py-3 text-center text-sm font-bold text-black transition-all focus:border-accent disabled:pointer-events-none disabled:opacity-50 dark:bg-raised-dark dark:text-white md:text-base lg:text-lg",
+        "rounded-3xl border border-transparent bg-gray-50 px-1 py-3 text-center text-sm font-bold text-black transition focus:border-accent disabled:pointer-events-none disabled:opacity-50 dark:bg-raised-dark dark:text-white md:text-base lg:text-lg",
         className,
       )}
     />
@@ -35,6 +36,8 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
   // Uncontrolled: the input keeps its own draft text; `key` below resets it whenever the
   // committed query in the URL changes (e.g. "Clear all").
   const searchRef = useRef<HTMLInputElement>(null);
+  // Downloaded once a country is chosen (lib/cities.ts); until then only the current city.
+  const cities = cityOptions(useCities(filters.country), filters.city);
 
   return (
     <>
@@ -60,7 +63,7 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
                 defaultValue={filters.query}
                 className="w-full flex-1 bg-transparent text-xl font-bold text-black outline-none placeholder-gray-300 focus:placeholder:text-transparent dark:text-white dark:placeholder-gray-600"
               />
-              <button type="submit" className="rounded-full bg-black px-14 py-4 text-white transition-all duration-500 hover:scale-105 active:scale-110">
+              <button type="submit" className="rounded-full bg-black px-14 py-4 text-white transition duration-500 hover:scale-105 active:scale-110">
                 Search
               </button>
             </form>
@@ -69,7 +72,7 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
       </section>
 
       {/* Sticky filter bar under the nav */}
-      <div className="sticky top-(--nav-height) z-40 border-b border-gray-100 bg-white/70 px-6 py-4 backdrop-blur-2xl transition-colors duration-200 dark:border-raised-dark dark:bg-black/70">
+      <div className="sticky top-(--nav-height) z-40 border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-md transition-colors duration-200 dark:border-raised-dark dark:bg-black/80">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
           <FilterSelect aria-label="Country" value={filters.country} onChange={(e) => onChange("country", e.target.value)}>
             <option value="">Global</option>
@@ -81,7 +84,7 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
           </FilterSelect>
           <FilterSelect aria-label="City" value={filters.city} disabled={!filters.country} onChange={(e) => onChange("city", e.target.value)}>
             <option value="">All Cities</option>
-            {getCities(filters.country).map((c) => (
+            {cities.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -107,7 +110,7 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
                 // Toggle buttons announce whether they're on (audit A4).
                 aria-pressed={selected}
                 className={cx(
-                  "shrink-0 rounded-full border border-transparent px-5 py-2 text-sm font-bold transition-all md:text-lg lg:text-xl",
+                  "shrink-0 rounded-full border border-transparent px-5 py-2 text-sm font-bold transition md:text-lg lg:text-xl",
                   selected ? "bg-black text-white shadow-lg dark:bg-white dark:text-black" : "text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white",
                 )}
               >

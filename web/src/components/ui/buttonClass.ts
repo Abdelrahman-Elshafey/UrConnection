@@ -27,7 +27,7 @@ export interface ButtonStyle {
  * because a .tsx file should export only components (React fast refresh). */
 export function buttonClass({ variant = "primary", size = "md", block = false }: ButtonStyle = {}, className?: string): string {
   return cx(
-    "inline-flex items-center justify-center gap-3 rounded-full font-bold transition-all active:scale-95",
+    "inline-flex items-center justify-center gap-3 rounded-full font-bold transition active:scale-95",
     "disabled:pointer-events-none disabled:opacity-40",
     VARIANTS[variant],
     SIZES[size],
