@@ -49,10 +49,16 @@ export function useGroupFilters() {
     ...(isPlatformKey(filters.platform) && { platform: filters.platform }),
   };
 
-  /** Replace the URL's filter params (replace: true, so filter tweaks don't flood the back button). */
+  /**
+   * Replace the URL's filter params.
+   *   replace: true          → filter tweaks don't flood the back button.
+   *   preventScrollReset     → a new URL is a new navigation, and <ScrollRestoration> scrolls
+   *                            every new navigation to the top. Filtering stays on the same page,
+   *                            so keep the user where they are.
+   */
   const writeUrl = (next: URLSearchParams) => {
     saveSearch(next.toString());
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, preventScrollReset: true });
   };
 
   const setFilter = (key: FilterKey, value: string) => {
@@ -79,7 +85,7 @@ export function useGroupFilters() {
     const saved = readSavedSearch();
     if (saved !== null) {
       initialized.current = true;
-      if (saved !== "") setSearchParams(new URLSearchParams(saved), { replace: true });
+      if (saved !== "") setSearchParams(new URLSearchParams(saved), { replace: true, preventScrollReset: true });
       return;
     }
 

@@ -59,7 +59,7 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : groups && groups.length > 0 ? (
-            <div className="mx-4 grid grid-cols-1 place-items-center gap-8 md:grid-cols-2 md:gap-10 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mx-4 grid grid-cols-1 justify-items-center gap-8 md:grid-cols-2 md:gap-10 lg:grid-cols-3 xl:grid-cols-4">
               {groups.map((group) => (
                 <GroupCard key={group.id} group={group} onDelete={setToDelete} />
               ))}
