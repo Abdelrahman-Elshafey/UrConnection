@@ -50,17 +50,35 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 | `npm run db:seed` | fill the database with demo data (development only) |
 | `npm test` | unit tests (API: Vitest + Supertest; no database needed) |
 | `npm run test:db` | database tests against a separate test database |
-| `npm run build` | production build into `web/dist/` |
+| `npm run build` | production builds: `web/dist/` (Vite) and `api/dist/` (esbuild) |
+| `npm run prod:env` / `prod:up` / `prod:down` / `prod:logs` / `prod:backup` | production stack in Docker (see below) |
 | `npm run preview` | serve the production build locally |
 | `npm run typecheck` | strict TypeScript check of every package |
 | `npm run lint` | ESLint for the whole repo |
+
+## Production stack on your computer
+The same containers that will run on the server (Stage 13). Needs Docker Desktop and free ports 80 and 443.
+
+```bash
+npm run prod:env     # once: creates .env.prod with random secrets (gitignored, never commit it)
+npm run db:up        # optional: the dev Mailpit catches the production stack's email (http://localhost:8025)
+npm run prod:up      # builds the images, starts everything, waits until healthy → https://localhost
+npm run prod:logs    # follow the logs        npm run prod:down   stop (data stays in Docker volumes)
+npm run prod:backup  # a database backup right now (one also runs at start and every 24 h)
+```
+- **Certificate warning:** for `localhost` Caddy signs its own certificate, so browsers warn. Either accept the warning, or trust Caddy's local root certificate once (Windows, current user):
+  `docker compose -f compose.prod.yml --env-file .env.prod cp caddy:/data/caddy/pki/authorities/local/root.crt caddy-root.crt` then `certutil -addstore -user Root caddy-root.crt`.
+- The production database starts empty (no seed data). Sign up; the verification email lands in Mailpit.
+- Only Caddy is reachable from outside. It serves HTTPS, sends `/api` to the API and `/media` to Garage, and adds the security headers (Content Security Policy enforced).
 
 ## Project structure
 ```
 web/              React app (Vite)
 api/              Express 5 API (TypeScript): auth (sessions, argon2id), /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
 packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries (+ `/cities` entry, loaded on demand)
-docker-compose.yml  development services (Postgres, Mailpit)
+docker-compose.yml  development services (Postgres, Mailpit, Garage)
+compose.prod.yml    production stack (Caddy, web, api, migrate, Postgres, Garage, backup) + Caddyfile
+docker/           Garage config, nginx config (web image), backup script
 docs/             architecture, code audit, master plan, security runbook
 supabase/         v1 database security SQL (RLS, constraints, storage policies)
 ```

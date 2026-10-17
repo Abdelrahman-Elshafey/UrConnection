@@ -45,9 +45,19 @@ export default defineConfig([
     },
   },
 
+  // Shared schemas get `z` from packages/shared/src/zod.ts (it configures zod for the CSP).
+  {
+    files: ['packages/shared/src/schemas/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{ name: 'zod', message: 'Import { z } from "../zod" (configured for the CSP), not from "zod".', allowTypeImports: true }],
+      }],
+    },
+  },
+
   // Config files, repo scripts and the API run in Node.
   {
-    files: ['*.config.{js,ts}', 'web/*.config.{js,ts}', 'api/**/*.ts', 'scripts/**/*.js'],
+    files: ['*.config.{js,ts}', 'web/*.config.{js,ts}', 'api/**/*.{js,ts}', 'scripts/**/*.js'],
     languageOptions: { globals: globals.node },
   },
 ])

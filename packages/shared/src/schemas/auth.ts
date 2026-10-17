@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../zod";
 import { profileFields } from "./profile";
 
 const email = z.email("Please enter a valid email address.").max(254);

@@ -1,0 +1,17 @@
+# What `docker build` never copies into an image (the build "context" is the repo root).
+# Smaller context = faster builds, and secrets or local junk can't leak into an image.
+**/node_modules
+**/dist
+**/dist-*
+.git
+.github
+.agents
+.VSCodeCounter
+.drafts
+docs
+supabase
+**/*.md
+# SECURITY: never bake secrets into an image. Config comes from the environment at runtime.
+**/.env
+**/.env.*
+!**/.env.example
