@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../zod";
 import { TOPICS } from "../topics";
 import { PLATFORM_KEYS, PLATFORM_MAP } from "../platforms";
 
