@@ -49,6 +49,9 @@ export function createApp(deps: AppDeps): Express {
         res.setHeader("X-Request-Id", id);
         return id;
       },
+      // Docker's health check calls /api/health every 10 s: ~8,600 identical lines a day
+      // that would bury the real ones. Failures still show up (errors are logged anyway).
+      autoLogging: { ignore: (req) => req.url === "/api/health" },
     }),
   );
 

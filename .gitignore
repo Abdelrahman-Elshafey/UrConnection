@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 .env.production
+# Production secrets (compose.prod.yml). Template: .env.prod.example
+.env.prod
 .env.development
 recovery-codes.txt
 

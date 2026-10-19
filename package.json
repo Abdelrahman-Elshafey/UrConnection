@@ -12,7 +12,7 @@
     "dev:web": "npm run dev -w @urconnections/web",
     "dev:api": "npm run dev -w @urconnections/api",
     "stop:dev": "node scripts/stop-dev.js",
-    "build": "npm run build -w @urconnections/web",
+    "build": "npm run build --workspaces --if-present",
     "preview": "npm run preview -w @urconnections/web",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint .",
@@ -24,7 +24,12 @@
     "db:rollback": "npm run db:rollback -w @urconnections/api",
     "db:reset": "npm run db:reset -w @urconnections/api",
     "db:seed": "npm run db:seed -w @urconnections/api",
-    "test:db": "npm run test:db -w @urconnections/api"
+    "test:db": "npm run test:db -w @urconnections/api",
+    "prod:env": "node scripts/gen-prod-env.js",
+    "prod:up": "docker compose -f compose.prod.yml --env-file .env.prod up -d --build --wait",
+    "prod:down": "docker compose -f compose.prod.yml --env-file .env.prod down",
+    "prod:logs": "docker compose -f compose.prod.yml --env-file .env.prod logs -f",
+    "prod:backup": "docker compose -f compose.prod.yml --env-file .env.prod exec backup sh /backup.sh once"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

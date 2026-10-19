@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../zod";
 
 /**
  * The signed-in user as the API returns it (GET /api/auth/me, login, register, PATCH /api/users/me).
