@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../zod";
 
 /**
  * Editable profile fields, named like the database columns (snake_case, the API's

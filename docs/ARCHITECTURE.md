@@ -13,7 +13,15 @@ tsconfig.base.json          # shared strict TS settings (strict, noUncheckedInde
 tsconfig.json               # solution file: `npm run typecheck` = tsc -b over web + api + packages/shared
 docker-compose.yml          # dev services: postgres:18-alpine on 127.0.0.1:5433 (volume pgdata) + mailpit (SMTP :1025, inbox http://localhost:8025)
                             #   + garage v2.4.1 (S3 API :3900, website :3902; --single-node --default-bucket creates bucket + key; volume garage)
-docker/garage/garage.toml   # Garage dev config (sqlite metadata, replication 1, [s3_api] + [s3_web] root domains)
+docker/garage/garage.toml   # Garage config, dev and prod (sqlite metadata, replication 1, [s3_api] + [s3_web] root domains)
+compose.prod.yml            # production stack (Stage 13): caddy (only published ports 80/443) → web + api; migrate (one-off) → api; postgres, garage, backup. Secrets from .env.prod
+Caddyfile                   # HTTPS (Let's Encrypt, or a local CA for localhost), security headers + enforced CSP, /api → api:3000, /media → garage:3902, rest → web:8080
+.env.prod.example           # template for .env.prod (gitignored): site address, DB password, Garage keys, SMTP, Google. `npm run prod:env` fills in random secrets
+docker/nginx/web.conf       # nginx in the web image: SPA fallback to index.html (no-cache), /assets/ cached 1 year (immutable), missing assets → 404
+docker/backup/backup.sh     # pg_dump --format=custom into the backups volume: at start + every 24 h, `once` for on-demand; keeps BACKUP_KEEP_DAYS
+scripts/gen-prod-env.js     # npm run prod:env: .env.prod from the template with random secrets (never overwrites an existing file)
+.dockerignore               # keeps node_modules, dist, .git, docs and every .env out of image builds
+.gitattributes              # *.sh keep LF line endings (they run in Linux containers)
 vercel.json                 # {git.deploymentEnabled: false}: v2 branches never deploy to Vercel. Only v1 on `main` stays live there until Stage 16
 .github/workflows/ci.yml    # on push/PR: npm ci → lint → typecheck → test → build
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
@@ -22,7 +30,9 @@ docs/                       # this file, CODE_AUDIT, MASTER_PLAN (the plan), SUP
 supabase/                   # v1 only: inspect.sql + migrations (RLS, CHECKs, bucket). Removed in Stage 16
 .VSCodeCounter/             # local line-count reports (gitignored)
 
-api/                        # @urconnections/api: Express 5 + TypeScript, run by tsx (no build step yet; Stage 13)
+api/                        # @urconnections/api: Express 5 + TypeScript. Dev: tsx runs the TS directly. Production: esbuild bundle (dist/) run by plain node
+  build.js                  # esbuild: src/index.ts + src/db/migrate.ts → dist/ (ESM, node24, source maps); bundles @urconnections/shared, keeps npm deps external
+  Dockerfile                # multi-stage: build (npm ci + build.js) → runtime (node:24-bookworm-slim, prod deps only, USER node, HEALTHCHECK /api/health). Build context = repo root
   .env.example              # NODE_ENV, PORT, DATABASE_URL, LOG_LEVEL, APP_ORIGIN, SMTP_URL, MAIL_FROM, GOOGLE_CLIENT_ID/SECRET (copy to api/.env)
   vitest.config.ts          # unit tests (no DB): fake DATABASE_URL, excludes *.db.test.ts
   vitest.db.config.ts       # database tests: real Postgres via TEST_DATABASE_URL (default: Docker urconnections_test)
@@ -81,6 +91,7 @@ api/                        # @urconnections/api: Express 5 + TypeScript, run by
 
 packages/shared/            # @urconnections/shared: TS source imported directly (no build step)
   src/index.ts              # public exports (import only from "@urconnections/shared")
+  src/zod.ts                # `z` for every shared schema (ESLint forbids importing "zod" there): turns on zod's jitless mode in browsers, because the CSP forbids eval
   src/topics.ts             # TOPICS (as const) + Topic type
   src/platforms.ts          # PLATFORMS: key, label, linkPattern (RegExp), placeholder; PLATFORM_KEYS/MAP, isPlatformKey
   src/countryNames.ts       # COUNTRY_LIST (literal, alphabetical), Country type, isCountry(): exported from index.ts
@@ -93,7 +104,8 @@ packages/shared/            # @urconnections/shared: TS source imported directly
 
 web/                        # the React app (Vite), 100% TypeScript (allowJs off since Stage 11)
   index.html                # Vite entry (/src/main.tsx); default title "UrConnections"
-  vite.config.ts            # react() + tailwindcss(); dev proxy /api → http://localhost:3000, /media → Garage website :3902 (Host = <bucket>.web.garage.localhost)
+  vite.config.ts            # react() + tailwindcss(); strictPort (dev + preview); dev proxy /api → http://localhost:3000, /media → Garage website :3902 (Host = <bucket>.web.garage.localhost)
+  Dockerfile                # multi-stage: build (npm ci + vite build) → nginxinc/nginx-unprivileged:1.30-alpine on :8080 with docker/nginx/web.conf. Build context = repo root
   vercel.json               # v1-era SPA rewrite + security headers (reference until they move to Caddy in Stage 13; v2 never deploys to Vercel)
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json
   public/favicon.svg
@@ -281,3 +293,18 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
 - No font CDN: Inter is self-hosted since Stage 12 (`@fontsource-variable/inter`, files served with the build)
+
+## 6. Production stack (Stage 13, `compose.prod.yml`)
+```
+browser ──https──▶ caddy :80/:443 ─┬─ /api/*   ─▶ api:3000 (node dist/index.js) ─┬─▶ postgres:5432
+                                    ├─ /media/* ─▶ garage:3902 (website endpoint)  └─▶ garage:3900 (S3 API)
+                                    └─ the rest ─▶ web:8080 (nginx, built React app)
+```
+- **Only Caddy publishes ports.** Every other service is reachable only on the project's private Docker network, by service name. Project name `urconnections-prod`, so containers and volumes never mix with the dev ones.
+- **Start order** (`depends_on` conditions): postgres healthy → `migrate` (`node dist/db/migrate.js latest`) exits 0 → api starts (also waits for garage healthy) → api + web healthy → caddy. `backup` also waits for `migrate`, so its first dump already has the schema.
+- **Secrets** come from `.env.prod` (gitignored, `npm run prod:env`); compose refuses to start when a required one is missing (`${VAR:?message}`). The API's `DATABASE_URL` is built from the `POSTGRES_*` values. Nothing secret is baked into an image (`.dockerignore` excludes every `.env`).
+- **HTTPS**: Caddy gets Let's Encrypt certificates for a real `SITE_ADDRESS`; for `localhost` it uses its own local CA (root certificate in the `caddy_data` volume). HTTP redirects to HTTPS. HSTS is left for Stage 14 (it would stick to `localhost` and break the dev server).
+- **Headers** (Caddyfile): enforced CSP `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://ipapi.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, plus nosniff, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy; `Server` removed; zstd/gzip. Because of `script-src 'self'`, zod runs `jitless` in the browser (`packages/shared/src/zod.ts`).
+- **Production cookies**: `__Host-sid` (Secure, HttpOnly, SameSite=Lax). The API trusts one proxy hop (`trust proxy` 1), so rate limits see the visitor's IP, not Caddy's.
+- **Images**: api 447 MB (node:24-bookworm-slim + 87 MB deps, 37 MB of it sharp's libvips; Debian because sharp/argon2 ship glibc binaries), web 91 MB. Both run as non-root users.
+- **Backups**: `backups` volume, `urconnections-<UTC timestamp>.dump` (pg_dump custom format), kept 14 days; restore with `pg_restore --clean --if-exists -d urconnections <file>`. A restore into a scratch DB was tested in Stage 13. Off-site copies: Stage 14.

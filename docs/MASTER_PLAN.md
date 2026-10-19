@@ -260,7 +260,7 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 ---
 
 ## 5. Security checklist (re-check at Stages 6, 9, 10, 14)
-Ticked after Stage 10: each ticked item has tests. Still open: CSP (Stage 13), `npm audit` in CI (Stage 15), restore-tested backups (Stage 14).
+Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Still open: `npm audit` in CI (Stage 15), restore-tested **off-site** backups (Stage 14; a local restore was tested in Stage 13).
 - [x] Passwords hashed with argon2id. Never logged, never returned.
 - [x] Session, verify, and reset tokens are random 32 bytes, **stored hashed**, with an expiry, and single use where it applies.
 - [x] Cookie: `httpOnly`, `Secure` (prod), `SameSite=Lax`, `Path=/`. The session is rotated on login.
@@ -269,7 +269,7 @@ Ticked after Stage 10: each ticked item has tests. Still open: CSP (Stage 13), `
 - [x] Every route validates its input with zod. The body never decides `user_id`.
 - [x] Ownership enforced in SQL (`AND user_id = $user`), with a test for "user B can't touch A's data".
 - [x] Uploads are checked by content (sharp decode), re-encoded, and size-limited.
-- [ ] `helmet` + CSP enforced. Errors never leak stack traces in prod.
+- [x] `helmet` + CSP enforced (Caddy, Stage 13). Errors never leak stack traces in prod.
 - [ ] Dependencies: `npm audit` in CI. Docker base images rebuilt regularly.
 - [ ] Backups tested by restoring them.
 
@@ -292,7 +292,7 @@ Ticked after Stage 10: each ticked item has tests. Still open: CSP (Stage 13), `
 | 10 Profile + avatars (Garage) | ✅ | **Storage: Garage v2.4.1** (MinIO CE archived Apr 2026; owner chose S3 over plain files to learn the S3 API). Single-node, bucket + key created by `--default-bucket`; the API enables website access at startup. `PUT`/`DELETE /api/users/me/avatar`: multer (memory, 5 MB) → sharp (JPEG/PNG/WebP only, ≤50 M px, 512×512 WebP, EXIF dropped) → `avatars/<uid>/<uuid>.webp` with immutable caching (new key = new URL, instead of `?t=`). Browsers read `/media/*` (Vite proxy → Garage website endpoint). **Beyond the plan:** the web app's Supabase client, deps and `VITE_*` vars removed (nothing used them any more); bundle 248 → 180 KB gzip. S5, O6, P2 closed. 8 unit + 9 DB tests; real round trip checked against Garage. |
 | 11 Full TS frontend + UI kit | ✅ | Started with a code review (audit section M + D13–D18, done first: ScrollRestoration, `react-router`, skipToken, React 19 `<title>`, FilterBar props, API `limitRequests`/`signedInUser`). Then: all `.tsx`, `allowJs` off, no `any`; UI kit in `components/ui` (Button, Field components with `useId` labels, CountryCityFields via FormProvider, ConfirmDialog on native `<dialog>`, Toast with React 19 `use()`, …), `@theme` color tokens, `/login` + `/signup` split (O3), one DeleteGroupDialog per page (O9), separate typed create/edit forms. Checked page by page in headless Chrome: found and fixed 404 retries and the missing hydrate fallback. **Not done:** a mobile nav menu. Bundle 179.0 KB gzip. |
 | 12 Frontend performance | ✅ | Lazy routes for every page except home (P1/R5): home JS **179.0 → 166.3 KB gzip** (zod stays: apiClient validates responses), then **→ 151.3** by loading the city lists only once a country is chosen (`@urconnections/shared/cities` entry + `useCities`). `RouteError` errorElement incl. "new version, reload" for missing chunks (R4). Detail loader prefetches the group in parallel with its chunk (R3). Inter self-hosted via `@fontsource-variable/inter` (P7, the biggest win). `transition` instead of `transition-all`, lighter blur (P6). Avatar img attributes (P9). Page-loading bar. **Lighthouse mobile: home 81–88 → 96 (LCP 3.2–3.8 → 2.3 s), detail 89 → 95.** Also on this branch: card layout and keep-scroll-on-filter fixes found while using the app. |
-| 13 Production Docker images | ☐ | |
+| 13 Production Docker images | ✅ | API bundled with **esbuild** (Node can't run our TS; shared package inlined, npm deps external) → `api/Dockerfile` multi-stage on node:24-bookworm-slim (Debian: sharp/argon2 binaries), non-root, HEALTHCHECK; 447 MB. `web/Dockerfile` → nginx-unprivileged :8080, SPA fallback, immutable `/assets`; 91 MB. `compose.prod.yml`: caddy (only public ports) → web/api, one-off `migrate` before api, postgres, garage, nightly `backup` (+ `npm run prod:backup`). Caddyfile: auto HTTPS (local CA for localhost), **CSP enforced** + security headers (S8). Secrets in `.env.prod` (`npm run prod:env`). **Found and fixed:** zod's eval probe under the strict CSP (`shared/src/zod.ts`, jitless), first backup taken before migrations. Full journey checked on `https://localhost`; backup restore tested. HSTS left for Stage 14. |
 | 14 VPS + staging deploy + backups | ☐ | |
 | 15 CI/CD | ☐ | |
 | 16 Launch v2 + retire Supabase | ☐ | No data migration (owner decision) |
