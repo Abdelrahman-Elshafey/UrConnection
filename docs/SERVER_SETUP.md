@@ -216,7 +216,7 @@ Installed: Docker 29.9.1, Compose v5.6.0. The limit applies to containers create
 
 ## 8. Deploy the app
 
-**1. Code** (public repo, so no deploy key is needed). Until the Stage 13 PR is merged, the server runs the `stage-13-prod-docker` branch:
+**1. Code** (public repo, so no deploy key is needed). Until Stage 15 automates deploys, the server follows the current stage branch (first `stage-13-prod-docker`, now `stage-14-vps`: `git fetch && git switch stage-14-vps`). Never copy files to the server by hand: a hand-copied `compose.prod.yml` arrived with Windows line endings (CRLF) and blocked `git switch` ("local changes would be overwritten").
 ```bash
 mkdir -p ~/apps && cd ~/apps
 git clone --branch stage-13-prod-docker https://github.com/BoudiHamed/UrConnection.git urconnections
@@ -254,6 +254,8 @@ curl -I http://urconnections.aelshafey.com/              # 308 → https://
 ```
 Ports 3000, 5432, 3900, 3902, 8025 and 8080 must be closed from outside; only Caddy (80/443) is public.
 
+**HSTS** (Caddyfile, Stage 14): `Strict-Transport-Security: max-age=31536000` on the real domain only. After one HTTPS visit the browser refuses plain HTTP to this host for a year, so a later visit can't be downgraded by someone on the network. Check: `curl -sI https://urconnections.aelshafey.com/ | grep -i strict`.
+
 **Day-to-day** (in `~/apps/urconnections`; `dc` is just shorthand here for `docker compose -f compose.prod.yml --env-file .env.prod`):
 ```bash
 dc ps                       # status of every service
@@ -272,7 +274,7 @@ git pull && dc up -d --build --wait  # deploy a new version (Stage 15 automates 
 |---|---|---|
 | TXT (**DKIM**) | `resend._domainkey` | Public key for the signature Resend puts on every email: receivers check the mail really comes from this domain and wasn't changed (same idea as the SSH key) |
 | CNAME | `send` → `send.forge.rmta.net` | Points to Resend's records for the bounce address: **SPF** (which servers may send) and **MX** (where bounces go). Resend can change its servers without DNS changes here. |
-| TXT (**DMARC**) | `_dmarc` = `v=DMARC1; p=none;` | What receivers do when a mail fails SPF/DKIM (`none` = only report). **TODO: add if missing.** |
+| TXT (**DMARC**) | `_dmarc` = `v=DMARC1; p=none;` | What receivers do when a mail fails SPF/DKIM (`none` = only report). **TODO: missing (checked 2026-10-20), add it.** |
 
 Mail goes out **from** `no-reply@aelshafey.com`; the technical bounce part uses `send.aelshafey.com`, which keeps the main domain's reputation separate.
 
@@ -313,10 +315,38 @@ Removed with `docker rm -f mailpit && docker image rm axllent/mailpit:v1` once R
 
 **Google sign-in** (optional, also open): create OAuth credentials with the redirect URI `https://urconnections.aelshafey.com/api/auth/google/callback`, then fill `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env.prod`.
 
-## 10. Backups and monitoring *(planned)*
+## 10. Backups and monitoring
 
-- **Off-site backups**: copy the nightly `pg_dump` files to storage at a *different* company (e.g. an S3 bucket via `rclone`), then practise a restore once. A backup that only lives on the same server dies with it (OVH's Strasbourg data center burned down in 2021).
-- **Uptime monitoring**: a free service (UptimeRobot, Better Stack) calls `/api/health` every few minutes and emails when it fails.
+A backup that only lives on the same server dies with it (OVH's Strasbourg data center burned down in 2021). So there are two layers:
+
+| Layer | Where | How often | Kept |
+|---|---|---|---|
+| `backup` service (`docker/backup/backup.sh`) | `backups` volume on the server | every 24 h (+ `dc exec backup sh /backup.sh once`) | 14 days (`BACKUP_KEEP_DAYS`) |
+| `offsite` service (`docker/backup/offsite.sh`) | **Cloudflare R2** bucket `urconnections-backups` | every 6 h, only new files | 30 days (`OFFSITE_KEEP_DAYS`) |
+
+**R2 setup (2026-10-20):** Cloudflare → R2 → bucket `urconnections-backups` (private). Key: *Account API token* with **Object Read & Write on this bucket only**, so a stolen key can't reach anything else in the account. The five `OFFSITE_*` values plus `COMPOSE_PROFILES=offsite` go at the end of `.env.prod` on the server (the profile is what makes Compose start `offsite`; without it the service is skipped, which keeps `npm run prod:up` on the PC working without a bucket). Check without showing the secrets:
+```bash
+awk -F= '/^(OFFSITE_|COMPOSE_PROFILES)/ {print $1, (length($2) ? "set" : "EMPTY")}' .env.prod
+dc exec offsite sh /offsite.sh once     # → "offsite: copied to r2:urconnections-backups (N dumps there)"
+```
+rclone's `Config file ... not found` notice is expected: the remote is built from `RCLONE_CONFIG_R2_*` variables instead of a file.
+
+**Restore drill (done 2026-10-20, passed).** Always restore **from R2**, the copy you'd depend on if the server were gone, into a scratch database so the live site isn't touched:
+```bash
+FILE=$(dc exec -T offsite rclone lsf r2:urconnections-backups --include 'urconnections-*.dump' 2>/dev/null | sort | tail -1)
+dc exec -T postgres createdb -U urconnections restore_test
+dc exec -T offsite rclone cat "r2:urconnections-backups/$FILE" 2>/dev/null \
+  | dc exec -T postgres pg_restore -U urconnections -d restore_test --no-owner --exit-on-error
+for db in urconnections restore_test; do
+  dc exec -T postgres psql -U urconnections -d $db -tAc "select '$db', (select count(*) from users), (select count(*) from groups), (select count(*) from kysely_migration)" </dev/null
+done
+dc exec -T postgres dropdb -U urconnections restore_test
+```
+The pipe streams the dump from one container into the other without a temporary file. Both lines matched (users, groups, sessions, migrations, the `citext` extension, triggers). For a **real** restore onto a new server: deploy the stack, stop `api`, then `pg_restore --clean --if-exists -d urconnections` instead of the scratch database.
+
+> **Trap found:** inside a script fed to `bash -s` (or a `while read` loop), `docker exec -T` reads the rest of the script from stdin and swallows it: the commands after it silently never run. `</dev/null` on the `exec` line prevents it.
+
+**Uptime monitoring**: a free service (UptimeRobot, Better Stack) calls `https://urconnections.aelshafey.com/api/health` every few minutes and emails when it fails. The endpoint also checks the database, so "up" means the whole chain (DNS → Caddy → API → Postgres) works.
 
 ## 11. Later: Cloudflare proxy (orange cloud)
 
