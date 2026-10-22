@@ -32,6 +32,9 @@ x-api-env: &api-env
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env.prod}
 
 # Both services run the same image; compose builds it once per `up --build`.
+# Image names: on your computer `urconnections-api:latest`, built locally by `npm run prod:up`.
+# On the server (Stage 15) .env.prod sets IMAGE_PREFIX=ghcr.io/<owner>/ and scripts/deploy.sh
+# sets IMAGE_TAG to the commit, so the server pulls the images CI built instead of building.
 x-api-build: &api-build
   context: .
   dockerfile: api/Dockerfile
@@ -61,12 +64,12 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
-    image: urconnections-web
+    image: ${IMAGE_PREFIX:-}urconnections-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
   api:
     build: *api-build
-    image: urconnections-api
+    image: ${IMAGE_PREFIX:-}urconnections-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment: *api-env
     depends_on:
@@ -80,7 +83,7 @@ services:
   # successfully, so the API never runs against an outdated schema.
   migrate:
     build: *api-build
-    image: urconnections-api
+    image: ${IMAGE_PREFIX:-}urconnections-api:${IMAGE_TAG:-latest}
     command: ["node", "dist/db/migrate.js", "latest"]
     environment: *api-env
     restart: "no"
