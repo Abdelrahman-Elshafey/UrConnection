@@ -4,8 +4,10 @@ name: CI
 
 on:
   push:
-    branches: [main, dev, "stage-*"]
+    # `dev` isn't listed: deploy.yml runs these same checks (via workflow_call) before deploying.
+    branches: [main, "stage-*"]
   pull_request:
+  workflow_call:
 
 # A new push to the same branch cancels the run that is still going for the old commit.
 concurrency:
@@ -49,6 +51,9 @@ jobs:
       # `npm ci` installs exactly what package-lock.json says (and fails if it is out of
       # sync with package.json). That's why the lockfile is committed.
       - run: npm ci
+      # SECURITY: fail on known high/critical vulnerabilities in what runs in production.
+      # Dev-only tools (Vite, ESLint, …) never reach the server, so they don't block a deploy.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
