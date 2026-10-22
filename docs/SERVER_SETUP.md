@@ -262,7 +262,10 @@ dc ps                       # status of every service
 dc logs -f api              # follow one service's logs (Ctrl+C to stop)
 dc exec backup sh /backup.sh once    # a database backup right now
 git pull && dc up -d --build --wait  # deploy a new version (Stage 15 automates this)
+dc restart caddy                     # ...and this when the Caddyfile changed (see the trap below)
 ```
+
+> **Trap found: single-file mounts keep the old file.** The Caddyfile, `backup.sh` and `offsite.sh` are mounted as single files. Such a mount is tied to the file's *inode*, and `git pull` doesn't edit files in place: it writes a new file and renames it over the old one. The container keeps seeing the old version, and `dc up` doesn't recreate it (its settings didn't change). Even `caddy reload` reloaded the *old* file. Fix: `dc restart <service>` after a pull that changed one of these files. Check what a container really sees: `dc exec caddy cat /etc/caddy/Caddyfile`.
 
 ## 9. Email — Resend
 

@@ -55,6 +55,8 @@ describe("security headers", () => {
     const res = await request(createApp(dbUp)).get("/api/health");
     expect(res.headers["x-powered-by"]).toBeUndefined();
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    // Caddy sends HSTS for the whole site; the API must not add a second, different one.
+    expect(res.headers["strict-transport-security"]).toBeUndefined();
   });
 });
 
