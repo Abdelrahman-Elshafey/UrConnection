@@ -9,8 +9,7 @@ name: Deploy
 
 on:
   push:
-    # TODO(stage-15): remove stage-15-cicd once the first deploy from that branch has worked.
-    branches: [dev, stage-15-cicd]
+    branches: [dev]
 
 # Never two deploys at once, and never cancel one half-way: a newer push waits its turn.
 concurrency:
