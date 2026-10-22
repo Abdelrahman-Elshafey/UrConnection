@@ -24,7 +24,9 @@ scripts/gen-prod-env.js     # npm run prod:env: .env.prod from the template with
 .dockerignore               # keeps node_modules, dist, .git, docs and every .env out of image builds
 .gitattributes              # *.sh keep LF line endings (they run in Linux containers)
 vercel.json                 # {git.deploymentEnabled: false}: v2 branches never deploy to Vercel. Only v1 on `main` stays live there until Stage 16
-.github/workflows/ci.yml    # on push/PR: npm ci → lint → typecheck → test → build
+.github/workflows/ci.yml    # on push/PR (and called by deploy.yml): npm ci → npm audit (prod deps) → lint → typecheck → test → build
+.github/workflows/deploy.yml # on push to dev: ci.yml → build api + web images → GHCR (tag = commit) → SSH → scripts/deploy.sh → smoke test
+scripts/deploy.sh           # runs ON THE SERVER (forced command of the deploy key): checkout commit → backup → pull → up --wait → restart changed mounts → prune
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
 .agents/rules/              # owner's standing rules: general-rules.md, auth-implmentation.md, style-guide.md
 docs/                       # this file, CODE_AUDIT, MASTER_PLAN (the plan), SUPABASE (v1 security runbook), REFACTOR_ROADMAP (history)
