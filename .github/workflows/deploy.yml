@@ -1,0 +1,89 @@
+# Continuous Deployment (Stage 15): every push to `dev` that passes the checks is built into
+# Docker images, pushed to GitHub's container registry (GHCR) and deployed to the server.
+#   check   → the same checks as ci.yml (reused, not copied)
+#   images  → build api + web, push ghcr.io/<owner>/urconnections-{api,web}:<commit>
+#   deploy  → SSH to the server, which runs scripts/deploy.sh <commit>; then a smoke test
+# Rollback: open an older successful run in the Actions tab → "Re-run jobs". Its images are
+# still in GHCR, so the server goes back to that commit (migrations are NOT undone).
+name: Deploy
+
+on:
+  push:
+    branches: [dev]
+
+# Never two deploys at once, and never cancel one half-way: a newer push waits its turn.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # SECURITY: only this job may push to GHCR. GITHUB_TOKEN is created per run and expires with it.
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        app: [api, web]
+    steps:
+      - uses: actions/checkout@v5
+
+      # Image names must be lowercase; the owner "BoudiHamed" isn't.
+      - id: owner
+        run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same Dockerfiles as `npm run prod:up`. The layer cache lives in GitHub Actions, so an
+      # unchanged `npm ci` layer is reused instead of reinstalling every time.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.app }}/Dockerfile
+          push: true
+          tags: ghcr.io/${{ steps.owner.outputs.name }}/urconnections-${{ matrix.app }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The "staging" environment holds the deploy key; only jobs that name it can read it.
+    environment:
+      name: staging
+      url: https://urconnections.aelshafey.com
+    steps:
+      # SECURITY: the server's host key is pinned (DEPLOY_KNOWN_HOSTS), never fetched with
+      # ssh-keyscan at run time: that would trust whatever machine answers on that address.
+      - name: Deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The server ignores the command and runs scripts/deploy.sh; the commit id is its input.
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "ubuntu@$HOST" "$GITHUB_SHA"
+
+      # From outside, through Caddy and HTTPS, the way a visitor reaches the site.
+      - name: Smoke test
+        run: curl -fsS --retry 10 --retry-all-errors --retry-delay 3 https://urconnections.aelshafey.com/api/health
