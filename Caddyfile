@@ -32,9 +32,15 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		# Don't advertise the server software.
 		-Server
-		# Strict-Transport-Security (HSTS) is added in Stage 14 with the real domain: sent
-		# for "localhost" it would make browsers force HTTPS on the dev server too.
 	}
+
+	# SECURITY: HSTS. After one HTTPS visit, the browser refuses plain HTTP to this host for a
+	# year, so nobody on the network can downgrade a later visit (e.g. a fake café Wi-Fi
+	# answering http://). Only for a real domain: sent for "localhost", browsers would force
+	# HTTPS on the dev server too. No includeSubDomains / preload: they would bind every
+	# other project under the domain, and preload is hard to undo.
+	@real_domain not host localhost
+	header @real_domain Strict-Transport-Security "max-age=31536000"
 
 	handle /api/* {
 		reverse_proxy api:3000

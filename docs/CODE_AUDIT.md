@@ -253,7 +253,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **One-time links**: Tokens are stored hashed, expire (24 h / 1 h), are purpose-bound (a verify link can't reset a password), and are consumed atomically. A new link cancels older ones.
 - **Reset hygiene**: A password reset ends every session of the account.
 - **Link scanners**: The verify page needs a click (POST) rather than verifying on page load, so mail security scanners can't use the token up.
-- **Production TODO (Stage 14)**: Set `SMTP_URL` / `MAIL_FROM` to a real provider and add SPF/DKIM for the domain.
+- **Production TODO (Stage 14)**: Set `SMTP_URL` / `MAIL_FROM` to a real provider and add SPF/DKIM for the domain. **Done in Stage 14**: Resend over SMTPS, DKIM + SPF + DMARC on `aelshafey.com`.
 
 ### Notes on Stage 9 (Google sign-in)
 - **Own OAuth flow**: The Supabase redirect (`VITE_AUTH_REDIRECT_URL`) is gone. The API runs the authorization-code flow with `state` (login CSRF) and PKCE (stolen codes are useless) via `arctic`, and only the API holds the client secret.
@@ -266,7 +266,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **O6 (closed)**: Always WebP, one object per upload (`avatars/<uid>/<uuid>.webp`). Replace = put new, swap the key in one locked transaction, delete old. Remove = 1 call.
 - **P2 (closed)**: `browser-image-compression` is gone (the server converts). The `@supabase/supabase-js` client and `web/.env` variables went too, since nothing in the web app uses them now. Home bundle: **248 → 180 KB gzip**, already under Stage 12's 190 KB target.
 - **Storage choice**: MinIO's community repo was archived in April 2026 and no longer publishes images. Garage (free, AGPL, self-hosted) was chosen for the S3 API. It runs behind a `Storage` interface, so plain files or a hosted S3 (R2/B2) would be one new implementation.
-- **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups.
+- **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups. **Stage 13/14**: secrets and the `/media` route are done; the Garage volume is **not** backed up yet.
 
 ### Notes on the 2026-10-13 review (start of Stage 11)
 - **Verdict**: The API and shared package are lean. Its interfaces (`Storage`, `Mailer`, `GoogleOAuth`) each exist so tests run without real services, so none were cut. Nearly all the repetition is in the React components (D1–D14), which is what the Stage 11 UI kit is for.
@@ -298,9 +298,15 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Not done / option for later**: zod/mini or skipping response validation (−≈ 20 KB). Not needed for the target.
 
 ### Notes on Stage 13 (production Docker images)
-- **S8 done for v2**: the CSP is now **enforced** by Caddy (v1's was Report-Only), with nosniff, X-Frame-Options, Referrer-Policy and Permissions-Policy, and no Supabase/Vercel/Google Fonts sources any more. `img-src` and `script-src` are `'self'` only. HSTS waits for Stage 14 (real domain).
+- **S8 done for v2**: the CSP is now **enforced** by Caddy (v1's was Report-Only), with nosniff, X-Frame-Options, Referrer-Policy and Permissions-Policy, and no Supabase/Vercel/Google Fonts sources any more. `img-src` and `script-src` are `'self'` only. HSTS waits for Stage 14 (real domain): **done**, see Stage 14 notes.
 - **Found by the enforced CSP**: zod 4 probes `new Function` to speed up validation; the browser reported each probe as a violation. Fix: `packages/shared/src/zod.ts` sets `jitless` (browser only) and every shared schema imports `z` from it (ESLint `no-restricted-imports`). Setting it in `web/src/main.tsx` didn't work: the schemas live in the shared vendor chunk, which runs before main's own code.
 - **API build**: esbuild bundle (`api/build.js`), because plain Node can't run our TS (extension-less imports, parameter properties, TS-source shared package). Native deps (argon2, sharp) stay external and are installed in the image; both were checked inside the container.
 - **Found while testing**: the first backup ran before `migrate` had created the tables (backup waited only for Postgres). `backup` now waits for `migrate`; a restore into a scratch database matched the live data (users, groups, migrations).
 - **Docker health checks** call `/api/health` every 10 s; those requests are no longer logged (pino-http `autoLogging.ignore`).
 - **Checked end to end on `https://localhost`** in headless Chrome: sign-up → verification email (prod API → dev Mailpit) → verify → create a group → avatar upload served from `/media` → lazy detail page. `__Host-sid` cookie Secure/HttpOnly/Lax, HTTP → HTTPS redirect, missing asset → 404, CSRF still rejects writes without Origin, errors without details. No console errors, no CSP violations.
+
+### Notes on Stage 14 (VPS, staging, off-site backups)
+- **S8 completed**: `Strict-Transport-Security: max-age=31536000` from Caddy, for every host except `localhost` (it would force HTTPS on the dev server). No `includeSubDomains`/`preload`, so other projects under `aelshafey.com` stay free. helmet's own HSTS is off (`app.ts`): API responses carried two differing headers. A test checks the API sends none.
+- **Backups off-site**: the `offsite` service copies every dump to a Cloudflare R2 bucket (another company than the VPS host) with a key limited to that bucket; restore from the R2 copy into a scratch database matched the live data. **Open**: the key can delete objects (R2 bucket lock would stop a server intruder wiping them), and avatars (Garage volume) are not backed up.
+- **Email**: Resend (SMTPS, send-only key), DKIM + SPF + DMARC (`p=none`). **Monitoring**: UptimeRobot on `/api/health` (checks the DB too).
+- **Found**: single-file bind mounts (Caddyfile, backup scripts) keep the old file after `git pull`; `dc restart <service>` is needed (documented in SERVER_SETUP.md §8).

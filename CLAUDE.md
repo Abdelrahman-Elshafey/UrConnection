@@ -49,6 +49,7 @@ The owner's goal is **learning**: explain the *why* of each new concept while im
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: file map, routing, data flow, query keys, the Supabase data model, and the conventions the code follows today.
 - **[docs/CODE_AUDIT.md](docs/CODE_AUDIT.md)**: numbered list of bugs (B), security (S), duplication (D), over-engineering (O), performance with measured bundle sizes (P), and accessibility (A), with IDs like `B22`, `P3`. Start here before refactoring.
 - **[docs/SUPABASE.md](docs/SUPABASE.md)**: database security runbook (RLS, constraints, storage, dashboard settings, CSP rollout). SQL lives in `supabase/` (`inspect.sql` + `migrations/`). The DB schema isn't otherwise in the repo.
+- **[docs/SERVER_SETUP.md](docs/SERVER_SETUP.md)**: the production server (Stage 14): domain, DNS, OVH VPS, SSH keys, hardening, firewall, Docker, with the commands and the why of each step. Runbook for rebuilding it.
 - **[docs/REFACTOR_ROADMAP.md](docs/REFACTOR_ROADMAP.md)**: the earlier frontend-only plan. Phases 0–1 are done. Phases 2–6 are **superseded by MASTER_PLAN.md**, but their audit IDs are folded into its stages.
 - **[.agents/rules/](.agents/rules/)**: the owner's standing rules (general, auth, style guide). They are the intended standards, and the code doesn't fully meet them yet.
 
