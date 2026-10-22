@@ -36,7 +36,9 @@ export function createApp(deps: AppDeps): Express {
   app.set("trust proxy", 1);
 
   // SECURITY: helmet sets protective HTTP headers (nosniff, frame-ancestors, ...).
-  app.use(helmet());
+  // HSTS is left to Caddy (Caddyfile), which knows whether this is a real domain; two
+  // differing Strict-Transport-Security headers on API responses would only confuse.
+  app.use(helmet({ strictTransportSecurity: false }));
 
   // One log line per request, tagged with a request id. The id is also returned in the
   // X-Request-Id header, so a user's bug report can be matched to the exact log line.

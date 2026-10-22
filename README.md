@@ -77,8 +77,8 @@ web/              React app (Vite)
 api/              Express 5 API (TypeScript): auth (sessions, argon2id), /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
 packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries (+ `/cities` entry, loaded on demand)
 docker-compose.yml  development services (Postgres, Mailpit, Garage)
-compose.prod.yml    production stack (Caddy, web, api, migrate, Postgres, Garage, backup) + Caddyfile
-docker/           Garage config, nginx config (web image), backup script
+compose.prod.yml    production stack (Caddy, web, api, migrate, Postgres, Garage, backup, offsite) + Caddyfile
+docker/           Garage config, nginx config (web image), backup + off-site copy scripts
 docs/             architecture, code audit, master plan, security runbook
 supabase/         v1 database security SQL (RLS, constraints, storage policies)
 ```

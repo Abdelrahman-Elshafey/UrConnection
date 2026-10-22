@@ -234,6 +234,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ### Stage 14 — Server + first deployment (staging)
 **You'll learn:** Linux server basics, SSH keys, firewall, DNS, TLS certificates, off-site backups, restore drills.
 - **Needs:** a domain name (about $10/year) and a VPS.
+- **Decided (2026-10-18):** `aelshafey.com` at Cloudflare Registrar (one personal domain, a subdomain per portfolio project), Cloudflare DNS (grey cloud first), OVHcloud VPS-1 with Ubuntu 26.04 LTS. Every server step, with commands and the why: **[SERVER_SETUP.md](SERVER_SETUP.md)**.
 - Server setup: non-root sudo user, SSH key only (password login off), `ufw` (22/80/443), unattended upgrades, Docker Engine + Compose plugin.
 - DNS: `staging.<domain>` → VPS. Deploy with `git pull`, then `docker compose -f compose.prod.yml up -d --build`.
 - Off-site backups (for example Backblaze B2 or another S3 bucket via `rclone`), plus a **tested restore** into a scratch database.
@@ -260,7 +261,7 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 ---
 
 ## 5. Security checklist (re-check at Stages 6, 9, 10, 14)
-Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Still open: `npm audit` in CI (Stage 15), restore-tested **off-site** backups (Stage 14; a local restore was tested in Stage 13).
+Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Re-checked at Stage 14: HSTS on the real domain; database backups copied off-site and a restore from the off-site copy tested. Still open: `npm audit` in CI (Stage 15), avatar backups.
 - [x] Passwords hashed with argon2id. Never logged, never returned.
 - [x] Session, verify, and reset tokens are random 32 bytes, **stored hashed**, with an expiry, and single use where it applies.
 - [x] Cookie: `httpOnly`, `Secure` (prod), `SameSite=Lax`, `Path=/`. The session is rotated on login.
@@ -271,7 +272,7 @@ Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Sti
 - [x] Uploads are checked by content (sharp decode), re-encoded, and size-limited.
 - [x] `helmet` + CSP enforced (Caddy, Stage 13). Errors never leak stack traces in prod.
 - [ ] Dependencies: `npm audit` in CI. Docker base images rebuilt regularly.
-- [ ] Backups tested by restoring them.
+- [x] Backups tested by restoring them (database, from the off-site R2 copy, Stage 14). Avatars (Garage) not backed up yet.
 
 ---
 
@@ -293,6 +294,6 @@ Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Sti
 | 11 Full TS frontend + UI kit | ✅ | Started with a code review (audit section M + D13–D18, done first: ScrollRestoration, `react-router`, skipToken, React 19 `<title>`, FilterBar props, API `limitRequests`/`signedInUser`). Then: all `.tsx`, `allowJs` off, no `any`; UI kit in `components/ui` (Button, Field components with `useId` labels, CountryCityFields via FormProvider, ConfirmDialog on native `<dialog>`, Toast with React 19 `use()`, …), `@theme` color tokens, `/login` + `/signup` split (O3), one DeleteGroupDialog per page (O9), separate typed create/edit forms. Checked page by page in headless Chrome: found and fixed 404 retries and the missing hydrate fallback. **Not done:** a mobile nav menu. Bundle 179.0 KB gzip. |
 | 12 Frontend performance | ✅ | Lazy routes for every page except home (P1/R5): home JS **179.0 → 166.3 KB gzip** (zod stays: apiClient validates responses), then **→ 151.3** by loading the city lists only once a country is chosen (`@urconnections/shared/cities` entry + `useCities`). `RouteError` errorElement incl. "new version, reload" for missing chunks (R4). Detail loader prefetches the group in parallel with its chunk (R3). Inter self-hosted via `@fontsource-variable/inter` (P7, the biggest win). `transition` instead of `transition-all`, lighter blur (P6). Avatar img attributes (P9). Page-loading bar. **Lighthouse mobile: home 81–88 → 96 (LCP 3.2–3.8 → 2.3 s), detail 89 → 95.** Also on this branch: card layout and keep-scroll-on-filter fixes found while using the app. |
 | 13 Production Docker images | ✅ | API bundled with **esbuild** (Node can't run our TS; shared package inlined, npm deps external) → `api/Dockerfile` multi-stage on node:24-bookworm-slim (Debian: sharp/argon2 binaries), non-root, HEALTHCHECK; 447 MB. `web/Dockerfile` → nginx-unprivileged :8080, SPA fallback, immutable `/assets`; 91 MB. `compose.prod.yml`: caddy (only public ports) → web/api, one-off `migrate` before api, postgres, garage, nightly `backup` (+ `npm run prod:backup`). Caddyfile: auto HTTPS (local CA for localhost), **CSP enforced** + security headers (S8). Secrets in `.env.prod` (`npm run prod:env`). **Found and fixed:** zod's eval probe under the strict CSP (`shared/src/zod.ts`, jitless), first backup taken before migrations. Full journey checked on `https://localhost`; backup restore tested. HSTS left for Stage 14. |
-| 14 VPS + staging deploy + backups | ☐ | |
+| 14 VPS + staging deploy + backups | ✅ | Domain `aelshafey.com` (Cloudflare), DNS `urconnections` → VPS (grey cloud). OVH VPS-1, Ubuntu 26.04: key-only SSH (no root, `AllowUsers ubuntu`), ufw 22/80/443, auto security updates, Docker 29.9 + Compose with log limits. **Found:** PowerShell 5.1 piping added a BOM to `authorized_keys`. **Live at https://urconnections.aelshafey.com** (2026-10-19): `.env.prod` generated on the server with openssl, Let's Encrypt certificate via HTTP-01, internal ports closed. Email: **Resend** free plan over SMTP (100/day), DKIM + SPF on `aelshafey.com`; a Mailpit placeholder (read through an SSH tunnel) bridged the gap before it. **Off-site backups** (2026-10-20): `offsite` service (rclone, opt-in profile) copies dumps to a Cloudflare R2 bucket every 6 h with a bucket-scoped key; **restore drill from R2 passed** (all counts matched). HSTS on the real domain. **Found:** `docker exec -T` in a piped script swallows the rest of it (`</dev/null`). UptimeRobot checks `/api/health` every 5 min; DMARC `p=none`. HSTS comes only from Caddy (helmet's turned off: API responses had two differing headers). **Found:** single-file bind mounts keep the old file after `git pull` (restart the service); `node_modules` workspace links still pointed at the old `D:\Find_Study` folder (`npm install`). **Not done:** Google sign-in (Stage 16 checklist); **avatars (Garage volume) are not backed up yet**. See [SERVER_SETUP.md](SERVER_SETUP.md). |
 | 15 CI/CD | ☐ | |
 | 16 Launch v2 + retire Supabase | ☐ | No data migration (owner decision) |
