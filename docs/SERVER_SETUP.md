@@ -277,7 +277,7 @@ dc restart caddy                     # ...and this when the Caddyfile changed (s
 |---|---|---|
 | TXT (**DKIM**) | `resend._domainkey` | Public key for the signature Resend puts on every email: receivers check the mail really comes from this domain and wasn't changed (same idea as the SSH key) |
 | CNAME | `send` → `send.forge.rmta.net` | Points to Resend's records for the bounce address: **SPF** (which servers may send) and **MX** (where bounces go). Resend can change its servers without DNS changes here. |
-| TXT (**DMARC**) | `_dmarc` = `v=DMARC1; p=none;` | What receivers do when a mail fails SPF/DKIM (`none` = only report). **TODO: missing (checked 2026-10-20), add it.** |
+| TXT (**DMARC**) | `_dmarc` = `v=DMARC1; p=none;` | What receivers do when a mail fails SPF/DKIM (`none` = only report). Added 2026-10-22. |
 
 Mail goes out **from** `no-reply@aelshafey.com`; the technical bounce part uses `send.aelshafey.com`, which keeps the main domain's reputation separate.
 
@@ -349,7 +349,9 @@ The pipe streams the dump from one container into the other without a temporary 
 
 > **Trap found:** inside a script fed to `bash -s` (or a `while read` loop), `docker exec -T` reads the rest of the script from stdin and swallows it: the commands after it silently never run. `</dev/null` on the `exec` line prevents it.
 
-**Uptime monitoring**: a free service (UptimeRobot, Better Stack) calls `https://urconnections.aelshafey.com/api/health` every few minutes and emails when it fails. The endpoint also checks the database, so "up" means the whole chain (DNS → Caddy → API → Postgres) works.
+**Uptime monitoring (UptimeRobot, set up 2026-10-22)**: an HTTP(s) monitor calls `https://urconnections.aelshafey.com/api/health` every 5 minutes and emails when it fails. The endpoint also checks the database, so "up" means the whole chain (DNS → Caddy → API → Postgres) works.
+
+**Not backed up yet: avatars.** They live in the `garage` volume, which neither service copies. Losing them means users upload their picture again; decide before launch (Stage 16).
 
 ## 11. Later: Cloudflare proxy (orange cloud)
 
