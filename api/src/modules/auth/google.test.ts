@@ -31,8 +31,8 @@ function makeApp(profiles: Record<string, GoogleProfile> = { "good-code": google
 }
 
 /** Starts a sign-in like a browser would: the agent keeps the cookie, we keep `state`. */
-async function start(agent: ReturnType<typeof request.agent>) {
-  const res = await agent.get("/api/auth/google");
+async function start(agent: ReturnType<typeof request.agent>, next?: string) {
+  const res = await agent.get("/api/auth/google").query(next === undefined ? {} : { next });
   return { res, state: new URL(res.headers.location!).searchParams.get("state")! };
 }
 
@@ -145,6 +145,31 @@ describe("GET /api/auth/google/callback", () => {
     const res = await agent.get("/api/auth/google/callback").query({ code: "unverified-code", state });
     expect(res.headers.location).toBe(`${SITE}/login?error=google_unverified`);
     expect(signIns).toEqual([]);
+  });
+
+  it("returns to the page the sign-in started from (?next=)", async () => {
+    const { agent } = makeApp();
+    const { state } = await start(agent, "/groups/abc?x=1");
+    const res = await agent.get("/api/auth/google/callback").query({ code: "good-code", state });
+    expect(res.headers.location).toBe(`${SITE}/groups/abc?x=1`);
+  });
+
+  it.each(["https://evil.example/", "//evil.example", "/\\evil.example", "/\t/evil.example"])(
+    "never redirects to another site (next=%s): it goes home instead",
+    async (next) => {
+      const { agent } = makeApp();
+      const { res: startRes, state } = await start(agent, next);
+      expect(startRes.headers["set-cookie"]![0]).toMatch(/^google_oauth=[^.;]+\.[^.;]+;/); // no next kept
+      const res = await agent.get("/api/auth/google/callback").query({ code: "good-code", state });
+      expect(res.headers.location).toBe(`${SITE}/`);
+    },
+  );
+
+  it("keeps next when sending the user back to /login, so trying again still ends up there", async () => {
+    const { agent } = makeApp();
+    await start(agent, "/create");
+    const res = await agent.get("/api/auth/google/callback").query({ error: "access_denied" });
+    expect(res.headers.location).toBe(`${SITE}/login?error=google_cancelled&next=%2Fcreate`);
   });
 
   it("sends the user back to /login when the code exchange fails", async () => {

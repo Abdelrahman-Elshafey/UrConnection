@@ -8,6 +8,7 @@ import {
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { HttpError } from "../../lib/errors";
+import { checkCity } from "../../lib/places";
 import { parseOrThrow } from "../../lib/validate";
 import { requireAuth, requireVerified, signedInUser } from "../auth/session.middleware";
 import type { GroupsRepository } from "./groups.repository";
@@ -55,6 +56,7 @@ export function groupsRouter({ groups }: GroupsDeps): Router {
 
   router.post("/", requireAuth, requireVerified, async (req, res) => {
     const input = parseOrThrow(createGroupSchema, req.body);
+    checkCity(input);
     // SECURITY: the owner is whoever is signed in. A `user_id` in the body is ignored
     // (zod drops unknown keys), so nobody can create groups in someone else's name.
     const group: Group = await groups.create(signedInUser(req).id, input);
@@ -71,6 +73,7 @@ export function groupsRouter({ groups }: GroupsDeps): Router {
     const current = await groups.getOwned(id, ownerId);
     if (!current) throw notFound();
     const merged = parseOrThrow(createGroupSchema, { ...current, ...patch });
+    checkCity(merged);
 
     // Ownership is checked again inside the UPDATE itself (WHERE id AND user_id).
     const { title, description, topic, country, city } = merged;
