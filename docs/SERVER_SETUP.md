@@ -219,7 +219,7 @@ Installed: Docker 29.9.1, Compose v5.6.0. The limit applies to containers create
 **1. Code** (public repo, so no deploy key is needed). Until Stage 15 automates deploys, the server follows the current stage branch (first `stage-13-prod-docker`, now `stage-14-vps`: `git fetch && git switch stage-14-vps`). Never copy files to the server by hand: a hand-copied `compose.prod.yml` arrived with Windows line endings (CRLF) and blocked `git switch` ("local changes would be overwritten").
 ```bash
 mkdir -p ~/apps && cd ~/apps
-git clone --branch stage-13-prod-docker https://github.com/BoudiHamed/UrConnection.git urconnections
+git clone --branch stage-13-prod-docker https://github.com/Abdelrahman-Elshafey/UrConnection.git urconnections
 cd urconnections
 ```
 
@@ -363,7 +363,7 @@ Gives caching, stronger DDoS protection and hides the server IP. Before turning 
 
 ## 12. Automatic deploys (Stage 15)
 
-Every push to `dev` is deployed by GitHub Actions ([deploy.yml](../.github/workflows/deploy.yml)): checks → build the `api` and `web` images → push them to **GHCR** (`ghcr.io/boudihamed/urconnections-{api,web}:<commit>`, public like the repo) → SSH to the server → [scripts/deploy.sh](../scripts/deploy.sh) → smoke test of `/api/health` from outside. The server never builds anything any more; it downloads the images CI built and tested.
+Every push to `dev` is deployed by GitHub Actions ([deploy.yml](../.github/workflows/deploy.yml)): checks → build the `api` and `web` images → push them to **GHCR** (`ghcr.io/abdelrahman-elshafey/urconnections-{api,web}:<commit>`, public like the repo) → SSH to the server → [scripts/deploy.sh](../scripts/deploy.sh) → smoke test of `/api/health` from outside. The server never builds anything any more; it downloads the images CI built and tested.
 
 **The deploy key.** GitHub logs in with its own SSH key, created for this alone (never your personal key). The private half is the `DEPLOY_SSH_KEY` secret of the GitHub environment `staging` (only the deploy job can read it); no copy is kept anywhere else. The public half is the second line of `~/.ssh/authorized_keys`:
 ```
@@ -376,6 +376,8 @@ command="sh /home/ubuntu/apps/urconnections/scripts/deploy.sh",restrict ssh-ed25
 **`staging` environment** (repo Settings → Environments): secret `DEPLOY_SSH_KEY`, variables `DEPLOY_HOST` (the server IP) and `DEPLOY_KNOWN_HOSTS` (the server's host-key line from the PC's trusted `known_hosts`, so GitHub refuses an impostor server).
 
 **What `deploy.sh` does** (also usable by hand: `sh scripts/deploy.sh <commit>`): checks out the commit (detached, hand edits discarded; `.env.prod` is gitignored and untouched) → backup → pulls the images → writes `IMAGE_TAG=<commit>` into `.env.prod` → `up -d --wait` (migrations first) → restarts services whose single-file mount changed → removes week-old unused images.
+
+**After renaming the GitHub account** (done 2026-10-26: BoudiHamed → Abdelrahman-Elshafey). Repo links redirect, but image names don't: GHCR moves the images to `ghcr.io/<new name>/…`, and pulls from the old name fail with `denied`. Update, on the server: `IMAGE_PREFIX=ghcr.io/<new name>/` in `.env.prod`, and `git remote set-url origin https://github.com/<new name>/UrConnection.git`. Then re-run the failed Deploy job. SECURITY: the old name is free for anyone to register. Someone who took it could publish images under your commit ids, so never leave `IMAGE_PREFIX` on the old name.
 
 **Rollback**: GitHub → Actions → an older green "Deploy" run → **Re-run jobs**. Its images are still in GHCR, so the server goes back to that commit. Migrations are not undone, so a migration has to stay compatible with the previous version of the code.
 
