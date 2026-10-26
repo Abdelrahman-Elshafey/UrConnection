@@ -46,6 +46,12 @@ describe("register", () => {
     expect((await me(agent)).user?.email).toBe("ana@example.com");
   });
 
+  it("refuses a city that isn't in the chosen country (400), and creates no account", async () => {
+    const res = await register(browser(), { country: "Egypt", city: "Berlin" });
+    expect(res.status).toBe(400);
+    expect(await db.selectFrom("users").select("id").execute()).toEqual([]);
+  });
+
   it("sets a secure-by-default session cookie", async () => {
     const res = await register(browser());
     const cookie = res.headers["set-cookie"]![0]!;
@@ -164,7 +170,7 @@ describe("PATCH /api/users/me", () => {
     const res = await agent
       .patch("/api/users/me")
       .set("Origin", ORIGIN)
-      .send({ display_name: "  Ana B.  ", city: "Cairo", email: "hacker@evil.example", id: "someone-else" });
+      .send({ display_name: "  Ana B.  ", country: "Egypt", city: "Cairo", email: "hacker@evil.example", id: "someone-else" });
 
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ display_name: "Ana B.", city: "Cairo", email: "ana@example.com" });
@@ -175,5 +181,23 @@ describe("PATCH /api/users/me", () => {
     await register(agent);
     const res = await agent.patch("/api/users/me").set("Origin", ORIGIN).send({ display_name: "x".repeat(101) });
     expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["a city outside the country", { country: "Egypt", city: "Berlin" }],
+    ["a city without a country", { city: "Cairo" }],
+    ["a country that isn't in the list", { country: "Atlantis" }],
+  ])("rejects %s (400)", async (_name, body) => {
+    const agent = browser();
+    await register(agent);
+    const res = await agent.patch("/api/users/me").set("Origin", ORIGIN).send(body);
+    expect(res.status).toBe(400);
+  });
+
+  it("checks a new city against the country already saved", async () => {
+    const agent = browser();
+    await register(agent, { country: "Egypt" });
+    expect((await agent.patch("/api/users/me").set("Origin", ORIGIN).send({ city: "Alexandria" })).status).toBe(200);
+    expect((await agent.patch("/api/users/me").set("Origin", ORIGIN).send({ city: "Berlin" })).status).toBe(400);
   });
 });

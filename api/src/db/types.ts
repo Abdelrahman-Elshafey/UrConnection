@@ -1,4 +1,4 @@
-import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { ColumnType, Generated, Insertable } from "kysely";
 import type { PlatformKey, Topic } from "@urconnections/shared";
 
 /**
@@ -79,9 +79,7 @@ export interface Database {
   groups: GroupsTable;
 }
 
-// Row shapes for each operation, e.g. NewGroup = what you pass to insertInto("groups").
-export type User = Selectable<UsersTable>;
+// Insert shapes, e.g. NewGroupRow = what you pass to insertInto("groups") (seed and db tests).
+// Repositories build their read shapes from the exact columns they select (Pick<Selectable<…>>).
 export type NewUser = Insertable<UsersTable>;
-export type UserUpdate = Updateable<UsersTable>;
-export type GroupRow = Selectable<GroupsTable>;
 export type NewGroupRow = Insertable<GroupsTable>;

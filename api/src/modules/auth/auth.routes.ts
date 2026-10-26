@@ -12,6 +12,7 @@ import { Router } from "express";
 import { config } from "../../config";
 import { HttpError } from "../../lib/errors";
 import { logger } from "../../lib/logger";
+import { checkCity } from "../../lib/places";
 import type { Mailer } from "../../lib/mailer";
 import { byEmail, byUser, HOUR, limitRequests, MINUTE } from "../../lib/rateLimit";
 import { parseOrThrow } from "../../lib/validate";
@@ -71,6 +72,7 @@ export function authRouter({ users, sessions, emailTokens, mailer }: AuthDeps): 
     // would also send the plain-text password to the database. (TypeScript doesn't flag
     // extra fields in a spread object, so this has to be deliberate.)
     const { password, ...profile } = parseOrThrow(registerSchema, req.body);
+    checkCity(profile);
     try {
       const user = await users.create({ ...profile, password_hash: await hashPassword(password) });
       await startSession(sessions, req, res, user.id);

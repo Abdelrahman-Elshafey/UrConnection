@@ -3,6 +3,7 @@ import { Router, type RequestHandler } from "express";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
 import { HttpError } from "../../lib/errors";
+import { checkCity } from "../../lib/places";
 import { byUser, HOUR, limitRequests } from "../../lib/rateLimit";
 import type { Storage } from "../../lib/storage";
 import { parseOrThrow } from "../../lib/validate";
@@ -76,7 +77,12 @@ export function usersRouter({ users, groups, storage }: UsersDeps): Router {
 
   router.patch("/me", requireAuth, async (req, res) => {
     const patch = parseOrThrow(profileUpdateSchema, req.body);
-    const user = await users.updateProfile(signedInUser(req).id, patch);
+    const current = signedInUser(req);
+    // Only when the location changes: an older profile with a mismatched city can still edit its name.
+    if (patch.country !== undefined || patch.city !== undefined) {
+      checkCity({ country: patch.country ?? current.country, city: patch.city ?? current.city });
+    }
+    const user = await users.updateProfile(current.id, patch);
     if (!user) throw unauthenticated(); // account deleted meanwhile
     res.json({ user } satisfies MeResponse);
   });
