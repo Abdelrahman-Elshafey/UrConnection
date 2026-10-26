@@ -37,7 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Image names must be lowercase; the owner "BoudiHamed" isn't.
+      # Image names must be lowercase; the owner "Abdelrahman-Elshafey" isn't.
+      # The owner is part of the image name: if the GitHub account is renamed, the images move
+      # to the new name and IMAGE_PREFIX in the server's .env.prod must follow (SERVER_SETUP.md §12).
       - id: owner
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
