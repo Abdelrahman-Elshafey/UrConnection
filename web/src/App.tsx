@@ -8,17 +8,25 @@ import { PageSpinner } from "./components/ui/Spinner";
 import { sessionQueryOptions } from "./features/auth/hooks/useUser";
 import GroupList from "./features/groups/components/GroupList";
 import { groupDetailQuery } from "./features/groups/hooks/useGroup";
+import { safeNextPath, withNext } from "./lib/nextPath";
 import { queryClient } from "./lib/queryClient";
 
 // Who is signed in? Read through the ['session'] cache (GET /api/auth/me once, then
 // cached), so route guards and components always agree. Resolves to a User or null.
 const getCurrentUser = () => queryClient.ensureQueryData(sessionQueryOptions);
 
-/** Loader for pages that need a session: no user → /login. */
-const requireAuth = async () => ((await getCurrentUser()) ? null : redirect("/login"));
+/** Loader for pages that need a session: no user → /login, then back here after signing in. */
+async function requireAuth({ request }: LoaderFunctionArgs) {
+  if (await getCurrentUser()) return null;
+  const { pathname, search } = new URL(request.url);
+  return redirect(withNext("/login", pathname + search));
+}
 
-/** Loader for /login and /signup: already signed in → home. */
-const redirectIfAuth = async () => ((await getCurrentUser()) ? redirect("/") : null);
+/** Loader for /login and /signup: already signed in → where the user was going (or home). */
+async function redirectIfAuth({ request }: LoaderFunctionArgs) {
+  if (!(await getCurrentUser())) return null;
+  return redirect(safeNextPath(new URL(request.url).searchParams.get("next")));
+}
 
 /**
  * Loader for /groups/:groupId (audit R3): starts fetching the group at the same moment the

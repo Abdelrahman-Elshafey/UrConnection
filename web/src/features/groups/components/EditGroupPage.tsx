@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router";
 import { ReadOnlyField } from "../../../components/ui/Field";
 import { NotFound } from "../../../components/ui/NotFound";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { isNotFound } from "../../../lib/apiClient";
 import { isOwner } from "../../../lib/format";
 import { getPlatform } from "../../../lib/platforms";
 import { useUser } from "../../auth/hooks/useUser";
@@ -26,7 +27,8 @@ export default function EditGroupPage() {
   const { data: group, isLoading, error } = useGroup(groupId);
 
   if (isLoading) return <PageSpinner />;
-  if (error || !group || !isOwner(user, group)) return <NotFound message="You can only edit groups you created." />;
+  if (error && !isNotFound(error)) throw error; // server trouble: the route's error page
+  if (!group || !isOwner(user, group)) return <NotFound message="You can only edit groups you created." />;
   // A separate component, so the form starts with the loaded group as its default values.
   return <EditGroupForm group={group} />;
 }

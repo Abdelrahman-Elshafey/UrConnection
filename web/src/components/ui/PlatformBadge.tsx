@@ -1,3 +1,4 @@
+import type { PlatformKey } from "@urconnections/shared";
 import { getPlatform } from "../../lib/platforms";
 import { cx } from "./cx";
 
@@ -7,7 +8,7 @@ const SIZES = {
 } as const;
 
 interface PlatformBadgeProps {
-  platform: string;
+  platform: PlatformKey;
   size?: keyof typeof SIZES;
   /** E.g. "min-w-0" inside a one-line flex row: the label then truncates ("Microsoft Te…"). */
   className?: string;

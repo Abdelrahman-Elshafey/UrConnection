@@ -1,5 +1,5 @@
 import type { User } from "@urconnections/shared";
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { getMe, logout } from "../../../services/auth.service";
 import { groupKeys } from "../../groups/api/queryKeys";
@@ -25,6 +25,16 @@ export function useSetUser() {
   return (user: User | null) => queryClient.setQueryData(SESSION_QUERY_KEY, user);
 }
 
+/**
+ * Someone else (or nobody) is signed in now: store the new session and drop the previous
+ * user's own data, so the next person never sees it, not even for a moment while it refetches.
+ * For sign-in, sign-out and password reset; profile edits (same user) use useSetUser.
+ */
+export function switchUser(queryClient: QueryClient, user: User | null): void {
+  queryClient.setQueryData(SESSION_QUERY_KEY, user);
+  queryClient.removeQueries({ queryKey: groupKeys.mine() });
+}
+
 /** Sign out, forget user-specific cached data, go home (audit D9: one shared handler). */
 export function useSignOut() {
   const queryClient = useQueryClient();
@@ -34,8 +44,7 @@ export function useSignOut() {
     mutationFn: logout,
     onSettled: () => {
       // Even if the request failed (offline), forget the user locally.
-      queryClient.setQueryData(SESSION_QUERY_KEY, null);
-      queryClient.removeQueries({ queryKey: groupKeys.mine() });
+      switchUser(queryClient, null);
       navigate("/");
     },
   });

@@ -28,7 +28,9 @@ export type FilterKey = keyof HomeFilters;
  */
 export function useGroupFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { country: detectedCountry, city: detectedCity, isDetecting } = useUserLocation();
+  // Case 3 below is the only one that uses the location, so only then is it looked up.
+  const needsLocation = searchParams.toString() === "" && readSavedSearch() === null;
+  const { country: detectedCountry, city: detectedCity, isDetecting } = useUserLocation(needsLocation);
   const initialized = useRef(false);
 
   const filters: HomeFilters = {

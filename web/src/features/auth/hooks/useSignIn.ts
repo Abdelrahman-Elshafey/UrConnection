@@ -1,18 +1,20 @@
 import type { User } from "@urconnections/shared";
-import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router";
 import { login, register } from "../../../services/auth.service";
 import { clearSavedSearch } from "../../groups/utils/savedSearch";
-import { useSetUser } from "./useUser";
+import { safeNextPath } from "../../../lib/nextPath";
+import { switchUser } from "./useUser";
 
 /** What happens after any successful sign-in (login or sign-up). */
 function useAfterSignIn() {
-  const setUser = useSetUser();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   return (user: User) => {
-    setUser(user); // the navbar and route guards know at once
+    switchUser(queryClient, user); // the navbar and route guards know at once
     clearSavedSearch(); // drop filters saved by a previous visitor of this tab
-    navigate("/");
+    navigate(safeNextPath(searchParams.get("next"))); // back to the page that asked for sign-in
   };
 }
 

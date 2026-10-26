@@ -6,6 +6,7 @@ import { Button, ButtonLink } from "../../../components/ui/Button";
 import { NotFound } from "../../../components/ui/NotFound";
 import { PlatformBadge } from "../../../components/ui/PlatformBadge";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { isNotFound } from "../../../lib/apiClient";
 import { formatLocation, isOwner } from "../../../lib/format";
 import { pageTitle } from "../../../lib/pageTitle";
 import { getPlatform } from "../../../lib/platforms";
@@ -23,7 +24,9 @@ export default function GroupDetail() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   if (isLoading) return <PageSpinner label="Loading Detail" />;
-  if (error || !group) return <NotFound />;
+  // Any other error (server down, 500) isn't "not found": the route's error page offers a reload.
+  if (error && !isNotFound(error)) throw error;
+  if (!group) return <NotFound />;
 
   const { title, topic, description, meeting_link, platform } = group;
 

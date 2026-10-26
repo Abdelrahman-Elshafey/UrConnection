@@ -12,6 +12,9 @@ export class ApiError extends Error {
   }
 }
 
+/** True for the API's 404: the thing really doesn't exist (or isn't yours, for writes). */
+export const isNotFound = (error: unknown): boolean => error instanceof ApiError && error.status === 404;
+
 type QueryValue = string | number | undefined | null;
 
 /** Builds "/api/x?a=1&b=2", leaving out empty values (so "no filter" is just absent). */
