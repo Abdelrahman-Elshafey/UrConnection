@@ -2,12 +2,13 @@ import { Link, useLocation } from "react-router";
 import { useSignOut, useUser } from "../../features/auth/hooks/useUser";
 import { Avatar } from "../ui/Avatar";
 import { ButtonLink } from "../ui/Button";
+import { withNext } from "../../lib/nextPath";
 
 const navText = "text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:text-black dark:text-gray-400 dark:hover:text-white";
 
 /** Sticky top bar: logo, account links, "Create Group". */
 export default function Navbar() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { data: user } = useUser();
   const { mutate: signOut } = useSignOut();
 
@@ -31,7 +32,8 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <Link to="/login" className={navText}>
+            // After signing in, come back to this page (e.g. the group you were looking at).
+            <Link to={withNext("/login", pathname + search)} className={navText}>
               Sign In
             </Link>
           )}

@@ -96,6 +96,18 @@ describe("POST /api/groups", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.details[0].path).toBe("meeting_link");
   });
+
+  // Each of these used to get past validation: a too-long link then failed the database CHECK
+  // (500 instead of 400), and any country or city was stored, unreachable by the filters.
+  it.each([
+    ["a link longer than the database allows", { meeting_link: `https://discord.gg/${"x".repeat(500)}` }, "meeting_link"],
+    ["a country that isn't in the list", { country: "Atlantis" }, "country"],
+    ["a city that isn't in the country", { city: "Berlin" }, "city"],
+  ])("rejects %s with 400", async (_name, change, field) => {
+    const res = await create(alice, { ...newGroup, ...change });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details.map((d: { path: string }) => d.path)).toContain(field);
+  });
 });
 
 describe("PATCH /api/groups/:id", () => {
@@ -131,6 +143,8 @@ describe("PATCH /api/groups/:id", () => {
   it("validates the changed values (400)", async () => {
     expect((await patch(alice, groupId, { title: "x".repeat(21) })).status).toBe(400);
     expect((await patch(alice, groupId, { topic: "Cooking" })).status).toBe(400);
+    // The city is checked against the group's country after merging: Cairo isn't in Germany.
+    expect((await patch(alice, groupId, { country: "Germany" })).status).toBe(400);
   });
 
   it("gives another user 404 (not 403) and changes nothing", async () => {

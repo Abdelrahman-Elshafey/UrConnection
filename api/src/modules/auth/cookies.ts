@@ -38,18 +38,26 @@ export function clearSessionCookie(res: Response): void {
 export const GOOGLE_OAUTH_COOKIE = isProduction ? "__Host-google_oauth" : "google_oauth";
 export const GOOGLE_OAUTH_TTL_MS = 10 * 60 * 1000; // 10 minutes to pick an account
 
-export function setGoogleOAuthCookie(res: Response, state: string, codeVerifier: string): void {
-  // Both values are base64url (no "."), so one cookie can carry both.
-  res.cookie(GOOGLE_OAUTH_COOKIE, `${state}.${codeVerifier}`, { ...baseOptions, maxAge: GOOGLE_OAUTH_TTL_MS });
+export interface GoogleOAuthCookie {
+  state: string;
+  codeVerifier: string;
+  /** Where to go after signing in (a path on this site, already checked), if not home. */
+  next?: string;
+}
+
+export function setGoogleOAuthCookie(res: Response, { state, codeVerifier, next }: GoogleOAuthCookie): void {
+  // Every part is base64url (no "."), so one cookie carries all of them: "state.verifier[.next]".
+  const parts = [state, codeVerifier, ...(next ? [Buffer.from(next).toString("base64url")] : [])];
+  res.cookie(GOOGLE_OAUTH_COOKIE, parts.join("."), { ...baseOptions, maxAge: GOOGLE_OAUTH_TTL_MS });
 }
 
 /** Reads and validates the cookie. undefined if it's missing or malformed. */
-export function readGoogleOAuthCookie(cookies: Record<string, unknown> | undefined): { state: string; codeVerifier: string } | undefined {
+export function readGoogleOAuthCookie(cookies: Record<string, unknown> | undefined): GoogleOAuthCookie | undefined {
   const value = cookies?.[GOOGLE_OAUTH_COOKIE];
-  if (typeof value !== "string" || value.length > 200) return undefined;
-  const [state, codeVerifier, extra] = value.split(".");
-  if (!state || !codeVerifier || extra !== undefined) return undefined;
-  return { state, codeVerifier };
+  if (typeof value !== "string" || value.length > 1000) return undefined;
+  const [state, codeVerifier, next, extra] = value.split(".");
+  if (!state || !codeVerifier || next === "" || extra !== undefined) return undefined;
+  return { state, codeVerifier, ...(next && { next: Buffer.from(next, "base64url").toString() }) };
 }
 
 export function clearGoogleOAuthCookie(res: Response): void {

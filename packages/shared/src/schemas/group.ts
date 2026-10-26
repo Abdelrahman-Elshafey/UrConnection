@@ -1,6 +1,7 @@
 import { z } from "../zod";
 import { TOPICS } from "../topics";
 import { PLATFORM_KEYS, PLATFORM_MAP } from "../platforms";
+import { isCountry } from "../countryNames";
 
 /**
  * The fields a user fills in to create a group. Kept as a plain object
@@ -12,9 +13,15 @@ const groupFields = z.object({
   title: z.string().trim().min(1, "Title is required").max(20, "Title is too long (max 20 characters)"),
   platform: z.enum(PLATFORM_KEYS, { error: "Platform is required" }),
   // protocol: only http(s) links. z.url() alone would also accept javascript:, data:, ...
-  meeting_link: z.url({ protocol: /^https?$/, error: "Please enter a valid http(s) URL" }),
-  country: z.string().min(1, "Country is required"),
-  city: z.string().min(1, "City is required"),
+  // max(500): the database allows 500 characters; a longer link would fail there with a 500.
+  meeting_link: z
+    .url({ protocol: /^https?$/, error: "Please enter a valid http(s) URL" })
+    .max(500, "Link is too long (max 500 characters)"),
+  // Only countries the filters offer: a group in "Egyptt" could never be found.
+  // (Whether the city belongs to the country is checked by the API, which has the city
+  // lists at hand; the web loads them only on demand, see cities.ts.)
+  country: z.string().min(1, "Country is required").refine(isCountry, "Please choose a country from the list"),
+  city: z.string().min(1, "City is required").max(100, "City name is too long"),
   description: z
     .string()
     .trim()
@@ -45,6 +52,10 @@ export const updateGroupSchema = groupFields
 
 /** A stored group, as returned by GET /api/groups and GET /api/groups/:id. */
 export const groupSchema = groupFields.extend({
+  // Stored rows are read back as plain text: one group saved before the country check
+  // existed must not make the web reject a whole page of results.
+  country: z.string(),
+  city: z.string(),
   id: z.uuid(),
   user_id: z.uuid(),
   created_at: z.iso.datetime({ offset: true }), // JSON has no Date type: timestamps travel as ISO strings

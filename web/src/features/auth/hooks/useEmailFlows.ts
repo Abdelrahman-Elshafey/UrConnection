@@ -5,7 +5,7 @@ import {
   resetPassword,
   verifyEmail,
 } from "../../../services/auth.service";
-import { SESSION_QUERY_KEY } from "./useUser";
+import { SESSION_QUERY_KEY, switchUser } from "./useUser";
 
 /** Confirm the email; then refresh "who am I" so email_verified updates everywhere. */
 export function useVerifyEmail() {
@@ -29,6 +29,6 @@ export function useResetPassword() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ token, password }: { token: string; password: string }) => resetPassword(token, password),
-    onSuccess: () => queryClient.setQueryData(SESSION_QUERY_KEY, null),
+    onSuccess: () => switchUser(queryClient, null),
   });
 }
