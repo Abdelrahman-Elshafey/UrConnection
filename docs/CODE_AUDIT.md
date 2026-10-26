@@ -319,13 +319,13 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 
 ### Notes on Stage 14 (VPS, staging, off-site backups)
 - **S8 completed**: `Strict-Transport-Security: max-age=31536000` from Caddy, for every host except `localhost` (it would force HTTPS on the dev server). No `includeSubDomains`/`preload`, so other projects under `aelshafey.com` stay free. helmet's own HSTS is off (`app.ts`): API responses carried two differing headers. A test checks the API sends none.
-- **Backups off-site**: the `offsite` service copies every dump to a Cloudflare R2 bucket (another company than the VPS host) with a key limited to that bucket; restore from the R2 copy into a scratch database matched the live data. **Open**: the key can delete objects (R2 bucket lock would stop a server intruder wiping them), and avatars (Garage volume) are not backed up.
+- **Backups off-site**: the `offsite` service copies every dump to a Cloudflare R2 bucket (another company than the VPS host) with a key limited to that bucket; restore from the R2 copy into a scratch database matched the live data. **Open**: the key can delete objects (R2 bucket lock would stop a server intruder wiping them), and avatars (Garage volume) are not backed up (**done in Stage 16**: mirrored to R2 by the same service).
 - **Email**: Resend (SMTPS, send-only key), DKIM + SPF + DMARC (`p=none`). **Monitoring**: UptimeRobot on `/api/health` (checks the DB too).
 - **Found**: single-file bind mounts (Caddyfile, backup scripts) keep the old file after `git pull`; `dc restart <service>` is needed (documented in SERVER_SETUP.md §8).
 
 ### Notes on the 2026-10-26 review (after Stage 15)
 - **Scope**: every file in `api/`, `web/`, `packages/shared/`, plus Docker, Caddy, CI and deploy. The security-critical code (sessions, OAuth, ownership, uploads, CSRF) held up; fixes were B31–B37, S13, O11, O12.
 - **Stale statuses closed**: S2, S4, S6, S10, S11 (Supabase items, superseded by the v2 API + DB CHECKs), R6, H4, H6.
-- **Still open**: H9 (the web and shared packages have no tests yet), P10/P11 (for when there is real traffic), avatars not in backups, no mobile nav menu.
+- **Still open**: H9 (the web and shared packages have no tests yet), P10/P11 (for when there is real traffic), no mobile nav menu.
 - **Tests added**: a too-long link, an unknown country and a city outside its country are refused with 400 (group create, group PATCH, register, profile PATCH); Google sign-in returns to `next` and never to another site; `safeNextPath` unit tests. API: 74 unit + 122 DB tests.
 - Home bundle unchanged (146 KB gzip measured with `gzip -9`).
