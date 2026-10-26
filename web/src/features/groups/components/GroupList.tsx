@@ -13,24 +13,16 @@ import GroupCard from "./GroupCard";
 export default function GroupList() {
   // Filters live in the URL (useGroupFilters); the API does the filtering (useGroups).
   const { filters, apiParams, setFilter, clearFilters, hasActiveFilters, isDetecting } = useGroupFilters();
-  const { groups, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGroups(apiParams);
+  const { groups, data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGroups(apiParams);
   const [toDelete, setToDelete] = useState<Group | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   if (isLoading) return <PageSpinner label="Initializing Experience" />;
 
-  if (error) {
-    return (
-      <div className="flex justify-center bg-white p-20 dark:bg-black">
-        <div className="w-full max-w-2xl rounded-[40px] bg-surface p-12 text-center dark:bg-raised-dark">
-          <p className="mb-8 font-medium text-gray-500 dark:text-gray-400">{error.message}</p>
-          <Button onClick={() => refetch()} size="sm">
-            Retry Connection
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Nothing to show at all (the first page failed): an error box in place of the cards. The
+  // search and filters stay, so the user can retry or change them. When groups are already
+  // loaded (a failed "Load more"), they stay on screen and the error shows by the button.
+  const listFailed = error !== null && !data;
 
   return (
     <div className="min-h-screen w-full bg-white transition-colors duration-200 dark:bg-black">
@@ -78,28 +70,42 @@ export default function GroupList() {
           </div>
         </div>
 
-        {/* justify-items-center, not place-items-center: cards keep the default align "stretch",
-            so every card in a row is as tall as the tallest one. */}
-        <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {groups.map((group) => (
-            <GroupCard key={group.id} group={group} onDelete={setToDelete} />
-          ))}
+        {listFailed ? (
+          <div className="mx-auto w-full max-w-2xl rounded-[40px] bg-surface p-12 text-center dark:bg-raised-dark">
+            <p className="mb-8 font-medium text-gray-500 dark:text-gray-400">{error.message}</p>
+            <Button onClick={() => refetch()} size="sm">
+              Retry Connection
+            </Button>
+          </div>
+        ) : (
+          // justify-items-center, not place-items-center: cards keep the default align "stretch",
+          // so every card in a row is as tall as the tallest one.
+          <div className="grid grid-cols-1 justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {groups.map((group) => (
+              <GroupCard key={group.id} group={group} onDelete={setToDelete} />
+            ))}
 
-          {groups.length === 0 && (
-            <div className="col-span-full py-30 text-center">
-              <h3 className="mb-6 text-4xl font-black tracking-tighter text-black dark:text-white md:text-6xl">No groups found.</h3>
-              <p className="mx-auto mb-10 max-w-sm px-6 text-lg font-medium leading-relaxed text-gray-500 dark:text-gray-400">
-                Refine your discovery parameters or expand your search to global locations.
-              </p>
-              <Button variant="dark" onClick={clearFilters} className="uppercase tracking-widest">
-                Reset Filters
-              </Button>
-            </div>
-          )}
-        </div>
+            {groups.length === 0 && (
+              <div className="col-span-full py-30 text-center">
+                <h3 className="mb-6 text-4xl font-black tracking-tighter text-black dark:text-white md:text-6xl">No groups found.</h3>
+                <p className="mx-auto mb-10 max-w-sm px-6 text-lg font-medium leading-relaxed text-gray-500 dark:text-gray-400">
+                  Refine your discovery parameters or expand your search to global locations.
+                </p>
+                <Button variant="dark" onClick={clearFilters} className="uppercase tracking-widest">
+                  Reset Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {hasNextPage && (
-          <div className="mt-16 flex justify-center">
+          <div className="mt-16 flex flex-col items-center gap-4">
+            {error && !listFailed && (
+              <p role="alert" className="text-sm font-medium text-red-500">
+                {error.message}
+              </p>
+            )}
             <Button variant="dark" onClick={() => fetchNextPage()} loading={isFetchingNextPage} className="uppercase tracking-widest">
               {isFetchingNextPage ? "Loading…" : "Load more"}
             </Button>

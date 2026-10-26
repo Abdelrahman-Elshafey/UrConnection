@@ -4,7 +4,6 @@ import {
   FaFacebook,
   FaFacebookMessenger,
   FaInstagram,
-  FaLink,
   FaLinkedin,
   FaMeetup,
   FaMicrosoft,
@@ -21,13 +20,7 @@ import {
   FaYoutube,
 } from "react-icons/fa6";
 import { SiGooglemeet, SiSignal, SiThreads, SiZoom } from "react-icons/si";
-import {
-  PLATFORMS as PLATFORM_META,
-  PLATFORM_MAP,
-  isPlatformKey,
-  type Platform,
-  type PlatformKey,
-} from "@urconnections/shared";
+import { PLATFORMS as PLATFORM_META, type Platform, type PlatformKey } from "@urconnections/shared";
 
 interface PlatformUi {
   icon: IconType;
@@ -37,9 +30,6 @@ interface PlatformUi {
 
 /** A platform as the UI needs it: shared metadata + icon and colors. */
 export type PlatformView = Platform & PlatformUi;
-
-/** Fallback for unknown/legacy platform values coming from the database. */
-export type UnknownPlatformView = { key: "unknown"; label: string; placeholder?: undefined } & PlatformUi;
 
 const GRAY = "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700";
 
@@ -140,11 +130,10 @@ const PLATFORM_UI: Record<PlatformKey, PlatformUi> = {
 
 export const PLATFORMS: readonly PlatformView[] = PLATFORM_META.map((p) => ({ ...p, ...PLATFORM_UI[p.key] }));
 
-const UNKNOWN_PLATFORM: UnknownPlatformView = { key: "unknown", label: "Link", icon: FaLink, color: GRAY };
+const PLATFORM_VIEWS = Object.fromEntries(PLATFORMS.map((p) => [p.key, p])) as Record<PlatformKey, PlatformView>;
 
-/** UI info for a stored platform key; unknown values get a neutral "Link" badge. */
-export const getPlatform = (key: string | null | undefined): PlatformView | UnknownPlatformView => {
-  if (!key || !isPlatformKey(key)) return UNKNOWN_PLATFORM;
-  // After the type guard, `key` is a PlatformKey, so both lookups are guaranteed to exist.
-  return { ...PLATFORM_MAP[key], ...PLATFORM_UI[key] };
-};
+/**
+ * UI info for a platform. Every stored group has a valid key (the database CHECK and the
+ * response schema guarantee it), so there's no "unknown platform" fallback.
+ */
+export const getPlatform = (key: PlatformKey): PlatformView => PLATFORM_VIEWS[key];

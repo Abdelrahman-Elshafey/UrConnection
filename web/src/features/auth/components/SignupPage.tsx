@@ -1,11 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema } from "@urconnections/shared";
 import { FormProvider, useForm } from "react-hook-form";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "../../../components/ui/Button";
 import { CountryCityFields } from "../../../components/ui/CountryCityFields";
 import { PasswordField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { withNext } from "../../../lib/nextPath";
 import { useRegister } from "../hooks/useSignIn";
 import AuthLayout from "./AuthLayout";
 import GoogleSignIn from "./GoogleSignIn";
@@ -14,6 +15,7 @@ const EMPTY = { email: "", password: "", confirmPassword: "", display_name: "", 
 
 /** /signup: create an account. Only email and password are required. */
 export default function SignupPage() {
+  const [searchParams] = useSearchParams();
   const { mutate: registerAccount, isPending, error } = useRegister();
   const form = useForm({ resolver: zodResolver(signupSchema), defaultValues: EMPTY });
   const {
@@ -54,7 +56,7 @@ export default function SignupPage() {
 
       <p className="mt-12 text-center text-xs font-bold text-gray-500 dark:text-gray-400">
         Already have an account?{" "}
-        <Link to="/login" className="ml-1 border-b border-current text-black hover:text-accent dark:text-white">
+        <Link to={withNext("/login", searchParams.get("next"))} className="ml-1 border-b border-current text-black hover:text-accent dark:text-white">
           Sign in
         </Link>
       </p>

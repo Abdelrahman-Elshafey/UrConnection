@@ -117,17 +117,22 @@ async function fetchLocation(): Promise<UserLocation> {
 /**
  * Detects the user's country and city on first visit.
  * staleTime: Infinity, because location doesn't change mid-session.
+ *
+ * `enabled`: only ask when the answer will be used. Each lookup sends the visitor's IP address
+ * to a third party (ipapi.co, rate-limited), so a visit that already has filters skips it.
  */
-export function useUserLocation(): UserLocation & { isDetecting: boolean } {
-  const { data, isPending } = useQuery({
+export function useUserLocation(enabled: boolean): UserLocation & { isDetecting: boolean } {
+  const { data, isLoading } = useQuery({
     queryKey: ["userLocation"],
     queryFn: fetchLocation,
     staleTime: Infinity,
+    enabled,
   });
 
   return {
     country: data?.country ?? "",
     city: data?.city ?? "",
-    isDetecting: isPending,
+    // isLoading, not isPending: a disabled query stays "pending" forever, but it isn't detecting.
+    isDetecting: isLoading,
   };
 }

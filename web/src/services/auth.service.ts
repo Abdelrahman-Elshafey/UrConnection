@@ -18,7 +18,7 @@ import { clearSavedSearch } from "../features/groups/utils/savedSearch";
 /**
  * Google sign-in (Stage 9) is a page navigation, not an API call: link to this URL.
  * The API redirects to Google and back, sets the session cookie, then sends the browser
- * to "/" (or to /login?error=<code> if something went wrong).
+ * to "/" or to `?next=<path>` (or to /login?error=<code> if something went wrong).
  */
 export const GOOGLE_SIGN_IN_URL = "/api/auth/google";
 

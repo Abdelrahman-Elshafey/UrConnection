@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { Button } from "../../../components/ui/Button";
 import { PasswordField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { withNext } from "../../../lib/nextPath";
 import { useLogin } from "../hooks/useSignIn";
 import AuthLayout from "./AuthLayout";
 import GoogleSignIn from "./GoogleSignIn";
@@ -47,7 +48,7 @@ export default function LoginPage() {
 
       <p className="mt-12 text-center text-xs font-bold text-gray-500 dark:text-gray-400">
         Don't have an account?{" "}
-        <Link to="/signup" className="ml-1 border-b border-current text-black hover:text-accent dark:text-white">
+        <Link to={withNext("/signup", searchParams.get("next"))} className="ml-1 border-b border-current text-black hover:text-accent dark:text-white">
           Sign up
         </Link>
       </p>
