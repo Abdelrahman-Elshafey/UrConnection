@@ -2,91 +2,52 @@
 trigger: always_on
 ---
 
-The "Aspirational Minimalism with Adaptive Theme" UI Design Brief Prompt
-Role Context: You are a Lead Frontend Architect and Senior Product Designer specializing in premium, high-converting e-commerce showcases.
+# UrConnections UI style guide: "Aspirational Minimalism" with an adaptive theme
 
-Objective: Design and code a responsive user interface for a premier hardware or lifestyle brand. The design must embody "Aspirational Minimalism" with a seamless, high-fidelity light/dark theme implementation. The focus is on immaculate cleanliness, sharp typographic hierarchy, and allowing immersive product imagery to tell the story.
+UrConnections helps people find study and interest groups by topic, place and platform.
+The UI is calm, Apple-like and content-first: the groups are the content, the UI only frames them.
+Build pages from the UI kit in `web/src/components/ui`; colors are the `@theme` tokens in `web/src/index.css`.
 
-1. Design Philosophy & General Aesthetic
-Minimalism as Luxury: Whitespace (negative space) is an active design element, not just empty space. Every pixel must have a clear purpose.
+## 1. Design philosophy
+- **Minimalism as quality**: whitespace is an active design element. Every element needs a clear purpose.
+- **Band structure**: pages are built from full-width horizontal sections (bands) that alternate background
+  (white / light gray `#f5f5f7` in light mode; black / deep gray `#1d1d1f` in dark mode) to separate content.
 
-Product-Centricity: The UI exists only to frame the product. Use edge-to-edge, ultra-high-resolution assets with shallow depth-of-field or isometric views.
+## 2. Typography
+- **Font**: Inter (self-hosted via `@fontsource-variable/inter`) everywhere.
+- **Display headlines**: very large (`text-5xl` to `text-8xl`), black weight, tight tracking (`PageHero`).
+- **Subheadings**: smaller, medium weight, directly under the headline.
+- **Body copy**: short, with generous line height.
+- **Contrast**: black on white, white on black. Muted gray only for secondary text (labels, hints, footer).
 
-Dynamic Band Structure: The layout is constructed of horizontal, full-bleed sections (bands). These bands alternate color based on the current theme (e.g., Light Gray and Pure White in Light Mode; Deep Midnight Gray and Pure Black in Dark Mode) to create a sense of depth and focus shift.
+## 3. Components
+- **Navigation**: sticky at the top with a backdrop blur, semi-transparent white (light) or deep gray (dark).
+  Logo, account links (Sign In / Profile / Sign Out) and the "Create Group" button.
+- **Home hero**: search-centric. A large search input ("Find your group by interest") and a headline.
+- **Filter bar**: sticky under the nav: Country, City, Platform selects and topic pills.
+- **Group grid**: responsive 1–4 columns of group cards.
+- **Group card**: topic tag, platform badge, title, short description, location (City, Country), and a clear
+  primary action ("Connect now") plus "View Details". Owners also see Edit / Delete.
+- **Footer**: dark, multi-column links (Explore, Account) and the copyright line.
 
-2. Typographic Hierarchy (Adaptive Contrast)
-Font Family: Use a clean, modern geometric sans-serif font family (e.g., San Francisco, Inter, Geist) throughout.
+## 4. Color and motion
+- **One accent color**, `#0071e3` (`bg-accent`), used sparingly for primary actions and highlights.
+  It must stay readable in both themes.
+- **Motion**: subtle and fast: fades, small scale on hover, smooth color transitions. Use `transition`
+  (not `transition-all`) and keep blur light, for performance.
 
-The "Display" Headlines: Headlines are exceptionally large (e.g., text-6xl to text-8xl), bold, with tight letter spacing (tracking) to feel compact and high-end.
+## 5. Dark mode
+- Follows the system setting (`prefers-color-scheme`, Tailwind `dark:`). *Planned (audit R7):* a manual toggle.
+- A color-space shift, not an inversion: white → black for main backgrounds, `#f5f5f7` → `#1d1d1f` for
+  alternating or nested sections. Elevated surfaces get slightly lighter grays, never black on black.
+- Text flips to white; long body text may use off-white `#f5f5f7`.
+- Shadows are rare. In dark mode, show elevation with lighter borders or a subtle glow, not black shadows.
 
-Subheadings: Slightly smaller, medium weight, providing context immediately beneath the headline.
-
-Body Copy: Sparse and impactful. High line-height for readability.
-
-High-Contrast Text: Text colors must switch perfectly (Pure Black on Pure White background, or Pure White on Pure Black background). Muted text is only for secondary legal text in the footer.
-
-3. Component Breakdown & Component Behavior
-A. Adaptive Global Navigation
-Style: Minimalist, centered horizontal list of key categories (e.g., "Hardware", "Services", "Support"). Icons only for "Search" and "Bag/Cart".
-
-Behavior: Sticky at the top. Must have an advanced backdrop-blur (acrylic effect).
-
-Light Mode Nav: Semi-transparent white background (#FFFFFFBF).
-
-Dark Mode Nav: Semi-transparent deep gray background (#1D1D1FBF).
-
-B. The Immersive Hero Section
-Layout: Centered content with a massive, edge-to-edge asset of the "flagship" product. Content must include the display headline, subheading, and two clean call-to-action links.
-
-C. Alternating Product Feature Bands
-Grid Pattern: Alternating 50/50 split sections (e.g., Section 1: Image Left, Text Right; Section 2: Text Left, Image Right).
-
-Immersive Bands: Use full-width bands where the product asset is the background, with centered text overlaid.
-
-D. The Detailed Utility Footer
-Style: Very detailed, multi-column sitemap with strict legal disclaimers.
-
-Contrast in Dark Mode: When the main site is in dark mode, the footer background shifts to a very deep, muted gray (#1D1D1F), keeping text readability high but subtly different from the main black background.
-
-4. Color Palette & Interactions
-Accent Color: Use ONE vibrant, signature accent color sparingly for CTAs and highlights (e.g., a specific blue #0071e3). This accent must remain consistent and accessible in both themes.
-
-Micro-interactions: Motion is key. Refined fade-ins on scroll, subtle parallax effects on large background assets, and smooth transitions when switching themes.
-
-5. Premium Dark Mode Implementation (Adaptive UI)
-Intuitive Theme Logic: The site must detect the user's system preference (prefers-color-scheme: dark) and automatically load the correct theme. A subtle toggle switch should allow the user to manually override the preference.
-
-Color Space Shift (Not Just Inversion):
-
-Main Backgrounds: Shift from Pure White (#FFFFFF) to a deep, focused Pure Black (#000000).
-
-Alternating Backgrounds: Shift from Light Gray (#F5F5F7) to a subtle Deep Midnight Gray (#1D1D1F) for nested sections.
-
-Depth Hierarchy: In dark mode, depth is created by moving from darker grays (base layer) to slightly lighter grays (elevated components), never pure black-on-pure black.
-
-Text Adaptation: Text must flip perfectly: pure black text shifts to Pure White (#FFFFFF) or off-white (#F5F5F7) for body copy, avoiding harsh #FFFFFF for large bodies of text.
-
-Asset Management: The UI must display theme-specific product renders where necessary (e.g., showing the hardware with a dark, moody studio render when dark mode is active).
-
-Shadows: Shadows are rarely used in the main interface, but in dark mode, any elevated component must use very subtle "glow" effects or slightly lighter gray borders instead of traditional black shadows to create the illusion of elevation.
-
-5. Layout Hierarchy:
-
-Hero Section: A minimalist search-centric hero. Large input fields for "Find your group who shares you same interest" and  (Country/City)".
-
-Global Discovery Bar: A sticky filter bar featuring dropdowns for Country (All), City (Selected), and Subject Category.
-
-The Grid (Group Feed): A responsive 3 or 4-column grid of "Groups".
-
-Card Content: Subject tag, Group Title, Member count, Location (City, Country), and a "Join" or "View Details" button.
-
-Sidebar/Navigation: Clean top navigation with "Create a Group", "My Groups", and "Profile".
-
-6. User Flow (UX):
-
-Zero Friction: The user should land on a page that immediately detects their location and shows local groups.
-
-Community Proof: Display "Social Proof" elements like "X students active now" or "X groups in your city".
-
-Action-Oriented: Every group card must have a clear primary action to reduce the steps between discovery and joining.
-
+## 6. User experience
+- **Zero friction**: the home page pre-selects the visitor's country/city (IP location) on a first visit,
+  so local groups show at once. Filters live in the URL, so results can be shared and bookmarked.
+- **Action-oriented**: every card has one clear primary action, keeping discovery-to-joining short.
+- **Accessible by default**: labels linked to inputs, `aria-pressed` on toggles, text at least 11–12px,
+  focus visible, native `<dialog>` for confirmations.
+- *Planned (audit R8):* social proof such as member counts or "X groups in your city" (needs a members
+  concept in the data model).
