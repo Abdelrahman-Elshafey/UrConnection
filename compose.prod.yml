@@ -146,8 +146,9 @@ services:
       migrate:
         condition: service_completed_successfully
 
-  # Off-site copies of the backups (Stage 14, docker/backup/offsite.sh): every 6 hours, new
-  # dumps go to an S3-compatible bucket at another company (Cloudflare R2), kept OFFSITE_KEEP_DAYS.
+  # Off-site copies (Stage 14, docker/backup/offsite.sh): every 6 hours, new dumps and a mirror
+  # of the avatar storage go to an S3-compatible bucket at another company (Cloudflare R2);
+  # old dumps and removed avatars are kept OFFSITE_KEEP_DAYS.
   # Opt-in through a profile: it runs only where .env.prod sets COMPOSE_PROFILES=offsite (the
   # server), so `npm run prod:up` on your computer works without a bucket.
   offsite:
@@ -166,9 +167,22 @@ services:
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${OFFSITE_S3_SECRET_ACCESS_KEY:-}
       # The key may only touch its own bucket, so don't try to list or create buckets.
       RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+      # Our own file storage (avatars), read through Garage's S3 API (Stage 16). The same key
+      # the API uses: Garage's --default-bucket creates only one. offsite.sh only reads from it.
+      STORAGE_BUCKET: ${S3_BUCKET:-urconnections}
+      RCLONE_CONFIG_GARAGE_TYPE: s3
+      RCLONE_CONFIG_GARAGE_PROVIDER: Other
+      RCLONE_CONFIG_GARAGE_ENDPOINT: http://garage:3900
+      RCLONE_CONFIG_GARAGE_REGION: garage
+      RCLONE_CONFIG_GARAGE_FORCE_PATH_STYLE: "true"
+      RCLONE_CONFIG_GARAGE_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env.prod}
+      RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env.prod}
     volumes:
       - ./docker/backup/offsite.sh:/offsite.sh:ro
       - backups:/backups:ro # read-only: this service can never change the local backups
+    depends_on:
+      garage:
+        condition: service_healthy
 
 volumes:
   pgdata:

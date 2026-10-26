@@ -351,7 +351,16 @@ The pipe streams the dump from one container into the other without a temporary 
 
 **Uptime monitoring (UptimeRobot, set up 2026-10-22)**: an HTTP(s) monitor calls `https://urconnections.aelshafey.com/api/health` every 5 minutes and emails when it fails. The endpoint also checks the database, so "up" means the whole chain (DNS → Caddy → API → Postgres) works.
 
-**Not backed up yet: avatars.** They live in the `garage` volume, which neither service copies. Losing them means users upload their picture again; decide before launch (Stage 16).
+**Avatars off-site (Stage 16).** The same `offsite` service mirrors the storage bucket (Garage, through its S3 API as the rclone remote `garage`) to `storage/` in the R2 bucket, every 6 hours, after the dumps. A picture that disappears from Garage (replaced, deleted, or the whole server lost) is not deleted in R2: `rclone sync --backup-dir` moves it to `storage-removed/<UTC time>/`, kept `OFFSITE_KEEP_DAYS` (pruned by that folder's time, not the file's age). Nothing new goes in `.env.prod`: it reuses `S3_*` and `OFFSITE_*`. The first deploy with this change recreates `offsite` with the new settings. Then check, and run the restore drill (into a temporary folder, so live storage is never touched):
+```bash
+dc exec offsite sh /offsite.sh once
+# → offsite: copied to r2:urconnections-backups (N dumps there)
+# → offsite: storage mirrored to r2:urconnections-backups/storage (N files)
+dc exec -T offsite sh -c 'rclone copy r2:$OFFSITE_S3_BUCKET/storage /tmp/restore && rclone check /tmp/restore garage:$STORAGE_BUCKET && rm -rf /tmp/restore' </dev/null
+# → "0 differences found", "N matching files"
+```
+**Real restore** (new server, or a lost volume): deploy the stack, then `dc exec -T offsite sh -c 'rclone copy r2:$OFFSITE_S3_BUCKET/storage garage:$STORAGE_BUCKET' </dev/null`. One removed picture: find it with `rclone lsf -R r2:$OFFSITE_S3_BUCKET/storage-removed` and copy that folder back the same way. Avatar URLs contain the storage key, so restored pictures show again with no database change.
+Tested 2026-10-26 against the dev Garage (a local folder standing in for R2): mirror, a removed picture moved to `storage-removed/`, an old removal folder pruned, the picture restored with the same content.
 
 ## 11. Later: Cloudflare proxy (orange cloud)
 
