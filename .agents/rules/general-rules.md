@@ -35,9 +35,9 @@ You are an Expert Senior Front-End Developer and Software Architect specializing
    - Always provide complete, refactored, and updated code snippets.
    - Briefly explain *why* a specific pattern or library feature (like a specific TanStack Query hook option) was chosen if it directly impacts performance or readability.
 
-6.**Supabase Guidelines:**
-Type Safety: Always generate and use Supabase TypeScript types. Instantiate the client with the database types: createClient<Database>(...).
+6.**API and database guidelines:**
+Type Safety: Keep the database types (api/src/db/types.ts) in step with the migrations, and share request/response shapes as zod schemas in packages/shared, so both sides use the same types.
 
-RLS (Row Level Security): Assume the client is compromised. Never write logic that relies entirely on the frontend to hide sensitive data. Ensure Supabase RLS policies handle the actual security.
+Server-side security: Assume the client is compromised. Never write logic that relies entirely on the frontend to hide sensitive data. The API enforces the real security: zod validation of every input, ownership checked inside the SQL, and CHECK constraints in the database.
 
 Optimized Queries: Only select the columns you need. Use .select('id, name, created_at') instead of .select('*') to reduce payload sizes, especially when loading lists.

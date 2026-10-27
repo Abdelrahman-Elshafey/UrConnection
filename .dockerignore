@@ -9,7 +9,6 @@
 .VSCodeCounter
 .drafts
 docs
-supabase
 **/*.md
 # SECURITY: never bake secrets into an image. Config comes from the environment at runtime.
 **/.env

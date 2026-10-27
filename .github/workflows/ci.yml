@@ -4,8 +4,8 @@ name: CI
 
 on:
   push:
-    # `dev` isn't listed: deploy.yml runs these same checks (via workflow_call) before deploying.
-    branches: [main, "stage-*"]
+    # `main` isn't listed: deploy.yml runs these same checks (via workflow_call) before deploying.
+    branches: [dev, "stage-*"]
   pull_request:
   workflow_call:
 

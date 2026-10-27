@@ -1,5 +1,6 @@
-# Continuous Deployment (Stage 15): every push to `dev` that passes the checks is built into
-# Docker images, pushed to GitHub's container registry (GHCR) and deployed to the server.
+# Continuous Deployment (Stage 15; from `main` since the Stage 16 launch): every push to `main`
+# that passes the checks is built into Docker images, pushed to GitHub's container registry
+# (GHCR) and deployed to the server. Work happens on `dev`; a PR dev → main is a release.
 #   check   → the same checks as ci.yml (reused, not copied)
 #   images  → build api + web, push ghcr.io/<owner>/urconnections-{api,web}:<commit>
 #   deploy  → SSH to the server, which runs scripts/deploy.sh <commit>; then a smoke test
@@ -9,7 +10,7 @@ name: Deploy
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
 
 # Never two deploys at once, and never cancel one half-way: a newer push waits its turn.
 concurrency:

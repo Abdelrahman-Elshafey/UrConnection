@@ -4,9 +4,9 @@ trigger: always_on
 
 1. Service Layer Abstraction (SOLID: Single Responsibility)
 
-Rule: Never call supabase.auth directly inside a React component.
+Rule: Never call the auth API (or fetch) directly inside a React component.
 
-Implementation: All authentication logic must reside in src/services/auth.service.ts. This service should export clean, typed functions like signInWithGoogle(), signInWithApple(), and signOut().
+Implementation: All authentication calls must reside in web/src/services/auth.service.ts (through lib/apiClient.ts). This service exports clean, typed functions like login(), register(), logout() and GOOGLE_SIGN_IN_URL. The session is an httpOnly cookie set by our API: frontend code never reads or stores a token.
 
 2. Route Protection via Loaders (Performance & UX)
 
@@ -22,6 +22,6 @@ Implementation: Use a useUser hook that wraps useQuery. When a user logs in or o
 
 4. Social Auth Handling (Clean Code)
 
-Rule: Standardize the OAuth redirect flow. Use environment variables for redirect URLs to ensure the flow works across Local, Staging, and Production environments.
+Rule: Standardize the OAuth redirect flow. The API owns it: the redirect URI comes from its APP_ORIGIN setting, so the same code works in development and production.
 
-Logic: supabase.auth.signInWithOAuth({ provider, options: { redirectTo: import.meta.env.VITE_AUTH_REDIRECT_URL } }).
+Logic: the Google button is a plain link to /api/auth/google (with ?next= to return to the current page). The API runs the authorization-code flow with state + PKCE and redirects back to the site.
