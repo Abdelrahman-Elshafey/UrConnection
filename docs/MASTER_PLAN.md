@@ -26,7 +26,7 @@ Audit IDs (B, S, D, O, P, A…) refer to [CODE_AUDIT.md](CODE_AUDIT.md). This pl
 | Sessions | **Server-side sessions in Postgres**, random token in an `httpOnly; Secure; SameSite=Lax` cookie | Simpler and safer than JWT in localStorage: XSS can't read it, and logout really revokes it. |
 | Google login | **`arctic`** (small OAuth 2.0 library) with state + PKCE | You write the flow yourself; the library only handles the protocol details. |
 | Email | **nodemailer**. **Mailpit** catches all mail in dev. Any SMTP provider in prod | See every email locally without sending real mail. |
-| File storage | **MinIO** (S3-compatible) in Docker. Images converted to WebP with **sharp** on the server | Learn the S3 API, which is the same as AWS. Server-side conversion closes S5 for good. |
+| File storage | **Garage** (S3-compatible, self-hosted in Docker; chosen in Stage 10 because MinIO's community edition was archived in April 2026), used through the AWS SDK behind a `Storage` interface. Images converted to WebP with **sharp** on the server | Learn the S3 API, which is the same as AWS. Server-side conversion closes S5 for good. |
 | Tests | **Vitest** (both sides) + **Supertest** (API) + React Testing Library | Vite-native and fast. |
 | Logging | **pino** (JSON logs) + request IDs | Production-grade logs from the start. |
 | Containers | **Docker** multi-stage images + **Docker Compose** (dev and prod files) | The core deployment skill. |
@@ -44,7 +44,7 @@ flowchart LR
   C -->|/api/*| A[api: Express + TS]
   C -->|/*| W[web: Nginx serving React build]
   A --> P[(Postgres)]
-  A --> M[(MinIO: avatars)]
+  A --> M[(Garage S3: avatars)]
   A -->|SMTP| E[Mail: Mailpit in dev, provider in prod]
   A -->|OAuth| G[Google]
 ```
@@ -53,8 +53,8 @@ flowchart LR
 Find_Study/
   package.json            # npm workspaces root: scripts that run across all packages
   tsconfig.base.json      # shared strict TS settings
-  docker-compose.yml      # dev: postgres, mailpit, minio (+ api/web optional)
-  compose.prod.yml        # prod: caddy, web, api, postgres, minio, backup
+  docker-compose.yml      # dev: postgres, mailpit, garage (+ api/web optional)
+  compose.prod.yml        # prod: caddy, web, api, postgres, garage, backup
   Caddyfile
   .github/workflows/      # ci.yml, deploy.yml
   packages/shared/src/    # zod schemas + inferred types + constants (topics, platforms, countries)
@@ -111,7 +111,13 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ## 3. Ground rules for every stage
 1. Branch `stage-XX-name` from `dev`. Keep the PR small. Merge only when `npm run lint && npm run typecheck && npm test` pass.
 2. **No secrets in git.** Every service reads env vars validated by `config.ts`. Commit a `.env.example`.
-3. Each stage updates the docs it touches (this file's progress table, ARCHITECTURE.md, CODE_AUDIT.md statuses).
+3. **Docs checklist: every stage, before its commit.** Each doc must describe the code *as it is after the stage*. Don't add notes on top of stale text; rewrite the outdated part.
+   - [ ] **MASTER_PLAN.md**: tick the stage in the progress table, plus a short note of what was done or changed from the plan
+   - [ ] **ARCHITECTURE.md**: folder map, routing, data flow, query keys (regenerate the map from `git ls-files`, not from memory)
+   - [ ] **CODE_AUDIT.md**: mark the items the stage fixed (`[x]` / `[~]`) and add stage notes
+   - [ ] **CLAUDE.md**: commands, layout, conventions, if any changed
+   - [ ] **README.md**: setup steps, commands, stack, if any changed
+   - [ ] **`.env.example`** files: every new env var is listed (no real values)
 4. Claude explains the *why* for each new concept as it's written, and flags security-critical code with `// SECURITY:` comments.
 5. Prefer boring, well-known libraries for anything cryptographic. **Never hand-roll crypto.**
 
@@ -142,7 +148,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 
 ### Stage 3 — Docker dev environment + API skeleton + CI
 **You'll learn:** images vs containers, volumes, networks, Compose, health checks, env validation, the Express request lifecycle, GitHub Actions.
-- `docker-compose.yml`: `postgres` (with a named volume), `mailpit` (UI on :8025), `minio` (console on :9001).
+- `docker-compose.yml`: `postgres` (with a named volume). Services are added in the stage that first uses them: mail catcher in Stage 8, file storage in Stage 10.
 - `api/`: Express 5 + TS, run with `tsx watch` in dev. `config.ts` (zod-validated env), `app.ts`, and `index.ts`. pino logger with request IDs. `GET /api/health` checks the DB connection. Error-handler middleware returning a consistent JSON error shape. `helmet`.
 - Vite dev proxy: `/api` → `http://localhost:3000`, so dev is same-origin too.
 - `.github/workflows/ci.yml`: install → lint → typecheck → test, on every PR.
@@ -151,8 +157,9 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ### Stage 4 — Database schema + migrations + seed
 **You'll learn:** schema design, primary and foreign keys, `CHECK` constraints, indexes, migrations (up/down), `citext`, UUIDs, typed queries.
 - Kysely instance, plus migrations for every table in §2 (the groups constraints carry over from Phase 1). Run with `npm run db:migrate -w api`.
-- Generate DB types (`kysely-codegen`) so every query is typed from the real schema.
+- DB types are **hand-written** in `api/src/db/types.ts` (kysely-codegen was tried, but it pulls in vulnerable dependencies). Database tests insert into and read every table, so the types can't silently drift from the SQL.
 - A seed script with a few users and about 50 groups across countries, for realistic dev data.
+- Database tests (`npm run test:db`) against a separate `*_test` database: migrations, every CHECK constraint, and a check that the shared topic/platform lists match the DB constraints. CI runs them against a Postgres service.
 - **Done when:** `db:migrate` + `db:seed` work from scratch, and `db:reset` rebuilds everything.
 
 ### Stage 5 — Groups API (read) + switch the home and detail pages
@@ -182,6 +189,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 
 ### Stage 8 — Email verification + password reset
 **You'll learn:** one-time tokens, expiry, email templates, SMTP, why "if the email exists, we sent a link" is the right message.
+- Add the **Mailpit** service to `docker-compose.yml` (web UI on :8025).
 - `email_tokens` (hashed, 24h verify, 1h reset, single use). Use nodemailer in dev → open Mailpit to see the email.
 - Unverified users can log in but **can't create groups** until they verify (product rule; adjust if you like).
 - Web: a verify-email landing page, plus "Forgot password" and "Reset password" pages.
@@ -193,8 +201,9 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 - Linking rule: if a user with the same **verified** email exists, link the account. Otherwise create a new user.
 - **Done when:** "Continue with Google" works against your API (Google Cloud console has the localhost redirect URI).
 
-### Stage 10 — Profile + avatars on MinIO
+### Stage 10 — Profile + avatars on S3 storage (Garage)
 **You'll learn:** multipart uploads (`multer`), validating files by their *content* (not the name), image processing, the S3 API, cache-busting.
+- **First, re-check the storage choice.** MinIO reportedly stopped publishing free Docker images in late 2025. Compare S3-compatible alternatives (e.g. Garage, SeaweedFS) with plain files on a Docker volume served by Caddy, then add the chosen service to `docker-compose.yml`.
 - `PATCH /api/users/me` (shared profile schema). `PUT /api/users/me/avatar`: max 5 MB in → `sharp` → 512px WebP → `avatars/<uid>.webp` in MinIO. `DELETE` removes it.
 - The browser no longer compresses anything, so `browser-image-compression` is removed (P2, O6, S5 all closed).
 - Web: the profile page uses the API. `startEditing` stays (B22 fix).
@@ -218,13 +227,14 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 **You'll learn:** multi-stage builds, small images (alpine/distroless), non-root users, `.dockerignore`, health checks, image size.
 - `api/Dockerfile`: build stage (`tsc`) → runtime stage (Node, prod deps only, `USER node`, `HEALTHCHECK`).
 - `web/Dockerfile`: build stage (`vite build`) → `nginx:alpine` serving `dist/` with SPA fallback and long cache headers for `/assets/*`.
-- `compose.prod.yml`: caddy, web, api, postgres, minio, plus a `backup` service (a nightly `pg_dump` to a volume, then off-site in Stage 14).
+- `compose.prod.yml`: caddy, web, api, postgres, garage, plus a `backup` service (a nightly `pg_dump` to a volume, then off-site in Stage 14).
 - `Caddyfile`: domain, automatic HTTPS, `/api/*` → api:3000, the rest → web:80. The security headers move here from `vercel.json`, with the CSP **enforced**.
 - **Done when:** `docker compose -f compose.prod.yml up` runs the whole production stack locally at `https://localhost`.
 
 ### Stage 14 — Server + first deployment (staging)
 **You'll learn:** Linux server basics, SSH keys, firewall, DNS, TLS certificates, off-site backups, restore drills.
 - **Needs:** a domain name (about $10/year) and a VPS.
+- **Decided (2026-10-18):** `aelshafey.com` at Cloudflare Registrar (one personal domain, a subdomain per portfolio project), Cloudflare DNS (grey cloud first), OVHcloud VPS-1 with Ubuntu 26.04 LTS. Every server step, with commands and the why: **[SERVER_SETUP.md](SERVER_SETUP.md)**.
 - Server setup: non-root sudo user, SSH key only (password login off), `ufw` (22/80/443), unattended upgrades, Docker Engine + Compose plugin.
 - DNS: `staging.<domain>` → VPS. Deploy with `git pull`, then `docker compose -f compose.prod.yml up -d --build`.
 - Off-site backups (for example Backblaze B2 or another S3 bucket via `rclone`), plus a **tested restore** into a scratch database.
@@ -251,17 +261,18 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 ---
 
 ## 5. Security checklist (re-check at Stages 6, 9, 10, 14)
-- [ ] Passwords hashed with argon2id. Never logged, never returned.
-- [ ] Session, verify, and reset tokens are random 32 bytes, **stored hashed**, with an expiry, and single use where it applies.
-- [ ] Cookie: `httpOnly`, `Secure` (prod), `SameSite=Lax`, `Path=/`. The session is rotated on login.
-- [ ] Origin check on every state-changing request. No CORS needed (same origin).
-- [ ] Rate limits on login, register, forgot-password, and avatar upload.
-- [ ] Every route validates its input with zod. The body never decides `user_id`.
-- [ ] Ownership enforced in SQL (`AND user_id = $user`), with a test for "user B can't touch A's data".
-- [ ] Uploads are checked by content (sharp decode), re-encoded, and size-limited.
-- [ ] `helmet` + CSP enforced. Errors never leak stack traces in prod.
-- [ ] Dependencies: `npm audit` in CI. Docker base images rebuilt regularly.
-- [ ] Backups tested by restoring them.
+Ticked after Stage 10: each ticked item has tests. CSP enforced in Stage 13. Re-checked at Stage 14: HSTS on the real domain; database backups copied off-site and a restore from the off-site copy tested. `npm audit` in CI since Stage 15. Still open: regular base-image rebuilds.
+- [x] Passwords hashed with argon2id. Never logged, never returned.
+- [x] Session, verify, and reset tokens are random 32 bytes, **stored hashed**, with an expiry, and single use where it applies.
+- [x] Cookie: `httpOnly`, `Secure` (prod), `SameSite=Lax`, `Path=/`. The session is rotated on login.
+- [x] Origin check on every state-changing request. No CORS needed (same origin).
+- [x] Rate limits on login, register, forgot-password, and avatar upload.
+- [x] Every route validates its input with zod. The body never decides `user_id`.
+- [x] Ownership enforced in SQL (`AND user_id = $user`), with a test for "user B can't touch A's data".
+- [x] Uploads are checked by content (sharp decode), re-encoded, and size-limited.
+- [x] `helmet` + CSP enforced (Caddy, Stage 13). Errors never leak stack traces in prod.
+- [~] Dependencies: `npm audit` in CI (Stage 15, production deps, high and above). Docker base images are rebuilt on every deploy, but not on a schedule yet.
+- [x] Backups tested by restoring them (database, from the off-site R2 copy, Stage 14). Avatars (Garage) mirrored to R2 too, restore drill on the server passed (Stage 16, 2026-10-27).
 
 ---
 
@@ -269,20 +280,20 @@ Group members (`group_members` table, join/leave, member counts) · "X groups in
 
 | Stage | Status | Notes |
 |---|---|---|
-| 0 Freeze v1 + Supabase hardening | ☐ | |
-| 1 Monorepo + TS foundation | ☐ | |
-| 2 Shared schemas + typed data layer | ☐ | |
-| 3 Docker dev + API skeleton + CI | ☐ | |
-| 4 DB schema + migrations + seed | ☐ | |
-| 5 Groups read API + home/detail switch | ☐ | |
-| 6 Auth core | ☐ | |
-| 7 Groups write + ownership | ☐ | |
-| 8 Email verification + reset | ☐ | |
-| 9 Google OAuth | ☐ | |
-| 10 Profile + avatars (MinIO) | ☐ | |
-| 11 Full TS frontend + UI kit | ☐ | |
-| 12 Frontend performance | ☐ | |
-| 13 Production Docker images | ☐ | |
-| 14 VPS + staging deploy + backups | ☐ | |
-| 15 CI/CD | ☐ | |
-| 16 Launch v2 + retire Supabase | ☐ | No data migration (owner decision) |
+| 0 Freeze v1 + Supabase hardening | ✅ | Commits pushed, `main` merged, tag `v1-supabase` pushed (2026-10-08). Closed by Stage 16: the Supabase project is deleted instead of paused. |
+| 1 Monorepo + TS foundation | ✅ | `web/` + `packages/shared`, TS 6 strict, `tsc -b`, typescript-eslint, `TOPICS` shared (D5). Bundle unchanged at 237 KB. **Vercel: set Root Directory = `web` before the next deploy from a branch containing this layout.** |
+| 2 Shared schemas + typed data layer | ✅ | Shared: topics, platforms (meta), countries (pre-sorted), group/auth/profile zod schemas. Web data layer (lib, services, hooks, api) is 100% TS, no `any`. Query-key factory. Components still `.jsx` (Stage 11). Bundle 236.7 KB. |
+| 3 Docker dev + API skeleton + CI | ✅ | Postgres 18 in Docker (host port **5433**, because a native Windows Postgres uses 5432). Express 5 API: zod-validated config, pino + request ids, helmet, JSON errors, graceful shutdown, `/api/health`. 6 Vitest/Supertest tests. Vite `/api` proxy. CI workflow. Bundle 244 KB (npm moved zod to 4.6.5 when the API was added). |
+| 4 DB schema + migrations + seed | ✅ | Migration 0001 (users, oauth_accounts, sessions, email_tokens, groups; citext, uuidv7, updated_at trigger, CHECKs, indexes). Kysely + hand-written types. CLI: migrate / rollback / reset / seed (3 users, 60 groups, validated with the shared schema). 44 DB tests incl. shared↔DB drift check; CI runs them. |
+| 5 Groups read API + home/detail switch | ✅ | `GET /api/groups` (filters, ILIKE search with escaped wildcards, uuidv7 cursor pagination) + `GET /api/groups/:id`. Shared contract: `groupListQuerySchema`, `groupListResponseSchema`. Web: `apiClient` (validates responses), `useGroups` (infinite query, Load more), `useGroupFilters` (URL = source of truth; O1/B13/B29). 18 unit + 57 DB tests. **Transitional:** profile "my groups" and create/delete still use Supabase until Stage 7. |
+| 6 Auth core | ✅ | register / login / logout / me + `PATCH /api/users/me` (pulled forward from Stage 10 so the profile page keeps working). argon2id, sha256-hashed session tokens in httpOnly SameSite=Lax cookies (`__Host-sid` in prod), 30-day sliding expiry, rotation on login, Origin-check CSRF, rate limits (per IP + per email failures), timing-safe login. Web: `useUser` reads `/api/auth/me`, `useSignOut` (D9). **Paused until later stages:** Google button (Stage 9), avatar upload (Stage 10); create/delete + "my groups" still Supabase (Stage 7). Found and fixed: register spread the plain password into the insert (caught by a test). |
+| 7 Groups write + ownership | ✅ | `POST /api/groups` (owner = session user), `PATCH /api/groups/:id` (**owner decision: title, description, topic, country, city editable; meeting link and platform fixed after creation**), `DELETE /api/groups/:id`, `GET /api/users/me/groups`. Ownership inside the SQL (`WHERE id AND user_id`); others get 404. Web: shared `GroupForm` (create/edit), `/groups/:id/edit`, owner-only Edit/Delete on cards and detail. Groups no longer use Supabase. 14 new DB tests with two users. Toast/ConfirmDialog moved to Stage 11 (UI kit). |
+| 8 Email verification + reset | ✅ | Mailpit in docker-compose (inbox http://localhost:8025). nodemailer behind a `Mailer` interface (fake in tests). One-time tokens (sha256-hashed, verify 24h / reset 1h, consumed by one atomic UPDATE, a new link cancels older ones). Verify on sign-up + resend; forgot-password answers before doing any work (no enumeration by text or timing); reset signs out everywhere. **Creating groups requires a verified email.** Web: verify page uses a button (mail scanners / StrictMode), forgot + reset pages, unverified banner. 12 new DB tests. Register's 409 kept as a documented trade-off. |
+| 9 Google OAuth | ✅ | **Vercel (owner decision):** v1 on `main` stays live as is; no v2 stage is ever deployed to Vercel (root `vercel.json` turns off Git deployments for every branch containing it; the Vercel project is deleted in Stage 16). `GET /api/auth/google` + `/callback` with `arctic` (state + PKCE S256 in a 10-min httpOnly cookie, `prompt=select_account`). ID token checked for `iss`, `aud`, `email_verified`. Linking: by `sub` → verified email (link) → **unverified email: Google wins, password removed and sessions ended (pre-hijack defence, an addition to the plan)** → new password-less user. Errors redirect to `/login?error=<code>` (shared `OAUTH_ERROR_MESSAGES`). `startSession` extracted so every sign-in rotates the same way. Google is optional (`GOOGLE_CLIENT_ID`/`SECRET`; off when empty). Removed the dead `VITE_AUTH_REDIRECT_URL`. 14 unit + 8 DB tests with a fake Google. |
+| 10 Profile + avatars (Garage) | ✅ | **Storage: Garage v2.4.1** (MinIO CE archived Apr 2026; owner chose S3 over plain files to learn the S3 API). Single-node, bucket + key created by `--default-bucket`; the API enables website access at startup. `PUT`/`DELETE /api/users/me/avatar`: multer (memory, 5 MB) → sharp (JPEG/PNG/WebP only, ≤50 M px, 512×512 WebP, EXIF dropped) → `avatars/<uid>/<uuid>.webp` with immutable caching (new key = new URL, instead of `?t=`). Browsers read `/media/*` (Vite proxy → Garage website endpoint). **Beyond the plan:** the web app's Supabase client, deps and `VITE_*` vars removed (nothing used them any more); bundle 248 → 180 KB gzip. S5, O6, P2 closed. 8 unit + 9 DB tests; real round trip checked against Garage. |
+| 11 Full TS frontend + UI kit | ✅ | Started with a code review (audit section M + D13–D18, done first: ScrollRestoration, `react-router`, skipToken, React 19 `<title>`, FilterBar props, API `limitRequests`/`signedInUser`). Then: all `.tsx`, `allowJs` off, no `any`; UI kit in `components/ui` (Button, Field components with `useId` labels, CountryCityFields via FormProvider, ConfirmDialog on native `<dialog>`, Toast with React 19 `use()`, …), `@theme` color tokens, `/login` + `/signup` split (O3), one DeleteGroupDialog per page (O9), separate typed create/edit forms. Checked page by page in headless Chrome: found and fixed 404 retries and the missing hydrate fallback. **Not done:** a mobile nav menu. Bundle 179.0 KB gzip. |
+| 12 Frontend performance | ✅ | Lazy routes for every page except home (P1/R5): home JS **179.0 → 166.3 KB gzip** (zod stays: apiClient validates responses), then **→ 151.3** by loading the city lists only once a country is chosen (`@urconnections/shared/cities` entry + `useCities`). `RouteError` errorElement incl. "new version, reload" for missing chunks (R4). Detail loader prefetches the group in parallel with its chunk (R3). Inter self-hosted via `@fontsource-variable/inter` (P7, the biggest win). `transition` instead of `transition-all`, lighter blur (P6). Avatar img attributes (P9). Page-loading bar. **Lighthouse mobile: home 81–88 → 96 (LCP 3.2–3.8 → 2.3 s), detail 89 → 95.** Also on this branch: card layout and keep-scroll-on-filter fixes found while using the app. |
+| 13 Production Docker images | ✅ | API bundled with **esbuild** (Node can't run our TS; shared package inlined, npm deps external) → `api/Dockerfile` multi-stage on node:24-bookworm-slim (Debian: sharp/argon2 binaries), non-root, HEALTHCHECK; 447 MB. `web/Dockerfile` → nginx-unprivileged :8080, SPA fallback, immutable `/assets`; 91 MB. `compose.prod.yml`: caddy (only public ports) → web/api, one-off `migrate` before api, postgres, garage, nightly `backup` (+ `npm run prod:backup`). Caddyfile: auto HTTPS (local CA for localhost), **CSP enforced** + security headers (S8). Secrets in `.env.prod` (`npm run prod:env`). **Found and fixed:** zod's eval probe under the strict CSP (`shared/src/zod.ts`, jitless), first backup taken before migrations. Full journey checked on `https://localhost`; backup restore tested. HSTS left for Stage 14. |
+| 14 VPS + staging deploy + backups | ✅ | Domain `aelshafey.com` (Cloudflare), DNS `urconnections` → VPS (grey cloud). OVH VPS-1, Ubuntu 26.04: key-only SSH (no root, `AllowUsers ubuntu`), ufw 22/80/443, auto security updates, Docker 29.9 + Compose with log limits. **Found:** PowerShell 5.1 piping added a BOM to `authorized_keys`. **Live at https://urconnections.aelshafey.com** (2026-10-19): `.env.prod` generated on the server with openssl, Let's Encrypt certificate via HTTP-01, internal ports closed. Email: **Resend** free plan over SMTP (100/day), DKIM + SPF on `aelshafey.com`; a Mailpit placeholder (read through an SSH tunnel) bridged the gap before it. **Off-site backups** (2026-10-20): `offsite` service (rclone, opt-in profile) copies dumps to a Cloudflare R2 bucket every 6 h with a bucket-scoped key; **restore drill from R2 passed** (all counts matched). HSTS on the real domain. **Found:** `docker exec -T` in a piped script swallows the rest of it (`</dev/null`). UptimeRobot checks `/api/health` every 5 min; DMARC `p=none`. HSTS comes only from Caddy (helmet's turned off: API responses had two differing headers). **Found:** single-file bind mounts keep the old file after `git pull` (restart the service); `node_modules` workspace links still pointed at the old `D:\Find_Study` folder (`npm install`). **Not done:** Google sign-in (Stage 16 checklist); **avatars (Garage volume) are not backed up yet**. See [SERVER_SETUP.md](SERVER_SETUP.md). |
+| 15 CI/CD | ✅ | **Deploys from `dev`, not `main`** (v1 still lives on `main` until Stage 16; switch the trigger at launch). `deploy.yml` reuses `ci.yml` (`workflow_call`) → api/web images to GHCR tagged with the commit (public, like the repo; layer cache in GitHub Actions) → SSH with a **dedicated deploy key restricted by a forced command** (`command=…deploy.sh,restrict`: tested, it can't run anything else or tunnel) and a pinned host key → `scripts/deploy.sh` (validates the commit id, detached checkout, backup first, pull, `up --wait`, restarts services whose single-file mount changed, prunes) → smoke test from outside. Key in the GitHub environment `staging`. `npm audit --omit=dev --audit-level=high` in CI. Rollback = re-run an older Deploy run. First deploy 2026-10-22 (`1bbf4bc`). See [SERVER_SETUP.md](SERVER_SETUP.md) §12. |
+| 16 Launch v2 + retire Supabase | 🟡 | No data migration (owner decision). **Avatar backups** (2026-10-26): the `offsite` service mirrors the Garage bucket to R2 (`storage/`; removed pictures kept in `storage-removed/<time>/` for `OFFSITE_KEEP_DAYS`); **restore drill on the server passed 2026-10-27** (`0 differences, 1 matching file`). **Google sign-in live in production** (2026-10-27). Address kept: `urconnections.aelshafey.com` (owner decision), so no DNS change. **Launch PR** (`stage-16-launch`): deploys now run from `main` (CI on `dev`/`stage-*`); `main`'s v1 history joined with `git merge -s ours` (it had diverged from `dev` in May, a plain merge would conflict everywhere), so dev → main is a fast-forward; removed `supabase/`, `docs/SUPABASE.md`, both `vercel.json`; Supabase dropped from CLAUDE.md, README, ARCHITECTURE and the `.agents/rules` (replaced by their v2 equivalents). **Owner, to finish:** delete the Vercel project *before* merging into `main` (else Vercel would try to build v2), merge dev → main (first deploy from `main`), delete the Supabase project. |

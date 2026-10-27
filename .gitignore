@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 .env.production
+# Production secrets (compose.prod.yml). Template: .env.prod.example
+.env.prod
 .env.development
 recovery-codes.txt
 
@@ -31,3 +33,6 @@ recovery-codes.txt
 .VSCodeCounter/
 
 
+
+# Local drafts kept for reference, never committed
+.drafts/

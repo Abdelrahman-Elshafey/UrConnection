@@ -1,0 +1,81 @@
+# Development services. Start: `npm run db:up` · stop: `npm run db:down` · logs: `npm run db:logs`
+#
+# Only what the code uses today: postgres, mailpit (Stage 8: catches outgoing email)
+# and garage (Stage 10: S3-compatible storage for avatars).
+# The production stack (Caddy, api, web, backups) lives in compose.prod.yml (Stage 13).
+
+name: urconnections
+
+services:
+  postgres:
+    # Pin the major version: a database must never jump majors by surprise.
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      # Development-only credentials (they match api/.env.example). Override them with a
+      # root .env file if you like. Production uses real secrets, never these values.
+      POSTGRES_USER: ${POSTGRES_USER:-urconnections}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urconnections_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-urconnections}
+    ports:
+      # SECURITY: 127.0.0.1 = reachable only from this computer, not from your Wi-Fi network.
+      # Host port 5433 (not the default 5432), so it never clashes with a Postgres installed
+      # directly on the machine. Inside Docker it is still 5432.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # A named volume keeps the data when the container is removed or recreated.
+      # Postgres 18 images store data under /var/lib/postgresql/<major>/docker.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # "healthy" only once Postgres really accepts connections, not just "the process started".
+      # `npm run db:up` (docker compose up --wait) waits for this.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Fake mail server for development (Stage 8). The API "sends" email to it over SMTP;
+  # nothing leaves your computer. Read every message in the web UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025" # SMTP: where the API delivers mail
+      - "127.0.0.1:8025:8025" # web UI: the inbox
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # S3-compatible object storage for avatars (Stage 10). Garage is free, open-source
+  # software we run ourselves; the API uses the standard S3 API (AWS SDK), so a hosted S3
+  # (AWS, Cloudflare R2, Backblaze B2) could replace it by changing only api/.env.
+  garage:
+    image: dxflrs/garage:v2.4.1
+    restart: unless-stopped
+    # --single-node: set up a one-node cluster automatically (no manual "layout" commands).
+    # --default-bucket: create the bucket and an access key from the GARAGE_DEFAULT_* values.
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      # SECURITY: development-only values (they match api/.env.example). Never use them
+      # in production; Stage 13/14 generate real ones (openssl rand -hex 32).
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-7781370026fc6cf1c6e9f366ba34ad89a1d31ad0e50b023b426926dd68a24d63}
+      GARAGE_DEFAULT_BUCKET: ${S3_BUCKET:-urconnections}
+      GARAGE_DEFAULT_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-GK4b0db6514b57266c64047709fc50c580}
+      GARAGE_DEFAULT_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-168b2c3c8ac79d62faf63944027e3a0da0dbd05ad8bf3e233affbe82cabbc3da}
+    ports:
+      - "127.0.0.1:3900:3900" # S3 API: the Express API uploads and deletes here
+      - "127.0.0.1:3902:3902" # website endpoint: browsers read avatars here (via the Vite proxy)
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - garage:/var/lib/garage # objects + metadata survive container restarts
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:
+  garage:

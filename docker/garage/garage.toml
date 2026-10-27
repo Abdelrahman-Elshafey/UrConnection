@@ -1,0 +1,29 @@
+# Garage (S3-compatible object storage) for DEVELOPMENT, used by docker-compose.yml.
+# Docs: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+# The rpc_secret comes from the GARAGE_RPC_SECRET environment variable (see docker-compose.yml).
+
+metadata_dir = "/var/lib/garage/meta" # the index: which objects exist, in which bucket
+data_dir = "/var/lib/garage/data"     # the object bytes themselves
+db_engine = "sqlite"
+
+# One node, one copy of each object. Fine for dev and a single small server;
+# a real cluster would keep 3 copies on 3 machines.
+replication_factor = 1
+
+# Garage nodes talk to each other on this port (only one node here).
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+# The S3 API: what our Express API talks to (upload, delete) with the AWS SDK.
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+# The "website" endpoint: serves objects to browsers as plain files, read-only and
+# without credentials. A request for Host "<bucket>.web.garage.localhost" and path
+# "/avatars/x.webp" returns that object. Only buckets with website access turned on.
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage.localhost"
+index = "index.html"

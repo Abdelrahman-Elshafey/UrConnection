@@ -1,0 +1,60 @@
+# Caddy: the only container reachable from outside (ports 80 and 443). Used by compose.prod.yml.
+# Docs: https://caddyserver.com/docs/caddyfile
+#
+# One domain for everything, so the browser only ever talks to one origin: no CORS,
+# and the session cookie simply works. Caddy routes by path:
+#   /api/*    → the Express API
+#   /media/*  → Garage's website endpoint (avatars), same as the Vite proxy in development
+#   the rest  → nginx serving the built React app
+#
+# HTTPS: for a real domain, Caddy gets and renews a free Let's Encrypt certificate by
+# itself. For "localhost" it creates its own local certificate authority instead (browsers
+# warn until you trust it: see README, "Production stack on your computer").
+
+{$SITE_ADDRESS:localhost} {
+	# Compress text responses (HTML, JS, CSS, JSON) on the fly.
+	encode zstd gzip
+
+	# SECURITY: response headers for every response (moved here from v1's vercel.json).
+	header {
+		# Content Security Policy, ENFORCED (v1 only reported violations). The browser may
+		# load scripts, styles, fonts and images only from this site, and fetch only from
+		# this site and ipapi.co (location detection). An injected <script> or a script
+		# from another domain simply doesn't run: the main defence against XSS.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://ipapi.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		# Don't guess file types (a "picture" can't be run as a script).
+		X-Content-Type-Options "nosniff"
+		# Nobody may show this site inside a frame (clickjacking). Old-browser twin of frame-ancestors.
+		X-Frame-Options "DENY"
+		# Other sites only learn our origin, never full URLs (which can contain tokens).
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Features the site never uses are switched off entirely.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		# Don't advertise the server software.
+		-Server
+	}
+
+	# SECURITY: HSTS. After one HTTPS visit, the browser refuses plain HTTP to this host for a
+	# year, so nobody on the network can downgrade a later visit (e.g. a fake café Wi-Fi
+	# answering http://). Only for a real domain: sent for "localhost", browsers would force
+	# HTTPS on the dev server too. No includeSubDomains / preload: they would bind every
+	# other project under the domain, and preload is hard to undo.
+	@real_domain not host localhost
+	header @real_domain Strict-Transport-Security "max-age=31536000"
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	# handle_path strips "/media", so /media/avatars/x.webp asks Garage for /avatars/x.webp.
+	# Garage picks the bucket from the Host header ("<bucket>.web.garage.localhost").
+	handle_path /media/* {
+		reverse_proxy garage:3902 {
+			header_up Host {$S3_BUCKET:urconnections}.web.garage.localhost
+		}
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+}

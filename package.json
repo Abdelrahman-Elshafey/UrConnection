@@ -1,39 +1,46 @@
 {
-  "name": "find-study",
+  "name": "urconnections",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "web",
+    "api",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "concurrently -n web,api -c blue,green \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "npm run dev -w @urconnections/web",
+    "dev:api": "npm run dev -w @urconnections/api",
+    "stop:dev": "node scripts/stop-dev.js",
+    "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview -w @urconnections/web",
+    "test": "npm run test --workspaces --if-present",
     "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@supabase/supabase-js": "^2.101.1",
-    "@tanstack/react-query": "^5.96.2",
-    "@tanstack/react-query-devtools": "^5.96.2",
-    "@vercel/analytics": "^2.0.1",
-    "browser-image-compression": "^2.0.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-hook-form": "^7.72.1",
-    "react-icons": "^5.6.0",
-    "react-router-dom": "^7.14.0",
-    "zod": "^4.3.6"
+    "typecheck": "tsc -b",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:migrate": "npm run db:migrate -w @urconnections/api",
+    "db:rollback": "npm run db:rollback -w @urconnections/api",
+    "db:reset": "npm run db:reset -w @urconnections/api",
+    "db:seed": "npm run db:seed -w @urconnections/api",
+    "test:db": "npm run test:db -w @urconnections/api",
+    "prod:env": "node scripts/gen-prod-env.js",
+    "prod:up": "docker compose -f compose.prod.yml --env-file .env.prod up -d --build --wait",
+    "prod:down": "docker compose -f compose.prod.yml --env-file .env.prod down",
+    "prod:logs": "docker compose -f compose.prod.yml --env-file .env.prod logs -f",
+    "prod:backup": "docker compose -f compose.prod.yml --env-file .env.prod exec backup sh /backup.sh once"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@types/node": "^24.19.1",
+    "concurrently": "^10.0.6",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "tailwindcss": "^4.2.2",
-    "vite": "^8.0.4"
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1"
   }
 }

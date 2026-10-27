@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (audit D11). Tailwind v4 turns every --color-* variable declared in
+ * @theme into utilities: --color-accent gives bg-accent, text-accent, border-accent/20, ...
+ * Change a value here and the whole site follows. Named by role, not by look.
+ */
+@theme {
+  /* Inter is self-hosted (main.tsx imports @fontsource-variable/inter, audit P7): one
+     variable-weight file per alphabet, served from our own origin. "Inter Variable" is the
+     name that package registers; system fonts fill in until it has loaded (font-display: swap). */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-accent: #0071e3;        /* the one brand blue: links, primary buttons, focus */
+  --color-accent-strong: #005bb5; /* accent on hover where brightness isn't enough */
+  --color-surface: #f5f5f7;       /* light grey band / card / input background */
+  --color-surface-dark: #111111;  /* the same role in dark mode */
+  --color-raised-dark: #1d1d1f;   /* dark nav, footer, pills: one step lighter than surface-dark */
+  --color-line-dark: #333336;     /* hairlines and hover borders in dark mode */
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    /* Shared by the sticky nav (MainLayout) and the sticky filter bar (FilterBar) */
+    --nav-height: 4rem;
+  }
+
+  html, body {
+    font-family: var(--font-sans);
+    @apply bg-white text-black dark:bg-black dark:text-white transition-colors duration-200 ease-in-out;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Default border color. Transitions are opt-in per element (transition-* classes),
+     not global — a transition on every node costs style recalc and fades colors in on load. */
+  * {
+    @apply border-gray-100 dark:border-raised-dark;
+  }
+
+  /* Universal interactive cursor */
+  button, select, a, [role="button"], .cursor-pointer {
+    @apply cursor-pointer;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ─── Utility animations ─── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+/* Page-loading bar (RootLayout). transform + opacity only: the browser can animate those
+   without recalculating layout (audit P6). The 150ms delay hides it on quick navigations. */
+@keyframes nav-progress {
+  0% { opacity: 1; transform: scaleX(0); }
+  100% { opacity: 1; transform: scaleX(0.9); }
+}
+
+.nav-progress {
+  opacity: 0;
+  transform-origin: left;
+  animation: nav-progress 8s cubic-bezier(0.1, 0.8, 0.2, 1) 150ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress { animation: none; opacity: 1; transform: scaleX(0.6); }
+}

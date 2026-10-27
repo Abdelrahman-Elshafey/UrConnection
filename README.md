@@ -1,26 +1,84 @@
-UrConnection - Full-Stack Social  Platform
-UrConnection is a dynamic web application designed to connect users through shared interests and professional profiles. Built with a focus on real-time data management and secure file handling, this project demonstrates a robust integration of the MERN stack (focusing on React) with Supabase for backend services.
+# UrConnections
 
-Main Features
-Dynamic Profile Management: Users can create and customize their professional profiles, including personal details and location data.
+Find study and interest groups near you, or online. Browse groups by topic, country/city, and platform (WhatsApp, Discord, Telegram, …), create your own group with a link to its chat, and manage your profile.
 
-Secure Avatar Uploads: Integrated Supabase Storage with custom Row-Level Security (RLS) policies to allow users to securely upload, update, and delete their profile pictures.
+> **Live at https://urconnections.aelshafey.com** (v2): a TypeScript monorepo with its own Express API, authentication, Postgres, and Docker deployment on a VPS.
+> The first version (React + Supabase on Vercel) is kept as the git tag [`v1-supabase`](../../tree/v1-supabase).
+> How it was built, stage by stage: [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md).
 
-Image Optimization: Implemented client-side compression using browser-image-compression to ensure fast load times and reduced storage costs (WebP format).
+## Features
+- **Discover groups**: search, filter by topic / country / city / platform, with your country and city pre-selected from your location
+- **Create groups**: validated form; the meeting link must match the chosen platform
+- **Manage your groups**: only the creator can edit (title, description, topic, location) or delete a group; the link and platform stay fixed
+- **Accounts**: email + password sign-up and login on our own API (argon2id passwords, secure session cookies), email verification, forgot/reset password, and "Continue with Google" (OAuth 2.0 with PKCE, handled by our API)
+- **Profile**: edit your details and upload an avatar (JPEG/PNG/WebP up to 5 MB; the API checks the real image, converts it to a 512px WebP and stores it in S3-compatible storage)
+- Light and dark mode (follows the system), responsive layout
 
-State Management: Utilized TanStack Query (React Query) for efficient data fetching, caching, and optimistic UI updates.
+## Tech stack
+| Part | Stack |
+|---|---|
+| Frontend | React 19, Vite, Tailwind CSS v4, React Router 7, TanStack Query, react-hook-form, all TypeScript |
+| Validation | zod schemas shared by the web app and the API (`packages/shared`) |
+| Backend | Node.js + Express 5 API, Postgres (Kysely), own session auth (argon2id), S3-compatible file storage (Garage in Docker) |
+| Hosting | Docker Compose on a VPS behind Caddy (HTTPS), deployed by GitHub Actions from `main` |
 
-Data Persistence: Real-time synchronization with a PostgreSQL database via Supabase, ensuring user metadata follows the session seamlessly.
+## Getting started
+Requirements: **Node.js 24** (LTS), npm, and **Docker Desktop** (running).
 
-Responsive UI: A modern, mobile-first design built with Tailwind CSS, featuring custom truncation logic for clean layout management.
+```bash
+npm install                      # installs every workspace (one lockfile at the root)
+cp api/.env.example api/.env     # dev defaults work as-is with docker-compose.yml (add Google keys for Google sign-in)
+npm run db:up                    # start Postgres (127.0.0.1:5433), Mailpit and Garage (avatar storage) in Docker
+npm run db:migrate               # create the tables
+npm run db:seed                  # optional: demo users and groups (log in as alice@example.com / Demo123!pass)
+npm run dev                      # web on http://localhost:5173, API on http://localhost:3000
+```
+Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 
-Tools Used
-React.js & Vite for the frontend architecture.
+**Emails in development** (verification, password reset) are caught by Mailpit and never really sent: read them at http://localhost:8025.
 
-Tailwind CSS for advanced responsive styling and layout.
+**Troubleshooting:** `Can't reach Postgres at localhost:5433` (or `ECONNREFUSED`) means the database container isn't running, usually because Docker Desktop isn't started (it doesn't start by itself after a reboot unless you enable *Settings → General → Start Docker Desktop when you sign in*). Start Docker Desktop, then run `npm run db:up`.
 
-Supabase (Auth, Storage, and PostgreSQL) for the backend infrastructure.
+**`Port 3000 is already in use`** (API) or **`Port 5173 is already in use`** (Vite) means a dev server from an earlier run is still running in the background, often after a terminal was closed. Run `npm run stop:dev`, then start again. Both servers refuse to start on a taken port on purpose: Vite would otherwise move to 5174, where the API's CSRF check rejects every sign-in and save.
 
-TanStack Query for server-state management.
+| Command | What it does |
+|---|---|
+| `npm run dev` | start web (Vite) and api (Express) together |
+| `npm run stop:dev` | stop dev servers left running in the background (ports 3000, 5173, 4173; only `node` processes). One port: `npm run stop:dev -- 3000` |
+| `npm run db:up` / `db:down` / `db:logs` | start / stop the dev containers (Postgres, Mailpit, Garage) / follow the Postgres log |
+| `npm run db:migrate` / `db:rollback` / `db:reset` | apply / undo the last / rebuild all migrations |
+| `npm run db:seed` | fill the database with demo data (development only) |
+| `npm test` | unit tests (API: Vitest + Supertest; no database needed) |
+| `npm run test:db` | database tests against a separate test database |
+| `npm run build` | production builds: `web/dist/` (Vite) and `api/dist/` (esbuild) |
+| `npm run prod:env` / `prod:up` / `prod:down` / `prod:logs` / `prod:backup` | production stack in Docker (see below) |
+| `npm run preview` | serve the production build locally |
+| `npm run typecheck` | strict TypeScript check of every package |
+| `npm run lint` | ESLint for the whole repo |
 
-Lucide React for consistent, scalable iconography.
+## Production stack on your computer
+The same containers that will run on the server (Stage 13). Needs Docker Desktop and free ports 80 and 443.
+
+```bash
+npm run prod:env     # once: creates .env.prod with random secrets (gitignored, never commit it)
+npm run db:up        # optional: the dev Mailpit catches the production stack's email (http://localhost:8025)
+npm run prod:up      # builds the images, starts everything, waits until healthy → https://localhost
+npm run prod:logs    # follow the logs        npm run prod:down   stop (data stays in Docker volumes)
+npm run prod:backup  # a database backup right now (one also runs at start and every 24 h)
+```
+- **Certificate warning:** for `localhost` Caddy signs its own certificate, so browsers warn. Either accept the warning, or trust Caddy's local root certificate once (Windows, current user):
+  `docker compose -f compose.prod.yml --env-file .env.prod cp caddy:/data/caddy/pki/authorities/local/root.crt caddy-root.crt` then `certutil -addstore -user Root caddy-root.crt`.
+- The production database starts empty (no seed data). Sign up; the verification email lands in Mailpit.
+- Only Caddy is reachable from outside. It serves HTTPS, sends `/api` to the API and `/media` to Garage, and adds the security headers (Content Security Policy enforced).
+
+## Project structure
+```
+web/              React app (Vite)
+api/              Express 5 API (TypeScript): auth (sessions, argon2id), /api/groups (filters, search, pagination), Postgres schema (Kysely migrations)
+packages/shared/  @urconnections/shared: zod schemas, types, topics, platforms, countries (+ `/cities` entry, loaded on demand)
+docker-compose.yml  development services (Postgres, Mailpit, Garage)
+compose.prod.yml    production stack (Caddy, web, api, migrate, Postgres, Garage, backup, offsite) + Caddyfile
+docker/           Garage config, nginx config (web image), backup + off-site copy scripts
+docs/             architecture, code audit, master plan, server runbook
+```
+More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

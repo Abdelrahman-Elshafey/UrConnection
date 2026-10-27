@@ -1,0 +1,63 @@
+# Continuous Integration: GitHub runs these checks on every push and pull request.
+# A red ❌ on a PR means "don't merge yet". Same commands you run locally.
+name: CI
+
+on:
+  push:
+    # `main` isn't listed: deploy.yml runs these same checks (via workflow_call) before deploying.
+    branches: [dev, "stage-*"]
+  pull_request:
+  workflow_call:
+
+# A new push to the same branch cancels the run that is still going for the old commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# SECURITY: the workflow only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # A throwaway Postgres just for this run (same major version as docker-compose.yml).
+    # It starts before the steps; GitHub waits until the health check passes.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: urconnections_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d urconnections_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm # reuse downloaded packages between runs (faster installs)
+
+      # `npm ci` installs exactly what package-lock.json says (and fails if it is out of
+      # sync with package.json). That's why the lockfile is committed.
+      - run: npm ci
+      # SECURITY: fail on known high/critical vulnerabilities in what runs in production.
+      # Dev-only tools (Vite, ESLint, …) never reach the server, so they don't block a deploy.
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:db # migrations + constraints against the Postgres service above
+        env:
+          TEST_DATABASE_URL: postgres://ci:ci@localhost:5432/urconnections_test
+      - run: npm run build
