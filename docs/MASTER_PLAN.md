@@ -8,7 +8,9 @@ a TypeScript monorepo with an Express API, your own authentication, Postgres, Do
 Each stage ends in something you can run and see working. The v1 site stayed on Supabase and Vercel until **Stage 16** (launched 2026-10-27), so nothing broke while you learned. **No data is migrated**: v1 only has the owner's test data, so v2 starts fresh from the seed script and real content created after launch.
 When a stage is done, tick it in the [progress table](#progress) and note anything surprising.
 
-Audit IDs (B, S, D, O, P, A…) refer to [CODE_AUDIT.md](CODE_AUDIT.md). This plan replaces Phases 2–6 of [REFACTOR_ROADMAP.md](REFACTOR_ROADMAP.md), and those audit items are folded into the stages below.
+Audit IDs (B, S, D, O, P, A…) refer to [CODE_AUDIT.md](CODE_AUDIT.md). This plan replaced Phases 2–6 of the earlier [REFACTOR_ROADMAP.md](https://github.com/Abdelrahman-Elshafey/UrConnection/blob/v1-supabase/docs/REFACTOR_ROADMAP.md) (kept in the `v1-supabase` tag), and those audit items are folded into the stages below.
+
+**Status (2026-10-27): Stages 0–16 are done and v2 is live.** Stage 17+ is optional feature work. Sections 1–4 below are the original plan, kept as the record of what was decided and why; the [progress table](#progress) notes where reality differed.
 
 ---
 
@@ -128,7 +130,7 @@ Tokens (session, verify, reset) are random 32 bytes. **Only their SHA-256 hash i
 ### Stage 0 — Freeze the current version
 - Commit Phases 0–1 on `dev`, merge to `main`, and tag **`v1-supabase`** (a safe point to return to).
 - Decide what happens to the v1 site while v2 is built. It only holds test data, but while it's online anyone can sign up, post groups, or upload files:
-  - keep it up as a demo → run the two Phase 1 migrations ([SUPABASE.md](SUPABASE.md), about 10 minutes), **or**
+  - keep it up as a demo → run the two Phase 1 migrations ([SUPABASE.md](https://github.com/Abdelrahman-Elshafey/UrConnection/blob/v1-supabase/docs/SUPABASE.md), about 10 minutes), **or**
   - nobody needs it → **pause the Supabase project** in its dashboard (the Vercel site then just shows errors, which you can take down too).
 - **Done when:** the tag exists, and the v1 site is either hardened or paused.
 

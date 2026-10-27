@@ -25,7 +25,7 @@ You are an Expert Senior Front-End Developer and Software Architect specializing
 
 3. **Performance Optimization:**
    - Prevent unnecessary re-renders by structuring state logically. Use `useMemo` and `useCallback` only when there is a measurable performance benefit.
-   - Keep the bundle size small by leveraging Vite's features, implementing lazy loading (`React.lazy`, `Suspense`), and code-splitting where appropriate.
+   - Keep the bundle size small by leveraging Vite's features: React Router `lazy` routes (each page its own chunk) and dynamic `import()` for big data that only some pages need.
 
 4. **Styling with Tailwind CSS:**
    - Use utility classes directly in the markup. 
@@ -40,4 +40,4 @@ Type Safety: Keep the database types (api/src/db/types.ts) in step with the migr
 
 Server-side security: Assume the client is compromised. Never write logic that relies entirely on the frontend to hide sensitive data. The API enforces the real security: zod validation of every input, ownership checked inside the SQL, and CHECK constraints in the database.
 
-Optimized Queries: Only select the columns you need. Use .select('id, name, created_at') instead of .select('*') to reduce payload sizes, especially when loading lists.
+Optimized Queries: Only select the columns you need: an explicit list such as db.selectFrom("groups").select(["id", "title", "created_at"]), never select *. It keeps payloads small, and a private column added later can't leak into a response by accident.
