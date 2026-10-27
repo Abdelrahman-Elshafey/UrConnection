@@ -19,18 +19,16 @@ Caddyfile                   # HTTPS (Let's Encrypt, or a local CA for localhost)
 .env.prod.example           # template for .env.prod (gitignored): site address, DB password, Garage keys, SMTP, Google. `npm run prod:env` fills in random secrets
 docker/nginx/web.conf       # nginx in the web image: SPA fallback to index.html (no-cache), /assets/ cached 1 year (immutable), missing assets → 404
 docker/backup/backup.sh     # pg_dump --format=custom into the backups volume: at start + every 24 h, `once` for on-demand; keeps BACKUP_KEEP_DAYS
-docker/backup/offsite.sh    # rclone copy of the dumps to Cloudflare R2 every 6 h (never deletes because a local file vanished); keeps OFFSITE_KEEP_DAYS
+docker/backup/offsite.sh    # every 6 h to Cloudflare R2: rclone copy of the dumps (never deletes because a local file vanished) + mirror of the avatar storage (removed files kept in storage-removed/); keeps OFFSITE_KEEP_DAYS
 scripts/gen-prod-env.js     # npm run prod:env: .env.prod from the template with random secrets (never overwrites an existing file)
 .dockerignore               # keeps node_modules, dist, .git, docs and every .env out of image builds
 .gitattributes              # *.sh keep LF line endings (they run in Linux containers)
-vercel.json                 # {git.deploymentEnabled: false}: v2 branches never deploy to Vercel. Only v1 on `main` stays live there until Stage 16
-.github/workflows/ci.yml    # on push/PR (and called by deploy.yml): npm ci → npm audit (prod deps) → lint → typecheck → test → build
-.github/workflows/deploy.yml # on push to dev: ci.yml → build api + web images → GHCR (tag = commit) → SSH → scripts/deploy.sh → smoke test
+.github/workflows/ci.yml    # on push to dev/stage-*, every PR (and called by deploy.yml): npm ci → npm audit (prod deps) → lint → typecheck → test → build
+.github/workflows/deploy.yml # on push to main: ci.yml → build api + web images → GHCR (tag = commit) → SSH → scripts/deploy.sh → smoke test
 scripts/deploy.sh           # runs ON THE SERVER (forced command of the deploy key): checkout commit → backup → pull → up --wait → restart changed mounts → prune
 eslint.config.js            # one flat config for the repo: JS + typescript-eslint + react-hooks (web/src only)
 .agents/rules/              # owner's standing rules: general-rules.md, auth-implmentation.md, style-guide.md
-docs/                       # this file, CODE_AUDIT, MASTER_PLAN (the plan), SUPABASE (v1 security runbook), REFACTOR_ROADMAP (history)
-supabase/                   # v1 only: inspect.sql + migrations (RLS, CHECKs, bucket). Removed in Stage 16
+docs/                       # this file, CODE_AUDIT, MASTER_PLAN (the plan), SERVER_SETUP (server runbook), REFACTOR_ROADMAP (history)
 .VSCodeCounter/             # local line-count reports (gitignored)
 
 api/                        # @urconnections/api: Express 5 + TypeScript. Dev: tsx runs the TS directly. Production: esbuild bundle (dist/) run by plain node
@@ -109,7 +107,6 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
   index.html                # Vite entry (/src/main.tsx); default title "UrConnections"
   vite.config.ts            # react() + tailwindcss(); strictPort (dev + preview); dev proxy /api → http://localhost:3000, /media → Garage website :3902 (Host = <bucket>.web.garage.localhost)
   Dockerfile                # multi-stage: build (npm ci + vite build) → nginxinc/nginx-unprivileged:1.30-alpine on :8080 with docker/nginx/web.conf. Build context = repo root
-  vercel.json               # v1-era SPA rewrite + security headers (reference until they move to Caddy in Stage 13; v2 never deploys to Vercel)
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json
   public/favicon.svg
   src/
@@ -258,13 +255,6 @@ RootLayout (no path)                    errorElement: RouteError (full page)
 
 All foreign keys are `on delete cascade`: deleting a user deletes their groups, sessions, tokens and OAuth links.
 Rules: **never edit a migration that has run**; add `0002_...` and register it in `migrations/index.ts`, then update `types.ts` and the DB tests.
-Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in Stage 5.
-
-### Supabase data model (v1; inferred from the code)
-- **Table `groups`**: `id`, `title` (≤20), `description` (20–200), `topic` (one of TOPICS), `platform` (PLATFORMS key), `meeting_link` (http(s) URL), `country`, `city`, `user_id` (set by the client), `date` (ISO string set by the client). Shape and rules: `groupSchema` / `createGroupSchema` in packages/shared.
-- **Auth `user_metadata`**: `display_name`, `phone_number`, `country`, `city`, `avatar_url`. There is no profiles table, so all of this lives in the auth user's metadata.
-- **Storage bucket `Users-Pics`**: path `${userId}/avatar.${ext}`. The public URL is stored in `user_metadata.avatar_url` with `?t=timestamp` for cache-busting.
-- RLS, constraints, and bucket policies are defined in `supabase/migrations/` (Phase 1). Check `docs/SUPABASE.md` to see whether they have been applied.
 
 ### Auth flow (own API, Stage 6)
 1. **Sign up / sign in:** `SignupPage` / `LoginPage` → `useRegister` / `useLogin` → `register()` / `login()` → API validates (shared schemas), hashes or verifies the password with argon2id, creates a `sessions` row holding only `sha256(token)`, and sets the token in an **httpOnly, SameSite=Lax** cookie (`sid`; `__Host-sid` + Secure in production). The response's `user` goes into `['session']` via `useSetUser`.
@@ -293,7 +283,8 @@ Note: v1 groups have a `date` column; v2 uses `created_at`. The API maps this in
 - **Tab titles:** each page renders `<title>{pageTitle("…")}</title>`.
 
 ## 5. External services
-- Garage (self-hosted, Docker): avatar storage. (v1 on `main` still uses Supabase until Stage 16.)
+- Garage (self-hosted, Docker): avatar storage, mirrored to Cloudflare R2 by the `offsite` service.
+- Cloudflare R2: off-site backups (database dumps + avatars). Resend: outgoing email (SMTP). Google: OAuth sign-in.
 - ipapi.co (client-side IP geolocation, 5s timeout, fails silently)
 - No font CDN: Inter is self-hosted since Stage 12 (`@fontsource-variable/inter`, files served with the build)
 

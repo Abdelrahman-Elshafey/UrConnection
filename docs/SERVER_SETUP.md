@@ -375,9 +375,9 @@ Gives caching, stronger DDoS protection and hides the server IP. Before turning 
 
 ---
 
-## 12. Automatic deploys (Stage 15)
+## 12. Automatic deploys (Stage 15; from `main` since Stage 16)
 
-Every push to `dev` is deployed by GitHub Actions ([deploy.yml](../.github/workflows/deploy.yml)): checks → build the `api` and `web` images → push them to **GHCR** (`ghcr.io/abdelrahman-elshafey/urconnections-{api,web}:<commit>`, public like the repo) → SSH to the server → [scripts/deploy.sh](../scripts/deploy.sh) → smoke test of `/api/health` from outside. The server never builds anything any more; it downloads the images CI built and tested.
+Every push to `main` is deployed by GitHub Actions (until the Stage 16 launch it was `dev`; now work goes to `dev`, and a PR dev → main is a release) ([deploy.yml](../.github/workflows/deploy.yml)): checks → build the `api` and `web` images → push them to **GHCR** (`ghcr.io/abdelrahman-elshafey/urconnections-{api,web}:<commit>`, public like the repo) → SSH to the server → [scripts/deploy.sh](../scripts/deploy.sh) → smoke test of `/api/health` from outside. The server never builds anything any more; it downloads the images CI built and tested.
 
 **The deploy key.** GitHub logs in with its own SSH key, created for this alone (never your personal key). The private half is the `DEPLOY_SSH_KEY` secret of the GitHub environment `staging` (only the deploy job can read it); no copy is kept anywhere else. The public half is the second line of `~/.ssh/authorized_keys`:
 ```
