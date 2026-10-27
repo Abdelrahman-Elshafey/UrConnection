@@ -1,6 +1,6 @@
 # UrConnections
 
-Find study and interest groups near you, or online. Browse groups by topic, country/city, and platform (WhatsApp, Discord, Telegram, …), create your own group with a link to its chat, and manage your profile.
+Find practical && social groups throughout all the platforms near you, or online. Browse groups by topic, country/city, and platform (WhatsApp, Discord, Telegram, …), create your own group with a link to its chat, and manage your profile.
 
 > **Live at https://urconnections.aelshafey.com** (v2): a TypeScript monorepo with its own Express API, authentication, Postgres, and Docker deployment on a VPS.
 > The first version (React + Supabase on Vercel) is kept as the git tag [`v1-supabase`](../../tree/v1-supabase).
