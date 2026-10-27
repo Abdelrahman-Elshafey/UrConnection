@@ -256,7 +256,11 @@ Ports 3000, 5432, 3900, 3902, 8025 and 8080 must be closed from outside; only Ca
 
 **HSTS** (Caddyfile, Stage 14): `Strict-Transport-Security: max-age=31536000` on the real domain only. After one HTTPS visit the browser refuses plain HTTP to this host for a year, so a later visit can't be downgraded by someone on the network. Check: `curl -sI https://urconnections.aelshafey.com/ | grep -i strict`.
 
-**Day-to-day** (in `~/apps/urconnections`; `dc` is just shorthand here for `docker compose -f compose.prod.yml --env-file .env.prod`):
+**Day-to-day** (in `~/apps/urconnections`; `dc` is a shorthand for `docker compose -f compose.prod.yml --env-file .env.prod`). It's a shell function, not a program (`apt install dc` would install an unrelated calculator). Define it once, so every SSH session has it:
+```bash
+echo 'dc() { docker compose -f ~/apps/urconnections/compose.prod.yml --env-file ~/apps/urconnections/.env.prod "$@"; }' >> ~/.bashrc
+source ~/.bashrc
+```
 ```bash
 dc ps                       # status of every service
 dc logs -f api              # follow one service's logs (Ctrl+C to stop)
@@ -356,11 +360,12 @@ The pipe streams the dump from one container into the other without a temporary 
 dc exec offsite sh /offsite.sh once
 # → offsite: copied to r2:urconnections-backups (N dumps there)
 # → offsite: storage mirrored to r2:urconnections-backups/storage (N files)
-dc exec -T offsite sh -c 'rclone copy r2:$OFFSITE_S3_BUCKET/storage /tmp/restore && rclone check /tmp/restore garage:$STORAGE_BUCKET && rm -rf /tmp/restore' </dev/null
+dc exec -T offsite sh -c 'mkdir -p /tmp/restore && rclone copy r2:$OFFSITE_S3_BUCKET/storage /tmp/restore && rclone check /tmp/restore garage:$STORAGE_BUCKET && rm -rf /tmp/restore' </dev/null
 # → "0 differences found", "N matching files"
 ```
 **Real restore** (new server, or a lost volume): deploy the stack, then `dc exec -T offsite sh -c 'rclone copy r2:$OFFSITE_S3_BUCKET/storage garage:$STORAGE_BUCKET' </dev/null`. One removed picture: find it with `rclone lsf -R r2:$OFFSITE_S3_BUCKET/storage-removed` and copy that folder back the same way. Avatar URLs contain the storage key, so restored pictures show again with no database change.
-Tested 2026-10-26 against the dev Garage (a local folder standing in for R2): mirror, a removed picture moved to `storage-removed/`, an old removal folder pruned, the picture restored with the same content.
+Tested 2026-10-26 against the dev Garage (a local folder standing in for R2): mirror, a removed picture moved to `storage-removed/`, an old removal folder pruned, the picture restored with the same content. **Restore drill on the server passed 2026-10-27**: 1 avatar mirrored, restored from R2, `0 differences found, 1 matching files`.
+> `mkdir -p /tmp/restore` matters when storage is empty: `rclone copy` of nothing creates no folder, and `rclone check` then fails with "directory not found" (seen on the first run, before anyone had uploaded a picture).
 
 ## 11. Later: Cloudflare proxy (orange cloud)
 
