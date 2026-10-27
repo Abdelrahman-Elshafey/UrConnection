@@ -1,6 +1,7 @@
 /**
- * Group categories. Single source of truth for the create form, the filter
- * bar, and (later) API validation and the database CHECK constraint.
+ * Group categories. Single source of truth for the create form, the filter bar and API
+ * validation. The database CHECK constraint repeats the list (migrations are frozen
+ * snapshots); a db test checks the two still agree.
  *
  * `as const` makes this a readonly tuple of literal strings instead of string[],
  * so TypeScript knows the exact allowed values.

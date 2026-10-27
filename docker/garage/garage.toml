@@ -1,6 +1,7 @@
-# Garage (S3-compatible object storage) for DEVELOPMENT, used by docker-compose.yml.
+# Garage (S3-compatible object storage), used by both docker-compose.yml (dev) and compose.prod.yml.
 # Docs: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
-# The rpc_secret comes from the GARAGE_RPC_SECRET environment variable (see docker-compose.yml).
+# No secrets in here: the rpc_secret and the access key come from environment variables
+# (dev defaults in docker-compose.yml, generated ones in the server's .env.prod).
 
 metadata_dir = "/var/lib/garage/meta" # the index: which objects exist, in which bucket
 data_dir = "/var/lib/garage/data"     # the object bytes themselves

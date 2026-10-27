@@ -1,5 +1,5 @@
 // Meeting platforms: everything that is NOT UI (icons/colors live in web/src/lib/platforms.ts).
-// The API will use the same linkPattern to validate meeting links.
+// createGroupSchema checks each meeting link against its platform's linkPattern, in the form and in the API.
 
 export const PLATFORMS = [
   {

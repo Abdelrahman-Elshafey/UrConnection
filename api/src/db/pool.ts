@@ -5,7 +5,7 @@ import { logger } from "../lib/logger";
 /**
  * A pool keeps a few open connections to Postgres and lends them out per query,
  * because opening a new connection for every request would be slow.
- * Stage 4 wraps this pool with Kysely for typed queries.
+ * db.ts wraps this pool with Kysely for typed queries.
  */
 export const pool = new pg.Pool({
   connectionString: config.DATABASE_URL,

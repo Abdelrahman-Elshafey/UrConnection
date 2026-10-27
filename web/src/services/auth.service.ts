@@ -7,12 +7,10 @@ import {
   type User,
 } from "@urconnections/shared";
 import { apiGet, apiSend, apiSendNoContent } from "../lib/apiClient";
-import { clearSavedSearch } from "../features/groups/utils/savedSearch";
 
 /**
  * Authentication through our own API (Stage 6). The session lives in an httpOnly
  * cookie the browser sends automatically: this code never sees or stores the token.
- * (Avatars move to the API in Stage 10.)
  */
 
 /**
@@ -35,10 +33,7 @@ export const login = async (input: LoginInput): Promise<User> => {
   return user!;
 };
 
-export const logout = async (): Promise<void> => {
-  await apiSendNoContent("POST", "/api/auth/logout");
-  clearSavedSearch(); // the next person on this tab starts with fresh filters
-};
+export const logout = (): Promise<void> => apiSendNoContent("POST", "/api/auth/logout");
 
 /** Update the signed-in user's own profile; returns the updated user. */
 export const updateProfile = async (patch: ProfileUpdate): Promise<User> => {

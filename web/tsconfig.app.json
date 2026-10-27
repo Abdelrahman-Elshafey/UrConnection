@@ -5,7 +5,10 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"] // import.meta.env, asset imports, ...
+    // Vite's types (import.meta.env, asset imports). No VITE_* variables are used: every
+    // setting lives in api/.env. To add one, declare it in a src/env.d.ts:
+    //   interface ImportMetaEnv { readonly VITE_X: string }
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }

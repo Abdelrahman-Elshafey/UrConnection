@@ -12,7 +12,7 @@ export const userSchema = z.object({
   country: z.string(),
   city: z.string(),
   avatar_url: z.string().nullable(), // e.g. "/media/avatars/<id>/<random>.webp"; null = no picture
-  email_verified: z.boolean(), // verification emails arrive in Stage 8
+  email_verified: z.boolean(),
   created_at: z.iso.datetime({ offset: true }),
 });
 

@@ -30,7 +30,7 @@ export function explainDatabaseError(err: unknown): string | null {
     return `Postgres rejected the username or password for ${where}. Check DATABASE_URL in api/.env (dev values: api/.env.example).`;
   }
   if (codes.has("3D000")) {
-    return `The database "${url.pathname.slice(1)}" doesn't exist on ${url.hostname}:${url.port}. Check DATABASE_URL in api/.env.`;
+    return `The database "${url.pathname.slice(1)}" doesn't exist on ${url.hostname}:${url.port || "5432"}. Check DATABASE_URL in api/.env.`;
   }
   if (codes.has("42P01")) {
     return "A table is missing: the database has no schema yet. Create it first:\n  npm run db:migrate";

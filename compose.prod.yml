@@ -125,8 +125,7 @@ services:
       retries: 20
 
   # Nightly pg_dump into the "backups" volume (docker/backup/backup.sh).
-  # On demand: npm run prod:backup
-  # Copying them off the server comes in Stage 14.
+  # On demand: npm run prod:backup. The "offsite" service below copies them off the server.
   backup:
     image: postgres:18-alpine # same major as the database, so pg_dump matches the server
     restart: unless-stopped
