@@ -110,16 +110,22 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json
   public/favicon.svg
   src/
-    main.tsx                # self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
-    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → NotFound
+    main.tsx                # initLocale(detectLocale()) first (no flash of English), then: self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
+    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → PageNotFound
     index.css               # Tailwind, @theme tokens (--font-sans = Inter Variable, colors accent, surface, …), base layer, .hide-scrollbar, .animate-fade-in, .nav-progress
     vite-env.d.ts           # Vite client types (no VITE_* variables are used)
+    i18n/                   # translations (own ~100-line layer, no library). See "Languages" in §4
+      locales.ts            # LOCALES en/it/de/fr, LOCALE_NAMES, detectLocale() (saved choice → navigator.languages → en), saveLocale() (localStorage "locale")
+      i18n.ts               # store (useSyncExternalStore) + useT() → { t, locale }; setLocale() loads a language chunk, sets <html lang>, saves; typed MessageKey ("nav.profile")
+      messages/en.ts        # every visible text, grouped by area; the source of truth and the `Messages` type. English is bundled and the fallback
+      messages/it.ts · de.ts · fr.ts  # translations, `satisfies Messages` (missing/extra key = build error); each is its own ~0.65 KB gzip chunk
     components/
       layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
       layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
       layout/MainLayout.tsx # Navbar + VerifyEmailBanner + <Outlet/> + Footer
       layout/Navbar.tsx     # sticky bar: logo, avatar + Profile (one link), Sign Out, Create Group
-      layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup)
+      layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup) + LanguageSelect next to the copyright
+      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → setLocale()
       ui/                   # the UI kit (Stage 11). Pages build on these; no raw button/input styling in pages
         cx.ts               # cx(...classes): join truthy class names
         buttonClass.ts      # buttonClass({ variant: primary|dark|outline|danger, size: xs|sm|md|lg|xl, block })
@@ -132,7 +138,7 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
         Avatar.tsx          # picture or initial (sm | lg)
         PlatformBadge.tsx   # platform pill with icon + colors (getPlatform)
         PageHero.tsx        # huge two-line headline ("Your / Profile.") + intro
-        NotFound.tsx        # "Not Found" page body (also the "*" route)
+        NotFound.tsx        # NotFound ("Not Found" page body) + PageNotFound ("no page at this address": the "*" route and 404 errors)
         ConfirmDialog.tsx   # native <dialog> + showModal(): focus trap, Escape, backdrop click
         toast/              # ToastProvider (aria-live region, 3.5 s) + useToast() (React 19 use(context)) + toastContext
     lib/
@@ -281,6 +287,7 @@ Rules: **never edit a migration that has run**; add `0002_...` and register it i
 - **Colors** are `@theme` tokens in `index.css` (`accent`, `accent-strong`, `surface`, `surface-dark`, `raised-dark`, `line-dark`), used as `bg-accent`, `text-accent`, `border-line-dark`, ... Dark mode uses the `dark:` variant (system preference; no manual toggle yet).
 - **Icons** come from `react-icons` (`fi` = Feather for UI, `fa`/`fa6`/`si` for brands), with `aria-hidden` when next to text.
 - **Tab titles:** each page renders `<title>{pageTitle("…")}</title>`.
+- **Languages (English, Italiano, Deutsch, Français):** components never hard-code visible text. Add it to `i18n/messages/en.ts` (grouped by area), translate it in `it.ts`, `de.ts`, `fr.ts` (TypeScript fails the build if one is missing), and render `t("area.key")` from `const { t } = useT()`. Placeholders: `"Hi {name}"` + `t(key, { name })`. Translate only what people see: values sent to the API or stored in the DB (topics, country names, platform keys) stay English. German and French run ~30% longer, so check new texts on a 390px phone; the navbar uses shorter labels than the footer for that reason. The visitor's choice is saved in `localStorage` (`locale`); `<html lang>` follows it. Pages not converted yet still show English.
 
 ## 5. External services
 - Garage (self-hosted, Docker): avatar storage, mirrored to Cloudflare R2 by the `offsite` service.

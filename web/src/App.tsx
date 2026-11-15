@@ -3,7 +3,7 @@ import { createBrowserRouter, redirect, RouterProvider, type LoaderFunctionArgs 
 import MainLayout from "./components/layout/MainLayout";
 import RootLayout from "./components/layout/RootLayout";
 import RouteError from "./components/layout/RouteError";
-import { NotFound } from "./components/ui/NotFound";
+import { PageNotFound } from "./components/ui/NotFound";
 import { PageSpinner } from "./components/ui/Spinner";
 import { sessionQueryOptions } from "./features/auth/hooks/useUser";
 import GroupList from "./features/groups/components/GroupList";
@@ -71,7 +71,7 @@ const router = createBrowserRouter([
               { path: "create", loader: requireAuth, lazy: page(() => import("./features/groups/components/CreateGroupPage")) },
               { path: "profile", loader: requireAuth, lazy: page(() => import("./features/profile/components/ProfilePage")) },
               // Any other address: a real "not found" page instead of a blank screen.
-              { path: "*", element: <NotFound message="There's no page at this address." /> },
+              { path: "*", element: <PageNotFound /> },
             ],
           },
         ],

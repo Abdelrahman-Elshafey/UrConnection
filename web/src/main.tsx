@@ -4,6 +4,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { ToastProvider } from "./components/ui/toast/ToastProvider";
+import { initLocale } from "./i18n/i18n";
+import { detectLocale } from "./i18n/locales";
 import { queryClient } from "./lib/queryClient";
 // Self-hosted Inter (audit P7): the font files ship with our build, so there is no request to
 // Google (faster first text, no third party seeing every visitor, simpler CSP in Stage 13).
@@ -11,14 +13,18 @@ import { queryClient } from "./lib/queryClient";
 import "@fontsource-variable/inter";
 import "./index.css";
 
-// index.html always has <div id="root">; the `!` tells TypeScript we know it's there.
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <App />
-      </ToastProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  </StrictMode>,
-);
+// Load the visitor's language first (English is instant; another language is one small
+// download), so the first paint is already in the right language.
+void initLocale(detectLocale()).then(() => {
+  // index.html always has <div id="root">; the `!` tells TypeScript we know it's there.
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+});
