@@ -164,6 +164,43 @@ export const en = {
       linkHint: "The link and platform can't be changed. To use another link, create a new group.",
     },
   },
+  profile: {
+    page: {
+      tabTitle: "Your profile",
+      heroLead: "Your",
+      heroAccent: "Profile.",
+      intro: "Manage your account details and view the communities you've launched.",
+      accountTitle: "Account Information",
+      accountIntro: "Your personal details and contact information. Manage how you appear to others.",
+      groupsTitle: "Your Groups",
+      groupsHeading: "Communities you lead.",
+      empty: "You haven't created any groups yet.",
+      emptyCta: "Launch your first channel",
+    },
+    details: {
+      displayName: "Display Name",
+      email: "Email Address",
+      phone: "Phone Number",
+      location: "Location",
+      notSet: "Not set",
+      edit: "Edit Profile",
+      emailHint: "Email cannot be changed from here.",
+      // Example values in the empty fields: a typical name and phone number for each language.
+      displayNamePlaceholder: "Jane Doe",
+      phonePlaceholder: "+1 234 567 8900",
+      saving: "Saving…",
+      save: "Save Changes",
+      updated: "Profile updated.",
+    },
+    avatar: {
+      change: "Change profile picture",
+      remove: "Remove",
+      wrongType: "Please choose a JPEG, PNG or WebP image.",
+      tooLarge: "That image is too large. The maximum is 5 MB.",
+      updated: "Picture updated.",
+      removed: "Picture removed.",
+    },
+  },
 };
 
 /**
