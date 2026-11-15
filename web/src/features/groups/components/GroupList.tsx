@@ -1,7 +1,8 @@
-import type { Group } from "@urconnections/shared";
+import { isTopic, type Group } from "@urconnections/shared";
 import { useRef, useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { useT } from "../../../i18n/i18n";
 import { pageTitle } from "../../../lib/pageTitle";
 import { useGroupFilters } from "../hooks/useGroupFilters";
 import { useGroups } from "../hooks/useGroups";
@@ -16,8 +17,9 @@ export default function GroupList() {
   const { groups, data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGroups(apiParams);
   const [toDelete, setToDelete] = useState<Group | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const { t } = useT();
 
-  if (isLoading) return <PageSpinner label="Initializing Experience" />;
+  if (isLoading) return <PageSpinner label={t("groups.list.pageSpinner")} />;
 
   // Nothing to show at all (the first page failed): an error box in place of the cards. The
   // search and filters stay, so the user can retry or change them. When groups are already
@@ -40,12 +42,11 @@ export default function GroupList() {
         <div className="mb-16 flex flex-col justify-between gap-8 px-2 md:flex-row md:items-end">
           <div className="ml-4">
             <h2 className="mb-4 text-4xl font-black tracking-tighter text-black dark:text-white md:text-5xl">
-              Explore {filters.topic !== "All" ? filters.topic : "Featured"}
+              {isTopic(filters.topic) ? t("groups.list.exploreTopic", { topic: t(`topics.${filters.topic}`) }) : t("groups.list.exploreFeatured")}
             </h2>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
               {/* Only loaded pages are known; "+" means more can be loaded. */}
-              {groups.length}
-              {hasNextPage ? "+" : ""} groups available in your network
+              {t("groups.list.available", { count: `${groups.length}${hasNextPage ? "+" : ""}` })}
             </p>
           </div>
 
@@ -56,7 +57,7 @@ export default function GroupList() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
                 </span>
-                Detecting Location
+                {t("groups.list.detecting")}
               </span>
             )}
             {hasActiveFilters && (
@@ -64,7 +65,7 @@ export default function GroupList() {
                 onClick={clearFilters}
                 className="rounded-full bg-accent/5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-accent transition-colors hover:text-accent-strong"
               >
-                Clear all
+                {t("groups.list.clearAll")}
               </button>
             )}
           </div>
@@ -74,7 +75,7 @@ export default function GroupList() {
           <div className="mx-auto w-full max-w-2xl rounded-[40px] bg-surface p-12 text-center dark:bg-raised-dark">
             <p className="mb-8 font-medium text-gray-500 dark:text-gray-400">{error.message}</p>
             <Button onClick={() => refetch()} size="sm">
-              Retry Connection
+              {t("groups.list.retry")}
             </Button>
           </div>
         ) : (
@@ -87,12 +88,12 @@ export default function GroupList() {
 
             {groups.length === 0 && (
               <div className="col-span-full py-30 text-center">
-                <h3 className="mb-6 text-4xl font-black tracking-tighter text-black dark:text-white md:text-6xl">No groups found.</h3>
+                <h3 className="mb-6 text-4xl font-black tracking-tighter text-black dark:text-white md:text-6xl">{t("groups.list.emptyTitle")}</h3>
                 <p className="mx-auto mb-10 max-w-sm px-6 text-lg font-medium leading-relaxed text-gray-500 dark:text-gray-400">
-                  Refine your discovery parameters or expand your search to global locations.
+                  {t("groups.list.emptyBody")}
                 </p>
                 <Button variant="dark" onClick={clearFilters} className="uppercase tracking-widest">
-                  Reset Filters
+                  {t("groups.list.resetFilters")}
                 </Button>
               </div>
             )}
@@ -107,7 +108,7 @@ export default function GroupList() {
               </p>
             )}
             <Button variant="dark" onClick={() => fetchNextPage()} loading={isFetchingNextPage} className="uppercase tracking-widest">
-              {isFetchingNextPage ? "Loading…" : "Load more"}
+              {t(isFetchingNextPage ? "groups.list.loadingMore" : "groups.list.loadMore")}
             </Button>
           </div>
         )}

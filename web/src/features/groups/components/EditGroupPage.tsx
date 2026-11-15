@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router";
 import { ReadOnlyField } from "../../../components/ui/Field";
 import { NotFound } from "../../../components/ui/NotFound";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { useT } from "../../../i18n/i18n";
 import { isNotFound } from "../../../lib/apiClient";
 import { isOwner } from "../../../lib/format";
 import { getPlatform } from "../../../lib/platforms";
@@ -25,10 +26,11 @@ export default function EditGroupPage() {
   const { groupId } = useParams();
   const { data: user } = useUser();
   const { data: group, isLoading, error } = useGroup(groupId);
+  const { t } = useT();
 
   if (isLoading) return <PageSpinner />;
   if (error && !isNotFound(error)) throw error; // server trouble: the route's error page
-  if (!group || !isOwner(user, group)) return <NotFound message="You can only edit groups you created." />;
+  if (!group || !isOwner(user, group)) return <NotFound message={t("groups.edit.notOwner")} />;
   // A separate component, so the form starts with the loaded group as its default values.
   return <EditGroupForm group={group} />;
 }
@@ -39,15 +41,16 @@ function EditGroupForm({ group }: { group: Group }) {
   const { title, topic, description, country, city } = group;
   const form = useForm({ resolver: zodResolver(editFormSchema), defaultValues: { title, topic, description, country, city } });
   const backTo = `/groups/${group.id}`;
+  const { t } = useT();
 
   return (
     <FormProvider {...form}>
       <GroupFormFrame
-        tabTitle="Edit group"
-        heroLead="Edit your"
-        intro="Update how your group is described. The platform and link stay as they are."
+        tabTitle={t("groups.edit.tabTitle")}
+        heroLead={t("groups.edit.heroLead")}
+        intro={t("groups.edit.intro")}
         cancelTo={backTo}
-        submitLabel="Save Changes"
+        submitLabel={t("groups.edit.submit")}
         isPending={isPending}
         error={error?.message}
         onSubmit={form.handleSubmit((values) => mutate({ id: group.id, ...values }, { onSuccess: () => navigate(backTo) }))}
@@ -55,11 +58,11 @@ function EditGroupForm({ group }: { group: Group }) {
         <GroupFormFields
           linkFields={
             <>
-              <ReadOnlyField label="Meeting Platform" value={getPlatform(group.platform).label} />
+              <ReadOnlyField label={t("groups.form.platform")} value={getPlatform(group.platform).label} />
               <ReadOnlyField
-                label="Group Link"
+                label={t("groups.form.link")}
                 value={group.meeting_link}
-                hint="The link and platform can't be changed. To use another link, create a new group."
+                hint={t("groups.edit.linkHint")}
               />
             </>
           }

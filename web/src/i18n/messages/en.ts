@@ -1,3 +1,5 @@
+import type { Topic } from "@urconnections/shared";
+
 /**
  * Every text on the website, in English. This file is the source of truth: add a text here
  * first, then translate it in it.ts, de.ts and fr.ts. TypeScript refuses to build if a
@@ -62,6 +64,103 @@ export const en = {
     errorHeading: "Something went wrong",
     errorBody: "This page hit an unexpected error. Reloading usually helps; if it doesn't, go back home.",
     reload: "Reload page",
+  },
+  // Labels for the topic values (the values themselves stay English: URL, API, DB).
+  topics: {
+    All: "All",
+    Programming: "Programming",
+    Language: "Language",
+    Math: "Math",
+    Science: "Science",
+    Design: "Design",
+    Business: "Business",
+    Art: "Art",
+  } satisfies Record<Topic | "All", string>,
+  groups: {
+    connect: "Connect now",
+    list: {
+      pageSpinner: "Initializing Experience",
+      exploreTopic: "Explore {topic}",
+      exploreFeatured: "Explore Featured",
+      available: "{count} groups available in your network",
+      detecting: "Detecting Location",
+      clearAll: "Clear all",
+      retry: "Retry Connection",
+      emptyTitle: "No groups found.",
+      emptyBody: "Refine your discovery parameters or expand your search to global locations.",
+      resetFilters: "Reset Filters",
+      loadingMore: "Loading…",
+      loadMore: "Load more",
+    },
+    filters: {
+      heroLead: "Find your",
+      // Shown huge (PageHero): a translation must fit a 390px phone (about 12 characters).
+      heroAccent: "Connections.",
+      heroIntro: "Discover elite communities focused on growth, learning, and local networking.",
+      searchLabel: "Search groups",
+      searchPlaceholder: "Find your group by Interest",
+      search: "Search",
+      platform: "Platform",
+      topic: "Topic",
+      global: "Global",
+      allCities: "All Cities",
+      allPlatforms: "All Platforms",
+    },
+    card: {
+      delete: "Delete {title}",
+      edit: "Edit {title}",
+      viewDetails: "View Details",
+    },
+    detail: {
+      loading: "Loading Detail",
+      back: "Back to Explore",
+      description: "Description",
+      location: "Location",
+      global: "Global Network",
+      platform: "Access Platform",
+      edit: "Edit Group",
+      delete: "Delete Group",
+    },
+    deleteDialog: {
+      title: "Delete this group?",
+      confirm: "Delete",
+      // Shown after the group's title, which is printed in bold in front of it.
+      body: "will be removed for everyone. This can't be undone.",
+      deleted: "\"{title}\" was deleted.",
+    },
+    form: {
+      cancel: "Cancel and Return",
+      heroAccent: "Community.",
+      topic: "Field of Interest",
+      selectTopic: "Select category",
+      title: "Group Name",
+      titlePlaceholder: "e.g. Design Collective",
+      country: "Network Location",
+      city: "Specific City",
+      platform: "Meeting Platform",
+      selectPlatform: "Select platform",
+      link: "Group Link",
+      selectPlatformFirst: "Select a platform first",
+      description: "Group Description",
+      descriptionPlaceholder: "What is the objective of this connection?",
+      descriptionHint: "20 to 200 characters.",
+    },
+    create: {
+      tabTitle: "Create a group",
+      heroLead: "Launch your",
+      intro: "Design a premium environment for focused growth and meaningful connections.",
+      submit: "Launch Channel",
+      // "Resend email" must match auth.verifyBanner's button text in each language (step 5).
+      unverified: "Please confirm your email address first: open the link we emailed you (or use \"Resend email\" above), then come back.",
+    },
+    edit: {
+      notOwner: "You can only edit groups you created.",
+      tabTitle: "Edit group",
+      heroLead: "Edit your",
+      intro: "Update how your group is described. The platform and link stay as they are.",
+      submit: "Save Changes",
+      linkHint: "The link and platform can't be changed. To use another link, create a new group.",
+    },
   },
 };
 
