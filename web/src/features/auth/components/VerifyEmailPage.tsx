@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router";
 import { Button, ButtonLink } from "../../../components/ui/Button";
 import { Notice } from "../../../components/ui/Notice";
+import { useT } from "../../../i18n/i18n";
 import { useVerifyEmail } from "../hooks/useEmailFlows";
 import AuthLayout from "./AuthLayout";
 
@@ -18,22 +19,23 @@ export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const { mutate, isPending, isSuccess, error } = useVerifyEmail();
+  const { t } = useT();
 
   if (isSuccess) {
     return (
-      <AuthLayout title="Email confirmed." subtitle="Thanks! You can now create groups.">
+      <AuthLayout title={t("auth.verify.doneTitle")} subtitle={t("auth.verify.doneSubtitle")}>
         <ButtonLink to="/" size="lg" block>
-          Explore groups
+          {t("auth.verify.explore")}
         </ButtonLink>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout title="Confirm your email." subtitle="One click and your address is verified.">
+    <AuthLayout title={t("auth.verify.title")} subtitle={t("auth.verify.subtitle")}>
       {!token && (
         <Notice tone="error" className="mb-8">
-          This link is incomplete. Open the link from the email again.
+          {t("auth.linkIncomplete")}
         </Notice>
       )}
       {error && (
@@ -42,7 +44,7 @@ export default function VerifyEmailPage() {
         </Notice>
       )}
       <Button onClick={() => mutate(token)} size="lg" block disabled={!token} loading={isPending}>
-        Confirm my email
+        {t("auth.verify.submit")}
       </Button>
     </AuthLayout>
   );

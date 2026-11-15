@@ -1,4 +1,4 @@
-import type { Topic } from "@urconnections/shared";
+import type { OAuthErrorCode, Topic } from "@urconnections/shared";
 
 /**
  * Every text on the website, in English. This file is the source of truth: add a text here
@@ -27,6 +27,15 @@ export const en = {
     selectCountryFirst: "Select a country first",
     showPassword: "Show password",
     hidePassword: "Hide password",
+    email: "Email Address",
+    displayName: "Display Name",
+    phone: "Phone Number",
+    // Example values in the empty fields: a typical name and phone number for each language.
+    displayNamePlaceholder: "Jane Doe",
+    phonePlaceholder: "+1 234 567 8900",
+    emailPlaceholder: "name@example.com",
+    password: "Password",
+    confirmPassword: "Confirm Password",
   },
   nav: {
     profile: "Profile",
@@ -178,16 +187,10 @@ export const en = {
       emptyCta: "Launch your first channel",
     },
     details: {
-      displayName: "Display Name",
-      email: "Email Address",
-      phone: "Phone Number",
       location: "Location",
       notSet: "Not set",
       edit: "Edit Profile",
       emailHint: "Email cannot be changed from here.",
-      // Example values in the empty fields: a typical name and phone number for each language.
-      displayNamePlaceholder: "Jane Doe",
-      phonePlaceholder: "+1 234 567 8900",
       saving: "Saving…",
       save: "Save Changes",
       updated: "Profile updated.",
@@ -199,6 +202,72 @@ export const en = {
       tooLarge: "That image is too large. The maximum is 5 MB.",
       updated: "Picture updated.",
       removed: "Picture removed.",
+    },
+  },
+  auth: {
+    back: "Return to Explore",
+    linkIncomplete: "This link is incomplete. Open the link from the email again.",
+    orContinueWith: "Or continue with",
+    login: {
+      tabTitle: "Sign in",
+      title: "Welcome back.",
+      subtitle: "Sign in to access your connections.",
+      forgot: "Forgot password?",
+      submit: "Sign In",
+      noAccount: "Don't have an account?",
+      signUp: "Sign up",
+    },
+    signup: {
+      tabTitle: "Create account",
+      title: "Join us.",
+      subtitle: "Create an account to build your network.",
+      submit: "Create Account",
+      haveAccount: "Already have an account?",
+      signIn: "Sign in",
+    },
+    // One per ?error= code the API sends back from Google sign-in (OAUTH_ERROR_MESSAGES).
+    oauth: {
+      google_unavailable: "Google sign-in isn't set up on this server yet.",
+      google_cancelled: "Google sign-in was cancelled.",
+      google_expired: "That Google sign-in expired or was started in another tab. Please try again.",
+      google_unverified: "Your Google account's email address isn't verified, so it can't be used to sign in here.",
+      google_too_many: "Too many sign-in attempts. Please wait a few minutes and try again.",
+      google_failed: "Google sign-in didn't work. Please try again.",
+    } satisfies Record<OAuthErrorCode, string>,
+    forgot: {
+      title: "Forgot your password?",
+      subtitle: "Enter your email and we'll send you a link to choose a new one.",
+      submit: "Send reset link",
+      back: "Back to sign in",
+      // Same text as the API's answer, which is the same whether or not the account exists.
+      sent: "If an account exists for this email, we've sent a link to reset the password.",
+    },
+    reset: {
+      title: "Choose a new password.",
+      subtitle: "At least 8 characters, with upper and lower case, a number and a symbol.",
+      requestNew: "Request a new link",
+      newPassword: "New Password",
+      confirmNew: "Confirm New Password",
+      submit: "Set new password",
+      doneTitle: "Password changed.",
+      doneSubtitle: "For your safety you've been signed out everywhere. Sign in with your new password.",
+      signIn: "Sign in",
+    },
+    verify: {
+      title: "Confirm your email.",
+      subtitle: "One click and your address is verified.",
+      submit: "Confirm my email",
+      doneTitle: "Email confirmed.",
+      doneSubtitle: "Thanks! You can now create groups.",
+      explore: "Explore groups",
+    },
+    banner: {
+      // {email} is shown in bold, wherever the language puts it.
+      text: "Please confirm your email ({email}) to create groups.",
+      // groups.create.unverified quotes this button: keep them the same.
+      resend: "Resend email",
+      sending: "Sending…",
+      sent: "New link sent. Check your inbox.",
     },
   },
 };

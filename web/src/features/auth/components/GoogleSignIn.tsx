@@ -1,6 +1,7 @@
 import { FaGoogle } from "react-icons/fa";
 import { useSearchParams } from "react-router";
 import { buttonClass } from "../../../components/ui/buttonClass";
+import { useT } from "../../../i18n/i18n";
 import { withNext } from "../../../lib/nextPath";
 import { GOOGLE_SIGN_IN_URL } from "../../../services/auth.service";
 
@@ -9,6 +10,7 @@ export default function GoogleSignIn() {
   // The page that sent the user to sign in (?next=…): the API keeps it during the trip to
   // Google and redirects there afterwards (it checks it is a path on this site).
   const [searchParams] = useSearchParams();
+  const { t } = useT();
 
   return (
     <>
@@ -17,7 +19,7 @@ export default function GoogleSignIn() {
           <div className="w-full border-t border-gray-100 dark:border-raised-dark" />
         </div>
         <span className="relative bg-white px-4 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:bg-black">
-          Or continue with
+          {t("auth.orContinueWith")}
         </span>
       </div>
       {/* A plain <a>, not a router Link or fetch(): the whole page travels to Google and back.

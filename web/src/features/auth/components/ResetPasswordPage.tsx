@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { Button, ButtonLink } from "../../../components/ui/Button";
 import { PasswordField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useT } from "../../../i18n/i18n";
 import { useResetPassword } from "../hooks/useEmailFlows";
 import AuthLayout from "./AuthLayout";
 
@@ -13,6 +14,7 @@ export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const { mutate, isPending, isSuccess, error } = useResetPassword();
+  const { t } = useT();
   const {
     register,
     handleSubmit,
@@ -21,34 +23,34 @@ export default function ResetPasswordPage() {
 
   if (isSuccess) {
     return (
-      <AuthLayout title="Password changed." subtitle="For your safety you've been signed out everywhere. Sign in with your new password.">
+      <AuthLayout title={t("auth.reset.doneTitle")} subtitle={t("auth.reset.doneSubtitle")}>
         <ButtonLink to="/login" size="lg" block>
-          Sign in
+          {t("auth.reset.signIn")}
         </ButtonLink>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout title="Choose a new password." subtitle="At least 8 characters, with upper and lower case, a number and a symbol.">
+    <AuthLayout title={t("auth.reset.title")} subtitle={t("auth.reset.subtitle")}>
       {!token && (
         <Notice tone="error" className="mb-8">
-          This link is incomplete. Open the link from the email again.
+          {t("auth.linkIncomplete")}
         </Notice>
       )}
       {error && (
         <Notice tone="error" className="mb-8">
           {error.message}{" "}
           <Link to="/forgot-password" className="underline">
-            Request a new link
+            {t("auth.reset.requestNew")}
           </Link>
         </Notice>
       )}
       <form onSubmit={handleSubmit(({ password }) => mutate({ token, password }))} className="space-y-6" noValidate>
-        <PasswordField label="New Password" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
-        <PasswordField label="Confirm New Password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+        <PasswordField label={t("auth.reset.newPassword")} autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+        <PasswordField label={t("auth.reset.confirmNew")} autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
         <Button type="submit" size="lg" block disabled={!token} loading={isPending}>
-          Set new password
+          {t("auth.reset.submit")}
         </Button>
       </form>
     </AuthLayout>

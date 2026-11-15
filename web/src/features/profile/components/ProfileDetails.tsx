@@ -44,9 +44,9 @@ export default function ProfileDetails({ user }: { user: User }) {
       <div className="animate-fade-in">
         <dl className="grid grid-cols-1 gap-10 md:grid-cols-2">
           {[
-            [t("profile.details.displayName"), user.display_name || t("profile.details.notSet")],
-            [t("profile.details.email"), user.email],
-            [t("profile.details.phone"), user.phone || t("profile.details.notSet")],
+            [t("fields.displayName"), user.display_name || t("profile.details.notSet")],
+            [t("fields.email"), user.email],
+            [t("fields.phone"), user.phone || t("profile.details.notSet")],
             [t("profile.details.location"), formatLocation({ city: user.city, country: countryName(user.country) }) || t("profile.details.notSet")],
           ].map(([label, value]) => (
             <div key={label} className="space-y-1">
@@ -82,18 +82,18 @@ export default function ProfileDetails({ user }: { user: User }) {
         className="animate-fade-in space-y-8"
       >
         {error && <Notice tone="error">{error.message}</Notice>}
-        <ReadOnlyField label={t("profile.details.email")} value={user.email} hint={t("profile.details.emailHint")} />
+        <ReadOnlyField label={t("fields.email")} value={user.email} hint={t("profile.details.emailHint")} />
         <TextField
-          label={t("profile.details.displayName")}
-          placeholder={t("profile.details.displayNamePlaceholder")}
+          label={t("fields.displayName")}
+          placeholder={t("fields.displayNamePlaceholder")}
           onSurface
           error={errors.display_name?.message}
           {...register("display_name")}
         />
         <TextField
-          label={t("profile.details.phone")}
+          label={t("fields.phone")}
           type="tel"
-          placeholder={t("profile.details.phonePlaceholder")}
+          placeholder={t("fields.phonePlaceholder")}
           onSurface
           error={errors.phone?.message}
           {...register("phone")}

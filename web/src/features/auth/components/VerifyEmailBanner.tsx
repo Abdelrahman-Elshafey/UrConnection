@@ -1,3 +1,4 @@
+import { useT } from "../../../i18n/i18n";
 import { useResendVerification } from "../hooks/useEmailFlows";
 import { useUser } from "../hooks/useUser";
 
@@ -5,20 +6,27 @@ import { useUser } from "../hooks/useUser";
 export default function VerifyEmailBanner() {
   const { data: user } = useUser();
   const { mutate, isPending, isSuccess, error } = useResendVerification();
+  const { t } = useT();
 
   if (!user || user.email_verified) return null;
+
+  // The address is bold, so split the sentence around its {email} slot: each language can
+  // put the address wherever its grammar wants it.
+  const [before = "", after = ""] = t("auth.banner.text").split("{email}");
 
   return (
     <div role="status" className="w-full border-b border-accent/20 bg-accent/5 px-6 py-3">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium text-black dark:text-white">
         <span>
-          Please confirm your email (<span className="font-bold">{user.email}</span>) to create groups.
+          {before}
+          <span className="font-bold">{user.email}</span>
+          {after}
         </span>
         {isSuccess ? (
-          <span className="font-bold text-accent">New link sent. Check your inbox.</span>
+          <span className="font-bold text-accent">{t("auth.banner.sent")}</span>
         ) : (
           <button onClick={() => mutate()} disabled={isPending} className="font-bold text-accent underline underline-offset-4 disabled:opacity-50">
-            {isPending ? "Sending…" : "Resend email"}
+            {t(isPending ? "auth.banner.sending" : "auth.banner.resend")}
           </button>
         )}
         {error && <span className="font-bold text-red-500">{error.message}</span>}
