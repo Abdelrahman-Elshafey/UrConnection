@@ -61,7 +61,8 @@ The owner's goal is **learning**: explain the *why* of each new concept while im
 - Design language: "Aspirational Minimalism" (Apple-like). Accent `#0071e3`, black/white with `#f5f5f7`/`#1d1d1f` bands, light and dark via `prefers-color-scheme` (Tailwind `dark:`). Typography is Inter with huge, tight headlines.
 
 ## Working conventions
-- Work on the `dev` branch (feature branches → PR into `dev`). `main` is production: merging `dev` into `main` deploys.
+- Base every new branch on the **last deployed version**, `origin/main` (run `git fetch origin` first), so later merges don't conflict. `main` is production: every push to it deploys.
+- Commits are authored as **A.Elshafey** only (`git config user.name "A.Elshafey"`, the owner's usual email). Never mention Claude or AI in commits: no `Co-Authored-By`, session links or similar lines.
 - Match the existing code style: double quotes, pages/feature components as default exports, UI-kit components as named exports, hooks named `useX` in `features/<feature>/hooks`. A `.tsx` file exports only components (React fast refresh): helpers go in `.ts` files.
 - After changes, run `npm run lint` and `npm run build`.
 - When you fix an audit item, update its status in `docs/CODE_AUDIT.md`.
