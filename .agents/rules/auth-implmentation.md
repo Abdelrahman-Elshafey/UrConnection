@@ -18,7 +18,7 @@ Goal: Prevent "Flash of Unauthenticated Content" (FOUC). The loader must check t
 
 Rule: Use a global TanStack Query key (e.g., ['session']) to manage the current user state.
 
-Implementation: Use a useUser hook that wraps useQuery. When a user logs in or out, use queryClient.invalidateQueries({ queryKey: ['session'] }) to ensure the entire UI stays in sync without page reloads.
+Implementation: Use a useUser hook that wraps useQuery. Every auth call answers with the user (or nothing, on logout), so put that answer straight into the cache with queryClient.setQueryData(['session'], user) instead of invalidating and fetching /me again: switchUser() when the user changes (it also drops the previous user's data), useSetUser() for the same user's profile changes. The entire UI stays in sync without page reloads.
 
 4. Social Auth Handling (Clean Code)
 

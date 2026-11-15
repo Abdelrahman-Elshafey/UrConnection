@@ -35,11 +35,9 @@ export const createGroupSchema = groupFields.refine(
   { message: "Link does not match the selected platform", path: ["meeting_link"] },
 );
 
-/** Fields the owner may change after creating a group. */
-export const EDITABLE_GROUP_FIELDS = ["title", "description", "topic", "country", "city"] as const;
-
 /**
- * PATCH /api/groups/:id: send only the fields that change (any of EDITABLE_GROUP_FIELDS).
+ * PATCH /api/groups/:id: send only the fields that change. The owner may change the title,
+ * description, topic, country and city.
  * The meeting link is fixed once the group exists, and so is the platform, because the
  * platform is determined by the link (a WhatsApp link only fits "whatsapp").
  * `.strict()`: sending meeting_link or platform is a 400 error, not silently ignored,

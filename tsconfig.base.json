@@ -1,7 +1,7 @@
 // Shared compiler settings. Every package's tsconfig "extends" this file.
 {
   "compilerOptions": {
-    // Output / syntax level: modern JS. Vite (and later the API bundler) does the
+    // Output / syntax level: modern JS. Vite (web) and esbuild (api/build.js) do the
     // final build, so TypeScript is only used to *check* types here.
     "target": "ES2022",
     "lib": ["ES2023"],

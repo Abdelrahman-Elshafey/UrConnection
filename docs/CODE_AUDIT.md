@@ -47,6 +47,9 @@
 | B35 | M | [x] | `App.tsx` loaders, `useSignIn`, Google routes | Signing in always went to `/`: a visitor sent from `/create` to `/login` had to find the page again. | `/login?next=<path>` from `requireAuth` and the navbar; `safeNextPath` (web and API) accepts only same-site paths (no open redirect); login ↔ signup links keep it. Google: `/api/auth/google?next=` keeps it in the OAuth cookie and redirects there after the callback (and keeps it on `/login?error=`). |
 | B36 | L | [x] | `CreateGroupPage.tsx` | An unverified user could fill in the whole form and only then got the 403. | A notice on top and a disabled submit (`GroupFormFrame` `blockedMessage`). |
 | B37 | L | [x] | `useSignIn`, `useResetPassword` | Signing in (or resetting the password) didn't drop `groupKeys.mine()`, so the next person on the tab could briefly see the previous user's groups. | `switchUser()` sets the session and removes the previous user's data; used by sign-in, sign-out and reset. |
+| B38 | L | [x] | `ConfirmDialog.tsx` | The backdrop check (`e.target === e.currentTarget`) also matched clicks on the dialog's own padding, because the padding belonged to the `<dialog>` element: a click in the empty space between the text and the buttons closed "Delete this group?". | The padding moved to an inner `<div>`; only a real backdrop click reaches the `<dialog>` itself. |
+| B39 | L | [x] | `auth.service.ts` `logout`, `useSignIn` | The saved home search was cleared in two places, and on sign-out only after a *successful* request, while `useSignOut` forgets the user even when the request fails (offline). A service also reached into a feature's storage helper. | `switchUser()` clears it, so every change of user (sign-in, sign-out, reset) does it once, whatever the request's outcome. |
+| B40 | L | [x] | `api/src/db/connectionHelp.ts` | The "database doesn't exist" hint printed `host:` with an empty port for a `DATABASE_URL` without one. | Falls back to 5432 like the other messages. |
 
 ## S — Security / privacy
 
@@ -120,6 +123,8 @@ Code that is more complex than the problem needs. Simplifying these removes whol
 | O10 | [x] | `GroupCard` / `GroupDetail` | `React.createElement(platformInfo.icon, {...})` plus `import React` just for it. `platforms.js` also has an unused `import React`. | Use `const Icon = platformInfo.icon; <Icon className=… />`, and drop the React imports (D8). |
 | O11 | [x] | `web/src/lib/platforms.ts` | An "unknown platform" fallback (`UNKNOWN_PLATFORM`, `UnknownPlatformView`, `getPlatform(string \| null \| undefined)`) left from v1. The DB CHECK and the response schema guarantee a valid key, so it could never run. | `getPlatform(key: PlatformKey)` is a plain lookup; `PlatformBadge` takes a `PlatformKey`. |
 | O12 | [x] | `api/src/db/types.ts` | Unused `User` (same name as the shared `User`), `UserUpdate`, `GroupRow` exports. | Removed; only the insert shapes used by seed and tests remain. |
+| O13 | [x] | `packages/shared/src/index.ts` | The package's public API exported 9 names nothing imports: `EDITABLE_GROUP_FIELDS` (a list no code read; `updateGroupSchema` picks its fields itself), `PLATFORM_MAP`, `passwordSchema`, `userSchema`, `OAUTH_ERROR_MESSAGES` (used only inside the package) and the types `ProfileInput`, `SignupInput`, `ForgotPasswordInput`, `ResetPasswordInput`. | `index.ts` exports only what web or api import; the unused list and types are deleted. |
+| O14 | [x] | `web/src/vite-env.d.ts` | The file only held `/// <reference types="vite/client" />`, which `tsconfig.app.json` already loads (`"types": ["vite/client"]`). | Deleted; the how-to for a future `VITE_*` variable moved into `tsconfig.app.json`. |
 
 ## M — Modernization (newer React / React Router / TanStack / TypeScript features)
 
@@ -199,6 +204,8 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 | H8 | [x] | `.agents/rules/style-guide.md` contains leftover e-commerce/hardware-brand text that contradicts the app's domain. Trim it to what applies. **2026-10-26:** rewritten for UrConnections (same design rules; the e-commerce/hardware text is gone; the theme toggle and social proof stay as "planned", R7/R8). |
 | H9 | [~] | No tests. Vitest + React Testing Library would be the natural fit with Vite. The best first targets are the pure utils: `filterGroups`, `findMatchingCountry`, `groupSchema`. |
 | H10 | [x] | `useUserLocation.js` has a redundant alias `'Czechia': 'Czechia'` and misplaced comments on `refetchOnMount`/`retry`. |
+| H11 | [x] | Comments describing a future that already happened: "(later) the API", "Stage 4 wraps this pool", "rate limiting later", "comes in Stage 14", "verification emails arrive in Stage 8", "Avatars move to the API in Stage 10", garage.toml "for DEVELOPMENT" (production mounts it too), the seed's "60 groups" (it makes 200). Rewritten to describe the code as it is. |
+| H12 | [x] | `docs/REFACTOR_ROADMAP.md` (superseded by MASTER_PLAN.md since Stage 0) and links to the deleted `docs/SUPABASE.md`. | The roadmap is deleted; both files stay readable in the `v1-supabase` tag, and the links point there. `.gitignore` lost the Vite-template entries this repo never produces (yarn/pnpm/lerna logs, `dist-ssr`, `.env.production`). |
 
 ### Notes on partly-done items (bug-fix pass, after `86180e9`)
 - **B4**: Delete now shows only with `canDelete` (passed by ProfilePage only). It still uses `window.confirm`; replace it with a `ConfirmDialog` in Phase 2.
@@ -216,7 +223,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **O2 (partial)**: The redundant `refetchOnMount`/`refetchOnWindowFocus`/`retry` options were removed (`fetchLocation` never throws). Still open: a TTL on the localStorage entry (with S3).
 - **P5 side effect**: Hover color changes on elements that had no `transition-*` class of their own now switch instantly instead of fading over 300ms. Add `transition-colors` where the fade is wanted.
 
-### Notes on Phase 1 (security). Runbook: [SUPABASE.md](SUPABASE.md)
+### Notes on Phase 1 (security). Runbook: [SUPABASE.md](https://github.com/Abdelrahman-Elshafey/UrConnection/blob/v1-supabase/docs/SUPABASE.md) (in the `v1-supabase` tag)
 - **S1**: Checked without printing values. The old commits only ever held the Supabase URL, the publishable key, and the redirect URL, all public by design. No rotation needed.
 - **S2/S6 `[~]`**: `supabase/migrations/20261008000100_groups_rls_and_checks.sql` is written: RLS (public read, owner-only writes), `user_id`/`date` defaults, and `NOT VALID` CHECK constraints. **Pending: the owner runs it.** Then validate the constraints, and drop `date`/`user_id` from the client insert (finishes B19).
 - **S5 `[~]`**: Client side done. The picker and the service accept only JPEG/PNG/WebP, and the extension comes from the MIME type, not the file name. Bucket MIME/size limits and owner-folder storage policies are in `20261008000200_avatar_bucket_hardening.sql`, **pending run**. The fixed-path WebP simplification (O6) is still Phase 2.
@@ -278,7 +285,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **O6 (closed)**: Always WebP, one object per upload (`avatars/<uid>/<uuid>.webp`). Replace = put new, swap the key in one locked transaction, delete old. Remove = 1 call.
 - **P2 (closed)**: `browser-image-compression` is gone (the server converts). The `@supabase/supabase-js` client and `web/.env` variables went too, since nothing in the web app uses them now. Home bundle: **248 → 180 KB gzip**, already under Stage 12's 190 KB target.
 - **Storage choice**: MinIO's community repo was archived in April 2026 and no longer publishes images. Garage (free, AGPL, self-hosted) was chosen for the S3 API. It runs behind a `Storage` interface, so plain files or a hosted S3 (R2/B2) would be one new implementation.
-- **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups. **Stage 13/14**: secrets and the `/media` route are done; the Garage volume is **not** backed up yet.
+- **Production TODO (Stage 13/14)**: Generate a real Garage `rpc_secret` and access key (never the dev values), and add a Caddy route `/media/*` → Garage `:3902` with `Host: <bucket>.web.<root_domain>`. Include the Garage volume in backups. **Stage 13/14**: secrets and the `/media` route are done. **Stage 16**: the avatars are mirrored to R2 by the `offsite` service.
 
 ### Notes on the 2026-10-13 review (start of Stage 11)
 - **Verdict**: The API and shared package are lean. Its interfaces (`Storage`, `Mailer`, `GoogleOAuth`) each exist so tests run without real services, so none were cut. Nearly all the repetition is in the React components (D1–D14), which is what the Stage 11 UI kit is for.
@@ -329,3 +336,10 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Still open**: H9 (the web and shared packages have no tests yet), P10/P11 (for when there is real traffic), no mobile nav menu.
 - **Tests added**: a too-long link, an unknown country and a city outside its country are refused with 400 (group create, group PATCH, register, profile PATCH); Google sign-in returns to `next` and never to another site; `safeNextPath` unit tests. API: 74 unit + 122 DB tests.
 - Home bundle unchanged (146 KB gzip measured with `gzip -9`).
+
+### Notes on the 2026-10-27 review (after the Stage 16 launch)
+- **Scope**: every source file in `api/`, `web/`, `packages/shared/`, plus Docker, Caddy, CI/CD, scripts and every doc. No security problem found; the paths checked on 2026-10-26 (sessions, OAuth, ownership, uploads, CSRF, open redirects) are unchanged.
+- **Fixed**: B38 (dialog closed on a click inside it), B39 (saved search cleared in one place, also when sign-out fails offline), B40, O13 (shared exports), O14 and H12 (unneeded files), H11 (stale comments).
+- **Looked at and kept**: the interfaces that exist for tests (`Storage`, `Mailer`, `GoogleOAuth`, the repositories), `formResolver`, `useSetUser` next to `switchUser` (same user vs another user), the three toast files (React fast refresh). Each pays for itself.
+- **Still open**: H9 (no web or shared tests), P10/P11 (for when there is real traffic), R7 (theme toggle), R8 (social proof), no mobile nav menu, scheduled base-image rebuilds (MASTER_PLAN §5).
+- Home bundle unchanged: index 78.0 + vendor 71.2 = 149.2 KB (`gzip -9`, i.e. 145.7 KiB; the "146" of the previous review was KiB).

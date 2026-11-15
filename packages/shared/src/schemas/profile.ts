@@ -18,7 +18,6 @@ export const profileSchema = z.object(profileFields);
 /** PATCH /api/users/me: send only the fields that change. */
 export const profileUpdateSchema = profileSchema.partial();
 
-export type ProfileInput = z.infer<typeof profileSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 
 // ── Avatars (Stage 10) ──────────────────────────────────────────────────────

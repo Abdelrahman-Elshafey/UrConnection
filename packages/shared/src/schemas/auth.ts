@@ -69,10 +69,7 @@ export const resetPasswordFormSchema = z
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.input<typeof registerSchema>;
-export type SignupInput = z.infer<typeof signupSchema>;
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /**
  * Google sign-in ends with a browser redirect, not a JSON response, so the API reports

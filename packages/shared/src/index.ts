@@ -1,9 +1,9 @@
-// Public API of @urconnections/shared: code shared by web (and later api).
+// Public API of @urconnections/shared: code shared by the web app and the API.
+// Only what one of them imports is exported here; helpers used inside this package stay internal.
 export { TOPICS, isTopic, type Topic } from "./topics";
 export {
   PLATFORMS,
   PLATFORM_KEYS,
-  PLATFORM_MAP,
   isPlatformKey,
   type Platform,
   type PlatformKey,
@@ -14,7 +14,6 @@ export { COUNTRY_LIST, isCountry, type Country } from "./countryNames";
 export {
   createGroupSchema,
   updateGroupSchema,
-  EDITABLE_GROUP_FIELDS,
   groupSchema,
   myGroupsResponseSchema,
   groupListQuerySchema,
@@ -33,27 +32,21 @@ export {
   profileUpdateSchema,
   AVATAR_MAX_BYTES,
   AVATAR_MIME_TYPES,
-  type ProfileInput,
   type ProfileUpdate,
 } from "./schemas/profile";
 export {
   loginSchema,
   registerSchema,
   signupSchema,
-  passwordSchema,
   verifyEmailSchema,
   forgotPasswordSchema,
   forgotPasswordResponseSchema,
   resetPasswordSchema,
   resetPasswordFormSchema,
-  OAUTH_ERROR_MESSAGES,
   oauthErrorMessage,
   type OAuthErrorCode,
   type LoginInput,
-  type ForgotPasswordInput,
   type ForgotPasswordResponse,
-  type ResetPasswordInput,
   type RegisterInput,
-  type SignupInput,
 } from "./schemas/auth";
-export { userSchema, meResponseSchema, type User, type MeResponse } from "./schemas/user";
+export { meResponseSchema, type User, type MeResponse } from "./schemas/user";

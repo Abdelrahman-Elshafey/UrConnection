@@ -2,7 +2,6 @@ import type { User } from "@urconnections/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
 import { login, register } from "../../../services/auth.service";
-import { clearSavedSearch } from "../../groups/utils/savedSearch";
 import { safeNextPath } from "../../../lib/nextPath";
 import { switchUser } from "./useUser";
 
@@ -13,7 +12,6 @@ function useAfterSignIn() {
   const [searchParams] = useSearchParams();
   return (user: User) => {
     switchUser(queryClient, user); // the navbar and route guards know at once
-    clearSavedSearch(); // drop filters saved by a previous visitor of this tab
     navigate(safeNextPath(searchParams.get("next"))); // back to the page that asked for sign-in
   };
 }

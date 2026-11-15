@@ -41,23 +41,26 @@ export function ConfirmDialog({ open, title, children, confirmLabel, busy = fals
         e.preventDefault();
         if (!busy) onCancel();
       }}
-      // A click on the backdrop lands on the <dialog> element itself, not on its content.
+      // A click on the backdrop lands on the <dialog> element itself. The padding sits on the
+      // inner <div>, so a click anywhere inside the box (even between the texts) lands there.
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onCancel();
       }}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-[32px] bg-white p-8 text-black shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm dark:bg-raised-dark dark:text-white"
+      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-4xl bg-white text-black shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm dark:bg-raised-dark dark:text-white"
     >
-      <h2 id={titleId} className="mb-3 text-2xl font-black tracking-tight">
-        {title}
-      </h2>
-      {children && <div className="mb-8 text-gray-500 dark:text-gray-400">{children}</div>}
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
-          Cancel
-        </Button>
-        <Button variant="danger" size="sm" onClick={onConfirm} loading={busy}>
-          {confirmLabel}
-        </Button>
+      <div className="p-8">
+        <h2 id={titleId} className="mb-3 text-2xl font-black tracking-tight">
+          {title}
+        </h2>
+        {children && <div className="mb-8 text-gray-500 dark:text-gray-400">{children}</div>}
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="danger" size="sm" onClick={onConfirm} loading={busy}>
+            {confirmLabel}
+          </Button>
+        </div>
       </div>
     </dialog>
   );
