@@ -120,6 +120,8 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
       i18n.ts               # store (useSyncExternalStore) + useT() → { t, locale }; setLocale() loads a language chunk, sets <html lang>, saves; typed MessageKey ("nav.profile")
       messages/en.ts        # every visible text, grouped by area; the source of truth and the `Messages` type. English is bundled and the fallback
       messages/it.ts · de.ts · fr.ts  # translations, `satisfies Messages` (missing/extra key = build error); each is its own ~0.65 KB gzip chunk
+      countries.ts          # countryName(country, locale) / useCountryName() / useCountryOptions(): country names via the browser's Intl.DisplayNames (0 KB), sorted per language with Intl.Collator; values stay the English COUNTRY_LIST names
+      countryCodes.ts       # COUNTRY_CODES: Record<Country, ISO code> (a country without a code = build error)
     components/
       layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
       layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
@@ -133,7 +135,7 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
         Button.tsx          # Button (loading spinner, type="button" by default) + ButtonLink (router Link styled as a button)
         Spinner.tsx         # Spinner (sm|md|lg, accent|current) + PageSpinner (full page, optional label)
         Field.tsx           # TextField, PasswordField (show/hide), SelectField, TextAreaField, ReadOnlyField: useId label wiring, aria-invalid/-describedby
-        CountryCityFields.tsx  # linked country → city selects for any react-hook-form form (useFormContext; country change clears city)
+        CountryCityFields.tsx  # linked country → city selects for any react-hook-form form (useFormContext; country change clears city); country names translated (useCountryOptions)
         Notice.tsx          # info / error message box (role status / alert)
         BackLink.tsx        # "‹ Back to …" link
         Avatar.tsx          # picture or initial (sm | lg)

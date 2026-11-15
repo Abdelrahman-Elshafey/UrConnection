@@ -6,6 +6,18 @@ import type { Messages } from "./en";
 export default {
   common: {
     returnHome: "Retour à l'accueil",
+    cancel: "Annuler",
+    loading: "Chargement",
+  },
+  fields: {
+    country: "Pays",
+    city: "Ville",
+    optional: "{label} (facultatif)",
+    selectCountry: "Choisissez un pays",
+    selectCity: "Choisissez une ville",
+    selectCountryFirst: "Choisissez d'abord un pays",
+    showPassword: "Afficher le mot de passe",
+    hidePassword: "Masquer le mot de passe",
   },
   nav: {
     profile: "Profil",

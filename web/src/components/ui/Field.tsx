@@ -1,5 +1,6 @@
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import { FiChevronDown, FiEye, FiEyeOff } from "react-icons/fi";
+import { useT } from "../../i18n/i18n";
 import { cx } from "./cx";
 
 /*
@@ -74,6 +75,7 @@ export function TextField({ label, error, hint, onSurface, className, ...input }
 export function PasswordField({ label, error, hint, onSurface, className, ...input }: Omit<ComponentProps<"input">, "type"> & FieldOwnProps) {
   const id = useId();
   const [visible, setVisible] = useState(false);
+  const { t } = useT();
   const Icon = visible ? FiEyeOff : FiEye;
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
@@ -87,7 +89,7 @@ export function PasswordField({ label, error, hint, onSurface, className, ...inp
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={t(visible ? "fields.hidePassword" : "fields.showPassword")}
           aria-pressed={visible}
           className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 transition-colors hover:text-black dark:hover:text-white"
         >

@@ -4,6 +4,18 @@ import type { Messages } from "./en";
 export default {
   common: {
     returnHome: "Zur Startseite",
+    cancel: "Abbrechen",
+    loading: "Wird geladen",
+  },
+  fields: {
+    country: "Land",
+    city: "Stadt",
+    optional: "{label} (optional)",
+    selectCountry: "Land auswählen",
+    selectCity: "Stadt auswählen",
+    selectCountryFirst: "Zuerst ein Land auswählen",
+    showPassword: "Passwort anzeigen",
+    hidePassword: "Passwort verbergen",
   },
   nav: {
     profile: "Profil",

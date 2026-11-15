@@ -12,6 +12,19 @@
 export const en = {
   common: {
     returnHome: "Return Home",
+    cancel: "Cancel",
+    loading: "Loading",
+  },
+  // Form fields of the UI kit (components/ui). Pages pass their own labels.
+  fields: {
+    country: "Country",
+    city: "City",
+    optional: "{label} (optional)",
+    selectCountry: "Select country",
+    selectCity: "Select city",
+    selectCountryFirst: "Select a country first",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
   },
   nav: {
     profile: "Profile",

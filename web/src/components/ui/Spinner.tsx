@@ -1,3 +1,4 @@
+import { useT } from "../../i18n/i18n";
 import { cx } from "./cx";
 
 const SIZES = {
@@ -20,10 +21,11 @@ interface SpinnerProps {
 
 /** A spinning ring (audit D1). role="status" + a label tell screen readers something is loading. */
 export function Spinner({ size = "md", tone = "accent", className }: SpinnerProps) {
+  const { t } = useT();
   return (
     <span
       role="status"
-      aria-label="Loading"
+      aria-label={t("common.loading")}
       className={cx("inline-block shrink-0 rounded-full animate-spin", SIZES[size], TONES[tone], className)}
     />
   );
