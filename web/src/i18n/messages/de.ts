@@ -19,7 +19,8 @@ export default {
   },
   nav: {
     profile: "Profil",
-    signIn: "Anmelden",
+    // "Login" (common in German): "Anmelden" + "Neue Gruppe" is too wide on 360px phones.
+    signIn: "Login",
     signOut: "Abmelden",
     goBack: "Zurück",
     // "Neue Gruppe": "Gruppe erstellen" next to "Anmelden" is too wide for a 390px phone.
@@ -27,7 +28,8 @@ export default {
     loadingPage: "Seite wird geladen",
   },
   footer: {
-    explore: "Entdecken",
+    // "Gruppen", not "Entdecken": the wider word overflowed 360px phones (spaced capitals).
+    explore: "Gruppen",
     allGroups: "Alle Gruppen",
     createGroup: "Gruppe erstellen",
     tagline: "Eine Premium-Plattform für fokussierte Communities und berufliches Networking. Finde deine Leute, überall auf der Welt.",
@@ -69,7 +71,8 @@ export default {
       pageSpinner: "Wird vorbereitet",
       exploreTopic: "{topic} entdecken",
       exploreFeatured: "Empfohlene Gruppen",
-      available: "{count} Gruppen in deinem Netzwerk",
+      available_one: "{count} Gruppe in deinem Netzwerk",
+      available_other: "{count} Gruppen in deinem Netzwerk",
       detecting: "Standort wird ermittelt",
       clearAll: "Alle zurücksetzen",
       retry: "Erneut versuchen",

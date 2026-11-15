@@ -17,7 +17,7 @@ export default function GroupList() {
   const { groups, data, isLoading, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useGroups(apiParams);
   const [toDelete, setToDelete] = useState<Group | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const { t } = useT();
+  const { t, tn } = useT();
 
   if (isLoading) return <PageSpinner label={t("groups.list.pageSpinner")} />;
 
@@ -46,7 +46,10 @@ export default function GroupList() {
             </h2>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
               {/* Only loaded pages are known; "+" means more can be loaded. */}
-              {t("groups.list.available", { count: `${groups.length}${hasNextPage ? "+" : ""}` })}
+              {hasNextPage
+                ? // More can be loaded: always plural, shown as "20+".
+                  tn("groups.list.available", Infinity, { count: `${groups.length}+` })
+                : tn("groups.list.available", groups.length)}
             </p>
           </div>
 

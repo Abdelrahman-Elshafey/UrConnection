@@ -110,14 +110,49 @@ function translate(messages: Messages, key: MessageKey | (string & {}), vars?: M
 
 export type TFunction = (key: MessageKey, vars?: MessageVars) => string;
 
+// ---- Plurals ------------------------------------------------------------------------------
+
+/**
+ * Keys that come in a singular/plural pair: "groups.list.available" when en.ts has both
+ * "available_one" and "available_other". (Template literal types: TypeScript strips the
+ * "_one" suffix from every key and keeps the ones whose "_other" twin exists too.)
+ */
+type PluralBase<K> = K extends `${infer Base}_one` ? (`${Base}_other` extends MessageKey ? Base : never) : never;
+// Passing the union through a generic makes the check run once per key ("distributive").
+export type PluralKey = PluralBase<MessageKey>;
+
+/**
+ * Which form a number needs. Languages differ: English and German use the singular only
+ * for 1, French also for 0 ("0 groupe"), and others have more forms. Intl.PluralRules knows
+ * every language's rule. Our four languages only need "one" and "other"; anything else the
+ * browser might answer (e.g. French "many" for millions) uses the plural.
+ */
+const pluralRules = new Map<Locale, Intl.PluralRules>();
+function pluralForm(locale: Locale, count: number): "one" | "other" {
+  let rules = pluralRules.get(locale);
+  if (!rules) {
+    rules = new Intl.PluralRules(locale);
+    pluralRules.set(locale, rules);
+  }
+  return rules.select(count) === "one" ? "one" : "other";
+}
+
+/**
+ * tn("groups.list.available", 1) → "1 group available…", tn(…, 3) → "3 groups available…".
+ * `{count}` is filled with the number unless `vars.count` says otherwise (e.g. "20+").
+ */
+export type TNFunction = (key: PluralKey, count: number, vars?: MessageVars) => string;
+
 /**
  * The hook components use:
- *   const { t, locale } = useT();
+ *   const { t, tn, locale } = useT();
  *   <h1>{t("notFound.heading")}</h1>
+ *   <p>{tn("groups.list.available", groups.length)}</p>   (singular or plural)
  * The component re-renders when the language changes.
  */
-export function useT(): { t: TFunction; locale: Locale } {
+export function useT(): { t: TFunction; tn: TNFunction; locale: Locale } {
   const { locale, messages } = useSyncExternalStore(subscribe, getState);
   const t: TFunction = (key, vars) => translate(messages, key, vars);
-  return { t, locale };
+  const tn: TNFunction = (key, count, vars) => translate(messages, `${key}_${pluralForm(locale, count)}`, { count, ...vars });
+  return { t, tn, locale };
 }

@@ -82,7 +82,9 @@ export const en = {
       pageSpinner: "Initializing Experience",
       exploreTopic: "Explore {topic}",
       exploreFeatured: "Explore Featured",
-      available: "{count} groups available in your network",
+      // Singular/plural pair, read with tn() (useT). {count} may be "20+".
+      available_one: "{count} group available in your network",
+      available_other: "{count} groups available in your network",
       detecting: "Detecting Location",
       clearAll: "Clear all",
       retry: "Retry Connection",

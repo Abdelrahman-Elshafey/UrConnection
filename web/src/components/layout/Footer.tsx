@@ -8,7 +8,8 @@ const linkClass = "text-xs text-gray-400 transition-colors hover:text-white md:t
 
 function Column({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mx-4 text-center">
+    // mx-2 on phones: with mx-4 the three columns were wider than a phone screen.
+    <div className="mx-2 text-center md:mx-4">
       <h2 className="mb-6 text-xs font-bold uppercase tracking-widest text-white md:text-sm">{title}</h2>
       <ul className="space-y-3">{children}</ul>
     </div>
@@ -38,7 +39,7 @@ export default function Footer() {
           </Column>
 
           <div className="relative bottom-10 text-center">
-            <Link to="/" className="mb-6 block text-3xl font-extrabold text-white md:text-5xl lg:text-6xl">
+            <Link to="/" className="mb-6 block text-2xl font-extrabold text-white sm:text-3xl md:text-5xl lg:text-6xl">
               UrConnections
             </Link>
             <p className="mx-auto max-w-xs text-xs leading-relaxed text-gray-400 md:text-sm">
