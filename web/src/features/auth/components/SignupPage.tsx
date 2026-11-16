@@ -6,6 +6,8 @@ import { Button } from "../../../components/ui/Button";
 import { CountryCityFields } from "../../../components/ui/CountryCityFields";
 import { PasswordField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
+import { useT } from "../../../i18n/i18n";
 import { withNext } from "../../../lib/nextPath";
 import { useRegister } from "../hooks/useSignIn";
 import AuthLayout from "./AuthLayout";
@@ -17,6 +19,9 @@ const EMPTY = { email: "", password: "", confirmPassword: "", display_name: "", 
 export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const { mutate: registerAccount, isPending, error } = useRegister();
+  const { t } = useT();
+  const { errorMessage } = useErrorText();
+  const optional = (label: string) => t("fields.optional", { label });
   const form = useForm({ resolver: zodResolver(signupSchema), defaultValues: EMPTY });
   const {
     register,
@@ -25,10 +30,10 @@ export default function SignupPage() {
   } = form;
 
   return (
-    <AuthLayout title="Join us." subtitle="Create an account to build your network." tabTitle="Create account">
+    <AuthLayout title={t("auth.signup.title")} subtitle={t("auth.signup.subtitle")} tabTitle={t("auth.signup.tabTitle")}>
       {error && (
         <Notice tone="error" className="mb-8">
-          {error.message}
+          {errorMessage(error)}
         </Notice>
       )}
 
@@ -40,14 +45,36 @@ export default function SignupPage() {
           className="space-y-6"
           noValidate
         >
-          <TextField label="Email Address" type="email" autoComplete="email" placeholder="name@example.com" error={errors.email?.message} {...register("email")} />
-          <TextField label="Display Name (optional)" autoComplete="name" placeholder="Jane Doe" error={errors.display_name?.message} {...register("display_name")} />
-          <TextField label="Phone Number (optional)" type="tel" autoComplete="tel" placeholder="+1 234 567 8900" error={errors.phone?.message} {...register("phone")} />
+          <TextField
+            label={t("fields.email")}
+            type="email"
+            autoComplete="email"
+            placeholder={t("fields.emailPlaceholder")}
+            error={errors.email?.message}
+            {...register("email")}
+          />
+          <TextField
+            label={optional(t("fields.displayName"))}
+            autoComplete="name"
+            placeholder={t("fields.displayNamePlaceholder")}
+            error={errors.display_name?.message}
+            {...register("display_name")}
+          />
+          <TextField
+            label={optional(t("fields.phone"))}
+            type="tel"
+            autoComplete="tel"
+            placeholder={t("fields.phonePlaceholder")}
+            error={errors.phone?.message}
+            {...register("phone")}
+          />
           <CountryCityFields optional />
-          <PasswordField label="Password" autoComplete="new-password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
-          <PasswordField label="Confirm Password" autoComplete="new-password" placeholder="••••••••" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+          <PasswordField label={t("fields.password")} autoComplete="new-password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
+          <PasswordField
+            label={t("fields.confirmPassword")}
+            autoComplete="new-password" placeholder="••••••••" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
           <Button type="submit" size="lg" block loading={isPending}>
-            Create Account
+            {t("auth.signup.submit")}
           </Button>
         </form>
       </FormProvider>
@@ -55,9 +82,9 @@ export default function SignupPage() {
       <GoogleSignIn />
 
       <p className="mt-12 text-center text-xs font-bold text-gray-500 dark:text-gray-400">
-        Already have an account?{" "}
+        {t("auth.signup.haveAccount")}{" "}
         <Link to={withNext("/login", searchParams.get("next"))} className="ml-1 border-b border-current text-black hover:text-accent dark:text-white">
-          Sign in
+          {t("auth.signup.signIn")}
         </Link>
       </p>
     </AuthLayout>

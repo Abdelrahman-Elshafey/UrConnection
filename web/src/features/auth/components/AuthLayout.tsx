@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BackLink } from "../../../components/ui/BackLink";
+import { useT } from "../../../i18n/i18n";
 import { pageTitle } from "../../../lib/pageTitle";
 
 interface AuthLayoutProps {
@@ -12,12 +13,13 @@ interface AuthLayoutProps {
 
 /** The centered, minimal layout of every account page: login, sign-up, verify, forgot, reset. */
 export default function AuthLayout({ title, subtitle, tabTitle, children }: AuthLayoutProps) {
+  const { t } = useT();
   return (
     <div className="flex min-h-screen flex-col justify-center bg-white px-6 py-20 dark:bg-black">
       <title>{pageTitle(tabTitle ?? title)}</title>
       <div className="mx-auto w-full max-w-md">
         <BackLink to="/" className="mb-12">
-          Return to Explore
+          {t("auth.back")}
         </BackLink>
         <h1 className="mb-4 text-5xl font-black leading-[0.9] tracking-tighter text-black dark:text-white md:text-6xl">{title}</h1>
         {subtitle && <p className="mb-10 text-lg font-medium text-gray-500 dark:text-gray-400">{subtitle}</p>}

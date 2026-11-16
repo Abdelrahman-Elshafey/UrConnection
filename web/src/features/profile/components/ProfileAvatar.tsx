@@ -5,6 +5,8 @@ import { Avatar } from "../../../components/ui/Avatar";
 import { cx } from "../../../components/ui/cx";
 import { Spinner } from "../../../components/ui/Spinner";
 import { useToast } from "../../../components/ui/toast/useToast";
+import { useErrorText } from "../../../i18n/errors";
+import { useT } from "../../../i18n/i18n";
 import { useRemoveAvatar, useUploadAvatar } from "../hooks/useAvatar";
 
 const ALLOWED: readonly string[] = AVATAR_MIME_TYPES;
@@ -13,10 +15,12 @@ const ALLOWED: readonly string[] = AVATAR_MIME_TYPES;
 export default function ProfileAvatar({ user }: { user: User }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const { t } = useT();
+  const { errorMessage } = useErrorText();
   const upload = useUploadAvatar();
   const remove = useRemoveAvatar();
   const isBusy = upload.isPending || remove.isPending;
-  const onError = (err: Error) => toast(err.message, "error");
+  const onError = (err: Error) => toast(errorMessage(err), "error");
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -25,10 +29,10 @@ export default function ProfileAvatar({ user }: { user: User }) {
 
     // Quick checks for a friendly message without a round trip. They're only UX:
     // the API checks the real contents of the file, whatever the browser says.
-    if (!ALLOWED.includes(file.type)) return onError(new Error("Please choose a JPEG, PNG or WebP image."));
-    if (file.size > AVATAR_MAX_BYTES) return onError(new Error("That image is too large. The maximum is 5 MB."));
+    if (!ALLOWED.includes(file.type)) return onError(new Error(t("profile.avatar.wrongType")));
+    if (file.size > AVATAR_MAX_BYTES) return onError(new Error(t("profile.avatar.tooLarge")));
 
-    upload.mutate(file, { onSuccess: () => toast("Picture updated."), onError });
+    upload.mutate(file, { onSuccess: () => toast(t("profile.avatar.updated")), onError });
   };
 
   return (
@@ -42,7 +46,7 @@ export default function ProfileAvatar({ user }: { user: User }) {
         ) : (
           <button
             onClick={() => fileInput.current?.click()}
-            aria-label="Change profile picture"
+            aria-label={t("profile.avatar.change")}
             className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition duration-300 hover:bg-black/40 hover:opacity-100 focus-visible:bg-black/40 focus-visible:opacity-100"
           >
             <FiCamera aria-hidden className="h-8 w-8 text-white drop-shadow-lg" />
@@ -54,11 +58,11 @@ export default function ProfileAvatar({ user }: { user: User }) {
 
       {user.avatar_url && (
         <button
-          onClick={() => remove.mutate(undefined, { onSuccess: () => toast("Picture removed."), onError })}
+          onClick={() => remove.mutate(undefined, { onSuccess: () => toast(t("profile.avatar.removed")), onError })}
           disabled={isBusy}
           className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-500 transition-colors hover:text-red-400 disabled:opacity-40"
         >
-          Remove
+          {t("profile.avatar.remove")}
         </button>
       )}
     </div>

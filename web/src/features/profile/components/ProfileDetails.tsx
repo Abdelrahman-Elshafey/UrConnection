@@ -8,6 +8,9 @@ import { CountryCityFields } from "../../../components/ui/CountryCityFields";
 import { ReadOnlyField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
 import { useToast } from "../../../components/ui/toast/useToast";
+import { useCountryName } from "../../../i18n/countries";
+import { useErrorText } from "../../../i18n/errors";
+import { useT } from "../../../i18n/i18n";
 import { formatLocation } from "../../../lib/format";
 import { useSignOut } from "../../auth/hooks/useUser";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
@@ -20,6 +23,9 @@ export default function ProfileDetails({ user }: { user: User }) {
   const { mutate: updateProfile, isPending, error, reset: clearError } = useUpdateProfile();
   const { mutate: signOut } = useSignOut();
   const toast = useToast();
+  const { t } = useT();
+  const { errorMessage } = useErrorText();
+  const countryName = useCountryName();
   const form = useForm({ resolver: zodResolver(profileSchema), defaultValues: formValues(user) });
   const {
     register,
@@ -40,10 +46,10 @@ export default function ProfileDetails({ user }: { user: User }) {
       <div className="animate-fade-in">
         <dl className="grid grid-cols-1 gap-10 md:grid-cols-2">
           {[
-            ["Display Name", user.display_name || "Not set"],
-            ["Email Address", user.email],
-            ["Phone Number", user.phone || "Not set"],
-            ["Location", formatLocation(user) || "Not set"],
+            [t("fields.displayName"), user.display_name || t("profile.details.notSet")],
+            [t("fields.email"), user.email],
+            [t("fields.phone"), user.phone || t("profile.details.notSet")],
+            [t("profile.details.location"), formatLocation({ city: user.city, country: countryName(user.country) }) || t("profile.details.notSet")],
           ].map(([label, value]) => (
             <div key={label} className="space-y-1">
               <dt className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{label}</dt>
@@ -53,10 +59,10 @@ export default function ProfileDetails({ user }: { user: User }) {
         </dl>
         <div className="mt-10 flex flex-wrap gap-4 border-t border-gray-200 pt-6 dark:border-white/5">
           <Button onClick={startEditing}>
-            <FiEdit2 aria-hidden /> Edit Profile
+            <FiEdit2 aria-hidden /> {t("profile.details.edit")}
           </Button>
           <Button variant="dark" onClick={() => signOut()}>
-            Sign Out
+            {t("nav.signOut")}
           </Button>
         </div>
       </div>
@@ -71,23 +77,36 @@ export default function ProfileDetails({ user }: { user: User }) {
           updateProfile(values, {
             onSuccess: () => {
               setIsEditing(false);
-              toast("Profile updated.");
+              toast(t("profile.details.updated"));
             },
           }),
         )}
         className="animate-fade-in space-y-8"
       >
-        {error && <Notice tone="error">{error.message}</Notice>}
-        <ReadOnlyField label="Email Address" value={user.email} hint="Email cannot be changed from here." />
-        <TextField label="Display Name" placeholder="Jane Doe" onSurface error={errors.display_name?.message} {...register("display_name")} />
-        <TextField label="Phone Number" type="tel" placeholder="+1 234 567 8900" onSurface error={errors.phone?.message} {...register("phone")} />
+        {error && <Notice tone="error">{errorMessage(error)}</Notice>}
+        <ReadOnlyField label={t("fields.email")} value={user.email} hint={t("profile.details.emailHint")} />
+        <TextField
+          label={t("fields.displayName")}
+          placeholder={t("fields.displayNamePlaceholder")}
+          onSurface
+          error={errors.display_name?.message}
+          {...register("display_name")}
+        />
+        <TextField
+          label={t("fields.phone")}
+          type="tel"
+          placeholder={t("fields.phonePlaceholder")}
+          onSurface
+          error={errors.phone?.message}
+          {...register("phone")}
+        />
         <CountryCityFields optional onSurface />
         <div className="flex flex-wrap gap-4 border-t border-gray-200 pt-6 dark:border-white/5">
           <Button type="submit" loading={isPending} disabled={!isDirty}>
-            {isPending ? "Saving…" : "Save Changes"}
+            {t(isPending ? "profile.details.saving" : "profile.details.save")}
           </Button>
           <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isPending}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

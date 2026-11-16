@@ -3,6 +3,7 @@ import { BackLink } from "../../../components/ui/BackLink";
 import { Button } from "../../../components/ui/Button";
 import { Notice } from "../../../components/ui/Notice";
 import { PageHero } from "../../../components/ui/PageHero";
+import { useT } from "../../../i18n/i18n";
 import { pageTitle } from "../../../lib/pageTitle";
 
 interface GroupFormFrameProps {
@@ -22,14 +23,15 @@ interface GroupFormFrameProps {
 
 /** The page around the create and edit forms: headline, back link, error, the form grid, submit. */
 export default function GroupFormFrame({ tabTitle, heroLead, intro, cancelTo, submitLabel, isPending, error, blockedMessage, onSubmit, children }: GroupFormFrameProps) {
+  const { t } = useT();
   return (
     <div className="min-h-screen w-full bg-white px-4 pb-25 pt-12 transition-colors duration-200 dark:bg-black">
       <title>{pageTitle(tabTitle)}</title>
       <div className="mx-auto flex max-w-7xl flex-col items-center">
         <BackLink to={cancelTo} className="mb-10 self-start lg:ml-20">
-          Cancel and Return
+          {t("groups.form.cancel")}
         </BackLink>
-        <PageHero lead={heroLead} accent="Community." intro={intro} className="mb-20 w-full max-w-5xl" />
+        <PageHero lead={heroLead} accent={t("groups.form.heroAccent")} intro={intro} className="mb-20 w-full max-w-5xl" />
 
         {blockedMessage && <Notice className="mb-10 w-full max-w-5xl">{blockedMessage}</Notice>}
         {error && (

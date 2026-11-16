@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useT } from "../../i18n/i18n";
 import { Button } from "./Button";
 
 interface ConfirmDialogProps {
@@ -24,6 +25,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ open, title, children, confirmLabel, busy = false, onConfirm, onCancel }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const { t } = useT();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -55,7 +57,7 @@ export function ConfirmDialog({ open, title, children, confirmLabel, busy = fals
         {children && <div className="mb-8 text-gray-500 dark:text-gray-400">{children}</div>}
         <div className="flex flex-wrap justify-end gap-3">
           <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button variant="danger" size="sm" onClick={onConfirm} loading={busy}>
             {confirmLabel}

@@ -112,28 +112,38 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
   tsconfig.json / tsconfig.app.json / tsconfig.node.json   # Vite-template layout; strict TS from tsconfig.base.json; Vite's client types via "types": ["vite/client"]
   public/favicon.svg
   src/
-    main.tsx                # self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
-    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → NotFound
+    main.tsx                # initLocale(detectLocale()) first (no flash of English), then: self-hosted Inter (@fontsource-variable/inter) + StrictMode + QueryClientProvider + ToastProvider + <App/> + ReactQueryDevtools
+    App.tsx                 # createBrowserRouter route tree; every page but home is `lazy` (own chunk); loaders requireAuth / redirectIfAuth / prefetchGroup; errorElement; hydrateFallbackElement; "*" → PageNotFound
     index.css               # Tailwind, @theme tokens (--font-sans = Inter Variable, colors accent, surface, …), base layer, .hide-scrollbar, .animate-fade-in, .nav-progress
+    i18n/                   # translations (own ~100-line layer, no library). See "Languages" in §4
+      locales.ts            # LOCALES en/it/de/fr, LOCALE_NAMES, detectLocale() (saved choice → navigator.languages → en), saveLocale() (localStorage "locale")
+      i18n.ts               # store (useSyncExternalStore) + useT() → { t, locale }; setLocale() loads a language chunk, sets <html lang>, saves; typed MessageKey ("nav.profile")
+      messages/en.ts        # every visible text, grouped by area; the source of truth and the `Messages` type. English is bundled and the fallback
+      messages/it.ts · de.ts · fr.ts  # translations, `satisfies Messages` (missing/extra key = build error); each is its own ~0.65 KB gzip chunk
+      countries.ts          # countryName(country, locale) / useCountryName() / useCountryOptions(): country names via the browser's Intl.DisplayNames (0 KB), sorted per language with Intl.Collator; values stay the English COUNTRY_LIST names
+      countryCodes.ts       # COUNTRY_CODES: Record<Country, ISO code> (a country without a code = build error)
+      messages.test.ts      # `npm test` (Vitest): every language has the English keys, no empty texts, the same {placeholders}, both plural forms; VALIDATION_MESSAGES unique; country names
+      errors.ts             # useErrorText(): fieldError(message) (shared VALIDATION_MESSAGES sentence → `validation.<key>`) + errorMessage(error) (ApiError code → `apiErrors.<code>`, TypeError → network; English keeps the API's words except for no connection / no JSON answer)
     components/
       layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
       layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
       layout/MainLayout.tsx # Navbar + VerifyEmailBanner + <Outlet/> + Footer
       layout/Navbar.tsx     # sticky bar: logo, avatar + Profile (one link), Sign Out, Create Group; Sign In carries ?next= (the current page)
-      layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup)
+      layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup) + LanguageSelect next to the copyright
+      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → setLocale()
       ui/                   # the UI kit (Stage 11). Pages build on these; no raw button/input styling in pages
         cx.ts               # cx(...classes): join truthy class names
         buttonClass.ts      # buttonClass({ variant: primary|dark|outline|danger, size: xs|sm|md|lg|xl, block })
         Button.tsx          # Button (loading spinner, type="button" by default) + ButtonLink (router Link styled as a button)
         Spinner.tsx         # Spinner (sm|md|lg, accent|current) + PageSpinner (full page, optional label)
         Field.tsx           # TextField, PasswordField (show/hide), SelectField, TextAreaField, ReadOnlyField: useId label wiring, aria-invalid/-describedby
-        CountryCityFields.tsx  # linked country → city selects for any react-hook-form form (useFormContext; country change clears city)
+        CountryCityFields.tsx  # linked country → city selects for any react-hook-form form (useFormContext; country change clears city); country names translated (useCountryOptions)
         Notice.tsx          # info / error message box (role status / alert)
         BackLink.tsx        # "‹ Back to …" link
         Avatar.tsx          # picture or initial (sm | lg)
         PlatformBadge.tsx   # platform pill with icon + colors (getPlatform)
         PageHero.tsx        # huge two-line headline ("Your / Profile.") + intro
-        NotFound.tsx        # "Not Found" page body (also the "*" route)
+        NotFound.tsx        # NotFound ("Not Found" page body) + PageNotFound ("no page at this address": the "*" route and 404 errors)
         ConfirmDialog.tsx   # native <dialog> + showModal(): focus trap, Escape, backdrop click (padding on an inner div, so clicks inside never count as backdrop)
         toast/              # ToastProvider (aria-live region, 3.5 s) + useToast() (React 19 use(context)) + toastContext
     lib/
@@ -283,6 +293,7 @@ Rules: **never edit a migration that has run**; add `0002_...` and register it i
 - **Colors** are `@theme` tokens in `index.css` (`accent`, `accent-strong`, `surface`, `surface-dark`, `raised-dark`, `line-dark`), used as `bg-accent`, `text-accent`, `border-line-dark`, ... Dark mode uses the `dark:` variant (system preference; no manual toggle yet).
 - **Icons** come from `react-icons` (`fi` = Feather for UI, `fa`/`fa6`/`si` for brands), with `aria-hidden` when next to text.
 - **Tab titles:** each page renders `<title>{pageTitle("…")}</title>`.
+- **Languages (English, Italiano, Deutsch, Français):** components never hard-code visible text. Add it to `i18n/messages/en.ts` (grouped by area), translate it in `it.ts`, `de.ts`, `fr.ts` (TypeScript fails the build if one is missing), and render `t("area.key")` from `const { t } = useT()`. Placeholders: `"Hi {name}"` + `t(key, { name })`. Labels used on several pages (email, password, name, phone, country, city, "(optional)") live in `fields`. Google sign-in errors are translated by their `?error=` code (`auth.oauth`, checked against `OAuthErrorCode`). Errors: form-check messages come from `VALIDATION_MESSAGES` in `packages/shared/src/schemas/messages.ts` (the schemas and so the API keep English; `Field` translates them), and request errors are shown with `errorMessage(error)` from `useErrorText()`, never `error.message`. Counts: a `key_one` + `key_other` pair read with `tn("area.key", count)` (`Intl.PluralRules` picks the form per language; French uses the singular for 0 too). Translate only what people see: values sent to the API or stored in the DB (topics, country names, platform keys) stay English. Topics are shown with `t(`topics.${topic}`)` (the `topics` block in `en.ts` must cover every `Topic`), countries with `useCountryName()` / `useCountryOptions()`; platform names are brands and stay as they are. German and French run ~30% longer, so check new texts on a 390px phone; the navbar uses shorter labels than the footer for that reason. The visitor's choice is saved in `localStorage` (`locale`); `<html lang>` follows it. Switching uses `switchLocale()`: the latest choice wins, and if the language file is gone (a deploy since the page opened) it saves the choice and reloads. Pages not converted yet still show English.
 
 ## 5. External services
 - Garage (self-hosted, Docker): avatar storage, mirrored to Cloudflare R2 by the `offsite` service.

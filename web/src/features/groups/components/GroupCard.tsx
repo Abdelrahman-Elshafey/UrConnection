@@ -2,6 +2,8 @@ import type { Group } from "@urconnections/shared";
 import { FiEdit2, FiMapPin, FiTrash2 } from "react-icons/fi";
 import { Link } from "react-router";
 import { PlatformBadge } from "../../../components/ui/PlatformBadge";
+import { useCountryName } from "../../../i18n/countries";
+import { useT } from "../../../i18n/i18n";
 import { formatLocation, isOwner } from "../../../lib/format";
 import { useUser } from "../../auth/hooks/useUser";
 
@@ -16,9 +18,11 @@ const cardLink =
 
 /** One group in a grid. The owner also sees Delete (top right) and Edit (bottom right) (the API refuses everyone else anyway). */
 export default function GroupCard({ group, onDelete }: GroupCardProps) {
-  const { id, title, description, topic, platform, meeting_link } = group;
+  const { id, title, description, topic, platform, meeting_link, city, country } = group;
   const { data: user } = useUser();
-  const location = formatLocation(group);
+  const { t } = useT();
+  const countryName = useCountryName();
+  const location = formatLocation({ city, country: countryName(country) });
   const owner = isOwner(user, group);
 
   return (
@@ -28,7 +32,7 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
       <div className="mb-8 flex items-center gap-2">
         <div className="flex min-w-0 flex-1 gap-2">
           <span className="shrink-0 rounded-full border border-gray-100 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-black dark:border-line-dark dark:bg-black dark:text-white">
-            {topic}
+            {t(`topics.${topic}`)}
           </span>
           <PlatformBadge platform={platform} className="min-w-0" />
         </div>
@@ -36,7 +40,7 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
         {owner && onDelete && (
           <button
             onClick={() => onDelete(group)}
-            aria-label={`Delete ${title}`}
+            aria-label={t("groups.card.delete", { title })}
             className="-mr-1 shrink-0 p-1 text-gray-400 transition-colors hover:text-red-500 dark:hover:text-red-400"
           >
             <FiTrash2 aria-hidden className="h-4 w-4" />
@@ -51,10 +55,10 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
 
       <div className="grid grid-cols-1">
         <a href={meeting_link} target="_blank" rel="noreferrer" className={cardLink}>
-          Connect now
+          {t("groups.connect")}
         </a>
         <Link to={`/groups/${id}`} className={`mb-3 w-[70%] ${cardLink}`}>
-          View Details
+          {t("groups.card.viewDetails")}
         </Link>
       </div>
 
@@ -68,7 +72,7 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
           )}
 
           {owner && (
-            <Link to={`/groups/${id}/edit`} aria-label={`Edit ${title}`} className="-mr-1 ml-auto shrink-0 p-1 text-gray-400 transition-colors hover:text-accent">
+            <Link to={`/groups/${id}/edit`} aria-label={t("groups.card.edit", { title })} className="-mr-1 ml-auto shrink-0 p-1 text-gray-400 transition-colors hover:text-accent">
               <FiEdit2 aria-hidden className="h-4 w-4" />
             </Link>
           )}
