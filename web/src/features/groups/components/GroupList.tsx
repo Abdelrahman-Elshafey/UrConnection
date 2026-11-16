@@ -2,6 +2,7 @@ import { isTopic, type Group } from "@urconnections/shared";
 import { useRef, useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { pageTitle } from "../../../lib/pageTitle";
 import { useGroupFilters } from "../hooks/useGroupFilters";
@@ -18,6 +19,7 @@ export default function GroupList() {
   const [toDelete, setToDelete] = useState<Group | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { t, tn } = useT();
+  const { errorMessage } = useErrorText();
 
   if (isLoading) return <PageSpinner label={t("groups.list.pageSpinner")} />;
 
@@ -76,7 +78,7 @@ export default function GroupList() {
 
         {listFailed ? (
           <div className="mx-auto w-full max-w-2xl rounded-[40px] bg-surface p-12 text-center dark:bg-raised-dark">
-            <p className="mb-8 font-medium text-gray-500 dark:text-gray-400">{error.message}</p>
+            <p className="mb-8 font-medium text-gray-500 dark:text-gray-400">{errorMessage(error)}</p>
             <Button onClick={() => refetch()} size="sm">
               {t("groups.list.retry")}
             </Button>
@@ -107,7 +109,7 @@ export default function GroupList() {
           <div className="mt-16 flex flex-col items-center gap-4">
             {error && !listFailed && (
               <p role="alert" className="text-sm font-medium text-red-500">
-                {error.message}
+                {errorMessage(error)}
               </p>
             )}
             <Button variant="dark" onClick={() => fetchNextPage()} loading={isFetchingNextPage} className="uppercase tracking-widest">

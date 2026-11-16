@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router";
 import { ReadOnlyField } from "../../../components/ui/Field";
 import { NotFound } from "../../../components/ui/NotFound";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { isNotFound } from "../../../lib/apiClient";
 import { isOwner } from "../../../lib/format";
@@ -42,6 +43,7 @@ function EditGroupForm({ group }: { group: Group }) {
   const form = useForm({ resolver: zodResolver(editFormSchema), defaultValues: { title, topic, description, country, city } });
   const backTo = `/groups/${group.id}`;
   const { t } = useT();
+  const { errorMessage } = useErrorText();
 
   return (
     <FormProvider {...form}>
@@ -52,7 +54,7 @@ function EditGroupForm({ group }: { group: Group }) {
         cancelTo={backTo}
         submitLabel={t("groups.edit.submit")}
         isPending={isPending}
-        error={error?.message}
+        error={error ? errorMessage(error) : undefined}
         onSubmit={form.handleSubmit((values) => mutate({ id: group.id, ...values }, { onSuccess: () => navigate(backTo) }))}
       >
         <GroupFormFields

@@ -1,4 +1,4 @@
-import type { OAuthErrorCode, Topic } from "@urconnections/shared";
+import { VALIDATION_MESSAGES, type OAuthErrorCode, type Topic, type ValidationMessageKey } from "@urconnections/shared";
 
 /**
  * Every text on the website, in English. This file is the source of truth: add a text here
@@ -269,6 +269,30 @@ export const en = {
       sending: "Sending…",
       sent: "New link sent. Check your inbox.",
     },
+  },
+  // Form-check messages: English comes straight from the shared schemas' table (the same
+  // sentences the API sends). `Record<…, string>` widens the exact sentences to string so
+  // translations fit the type.
+  validation: VALIDATION_MESSAGES as Record<ValidationMessageKey, string>,
+  // API errors by their `code`. English shows the API's own message (these values document
+  // it); other languages show the translation, or the API's message for an unknown code.
+  apiErrors: {
+    invalid_credentials: "Invalid email or password.",
+    email_taken: "An account with this email already exists.",
+    invalid_token: "This link is invalid or has expired. Please request a new one.",
+    unauthenticated: "Please sign in",
+    email_not_verified: "Please confirm your email address first.",
+    not_found: "Group not found",
+    invalid_request: "The request is invalid",
+    too_many_requests: "Too many attempts. Please wait a few minutes and try again.",
+    file_too_large: "That image is too large. The maximum is 5 MB.",
+    invalid_image: "Please choose a JPEG, PNG or WebP image.",
+    invalid_upload: "Choose an image to upload.",
+    forbidden_origin: "Cross-site request blocked",
+    internal_error: "Something went wrong",
+    // Not from the API: no JSON answer (API down, proxy error) and no connection at all.
+    http_error: "The server isn't responding. Please try again shortly.",
+    network: "Can't connect. Check your network and try again.",
   },
 };
 

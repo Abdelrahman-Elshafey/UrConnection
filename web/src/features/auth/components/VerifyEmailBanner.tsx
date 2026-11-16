@@ -1,3 +1,4 @@
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useResendVerification } from "../hooks/useEmailFlows";
 import { useUser } from "../hooks/useUser";
@@ -7,6 +8,7 @@ export default function VerifyEmailBanner() {
   const { data: user } = useUser();
   const { mutate, isPending, isSuccess, error } = useResendVerification();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
 
   if (!user || user.email_verified) return null;
 
@@ -29,7 +31,7 @@ export default function VerifyEmailBanner() {
             {t(isPending ? "auth.banner.sending" : "auth.banner.resend")}
           </button>
         )}
-        {error && <span className="font-bold text-red-500">{error.message}</span>}
+        {error && <span className="font-bold text-red-500">{errorMessage(error)}</span>}
       </div>
     </div>
   );

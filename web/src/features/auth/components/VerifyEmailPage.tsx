@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router";
 import { Button, ButtonLink } from "../../../components/ui/Button";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useVerifyEmail } from "../hooks/useEmailFlows";
 import AuthLayout from "./AuthLayout";
@@ -20,6 +21,7 @@ export default function VerifyEmailPage() {
   const token = searchParams.get("token") ?? "";
   const { mutate, isPending, isSuccess, error } = useVerifyEmail();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
 
   if (isSuccess) {
     return (
@@ -40,7 +42,7 @@ export default function VerifyEmailPage() {
       )}
       {error && (
         <Notice tone="error" className="mb-8">
-          {error.message}
+          {errorMessage(error)}
         </Notice>
       )}
       <Button onClick={() => mutate(token)} size="lg" block disabled={!token} loading={isPending}>

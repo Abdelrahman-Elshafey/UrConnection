@@ -2,6 +2,7 @@ import { createGroupSchema } from "@urconnections/shared";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { SelectField, TextField } from "../../../components/ui/Field";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { formResolver } from "../../../lib/formResolver";
 import { getPlatform, PLATFORMS } from "../../../lib/platforms";
@@ -19,6 +20,7 @@ export default function CreateGroupPage() {
   const { data: user } = useUser();
   const { mutate, isPending, error } = useCreateGroup();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   // The form's types come from the schema: what the fields hold (plus "" before a choice,
   // see formResolver) and what onSubmit receives (already validated, topic is a real Topic).
   const form = useForm({ resolver: formResolver(createGroupSchema), defaultValues: EMPTY });
@@ -40,7 +42,7 @@ export default function CreateGroupPage() {
         cancelTo="/"
         submitLabel={t("groups.create.submit")}
         isPending={isPending}
-        error={error?.message}
+        error={error ? errorMessage(error) : undefined}
         // The API refuses groups from unconfirmed addresses (403): say so before the form is filled in.
         // "Resend email" is in the banner under the navbar (VerifyEmailBanner).
         blockedMessage={user && !user.email_verified ? t("groups.create.unverified") : undefined}

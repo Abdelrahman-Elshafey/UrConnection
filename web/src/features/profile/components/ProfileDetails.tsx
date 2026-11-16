@@ -9,6 +9,7 @@ import { ReadOnlyField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
 import { useToast } from "../../../components/ui/toast/useToast";
 import { useCountryName } from "../../../i18n/countries";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { formatLocation } from "../../../lib/format";
 import { useSignOut } from "../../auth/hooks/useUser";
@@ -23,6 +24,7 @@ export default function ProfileDetails({ user }: { user: User }) {
   const { mutate: signOut } = useSignOut();
   const toast = useToast();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   const countryName = useCountryName();
   const form = useForm({ resolver: zodResolver(profileSchema), defaultValues: formValues(user) });
   const {
@@ -81,7 +83,7 @@ export default function ProfileDetails({ user }: { user: User }) {
         )}
         className="animate-fade-in space-y-8"
       >
-        {error && <Notice tone="error">{error.message}</Notice>}
+        {error && <Notice tone="error">{errorMessage(error)}</Notice>}
         <ReadOnlyField label={t("fields.email")} value={user.email} hint={t("profile.details.emailHint")} />
         <TextField
           label={t("fields.displayName")}

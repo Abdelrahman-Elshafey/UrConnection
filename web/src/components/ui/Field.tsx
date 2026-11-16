@@ -1,5 +1,6 @@
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import { FiChevronDown, FiEye, FiEyeOff } from "react-icons/fi";
+import { useErrorText } from "../../i18n/errors";
 import { useT } from "../../i18n/i18n";
 import { cx } from "./cx";
 
@@ -36,6 +37,8 @@ const controlClass = (invalid: boolean, onSurface = false) =>
 
 /** Label + slot + hint + error, and the ids that connect them. */
 function FieldShell({ id, label, error, hint, children }: Omit<FieldOwnProps, "onSurface"> & { id: string; children: ReactNode }) {
+  // Form-check messages arrive in English (shared schemas); show them in the visitor's language.
+  const { fieldError } = useErrorText();
   return (
     <div className="space-y-2">
       <label htmlFor={id} className="ml-1 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
@@ -49,7 +52,7 @@ function FieldShell({ id, label, error, hint, children }: Omit<FieldOwnProps, "o
       )}
       {error && (
         <p id={`${id}-error`} className="ml-1 text-xs font-bold text-red-500">
-          {error}
+          {fieldError(error)}
         </p>
       )}
     </div>

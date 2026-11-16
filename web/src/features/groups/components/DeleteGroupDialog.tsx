@@ -1,6 +1,7 @@
 import type { Group } from "@urconnections/shared";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { useToast } from "../../../components/ui/toast/useToast";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 
@@ -21,6 +22,7 @@ export default function DeleteGroupDialog({ group, onClose, onDeleted }: DeleteG
   const { mutate: deleteGroup, isPending } = useDeleteGroup();
   const toast = useToast();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
 
   const confirm = () => {
     if (!group) return;
@@ -30,7 +32,7 @@ export default function DeleteGroupDialog({ group, onClose, onDeleted }: DeleteG
         onClose();
         onDeleted?.();
       },
-      onError: (err) => toast(err.message, "error"),
+      onError: (err) => toast(errorMessage(err), "error"),
     });
   };
 

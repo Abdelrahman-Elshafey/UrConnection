@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { Button } from "../../../components/ui/Button";
 import { PasswordField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { withNext } from "../../../lib/nextPath";
 import { useLogin } from "../hooks/useSignIn";
@@ -15,6 +16,7 @@ import GoogleSignIn from "./GoogleSignIn";
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   // Only codes the API really sends get a message (oauthErrorMessage knows them); anything
   // else in the URL is ignored, so a crafted link can't put its own text on the page.
   const errorCode = searchParams.get("error");
@@ -30,7 +32,7 @@ export default function LoginPage() {
     <AuthLayout title={t("auth.login.title")} subtitle={t("auth.login.subtitle")} tabTitle={t("auth.login.tabTitle")}>
       {(error || googleError) && (
         <Notice tone="error" className="mb-8">
-          {error?.message ?? googleError}
+          {error ? errorMessage(error) : googleError}
         </Notice>
       )}
 

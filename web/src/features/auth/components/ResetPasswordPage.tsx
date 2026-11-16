@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { Button, ButtonLink } from "../../../components/ui/Button";
 import { PasswordField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useResetPassword } from "../hooks/useEmailFlows";
 import AuthLayout from "./AuthLayout";
@@ -15,6 +16,7 @@ export default function ResetPasswordPage() {
   const token = searchParams.get("token") ?? "";
   const { mutate, isPending, isSuccess, error } = useResetPassword();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   const {
     register,
     handleSubmit,
@@ -40,7 +42,7 @@ export default function ResetPasswordPage() {
       )}
       {error && (
         <Notice tone="error" className="mb-8">
-          {error.message}{" "}
+          {errorMessage(error)}{" "}
           <Link to="/forgot-password" className="underline">
             {t("auth.reset.requestNew")}
           </Link>

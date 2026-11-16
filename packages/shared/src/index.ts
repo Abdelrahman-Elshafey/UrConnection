@@ -49,4 +49,5 @@ export {
   type ForgotPasswordResponse,
   type RegisterInput,
 } from "./schemas/auth";
+export { VALIDATION_MESSAGES, type ValidationMessageKey } from "./schemas/messages";
 export { meResponseSchema, type User, type MeResponse } from "./schemas/user";

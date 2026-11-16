@@ -5,6 +5,7 @@ import { Avatar } from "../../../components/ui/Avatar";
 import { cx } from "../../../components/ui/cx";
 import { Spinner } from "../../../components/ui/Spinner";
 import { useToast } from "../../../components/ui/toast/useToast";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useRemoveAvatar, useUploadAvatar } from "../hooks/useAvatar";
 
@@ -15,10 +16,11 @@ export default function ProfileAvatar({ user }: { user: User }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const toast = useToast();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   const upload = useUploadAvatar();
   const remove = useRemoveAvatar();
   const isBusy = upload.isPending || remove.isPending;
-  const onError = (err: Error) => toast(err.message, "error");
+  const onError = (err: Error) => toast(errorMessage(err), "error");
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

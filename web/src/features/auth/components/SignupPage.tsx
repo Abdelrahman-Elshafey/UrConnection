@@ -6,6 +6,7 @@ import { Button } from "../../../components/ui/Button";
 import { CountryCityFields } from "../../../components/ui/CountryCityFields";
 import { PasswordField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { withNext } from "../../../lib/nextPath";
 import { useRegister } from "../hooks/useSignIn";
@@ -19,6 +20,7 @@ export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const { mutate: registerAccount, isPending, error } = useRegister();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   const optional = (label: string) => t("fields.optional", { label });
   const form = useForm({ resolver: zodResolver(signupSchema), defaultValues: EMPTY });
   const {
@@ -31,7 +33,7 @@ export default function SignupPage() {
     <AuthLayout title={t("auth.signup.title")} subtitle={t("auth.signup.subtitle")} tabTitle={t("auth.signup.tabTitle")}>
       {error && (
         <Notice tone="error" className="mb-8">
-          {error.message}
+          {errorMessage(error)}
         </Notice>
       )}
 

@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { Button } from "../../../components/ui/Button";
 import { TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
+import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { useForgotPassword } from "../hooks/useEmailFlows";
 import AuthLayout from "./AuthLayout";
@@ -13,6 +14,7 @@ import AuthLayout from "./AuthLayout";
 export default function ForgotPasswordPage() {
   const { mutate, isPending, isSuccess, error } = useForgotPassword();
   const { t } = useT();
+  const { errorMessage } = useErrorText();
   const {
     register,
     handleSubmit,
@@ -26,7 +28,7 @@ export default function ForgotPasswordPage() {
       {isSuccess && <Notice className="mb-8">{t("auth.forgot.sent")}</Notice>}
       {error && (
         <Notice tone="error" className="mb-8">
-          {error.message}
+          {errorMessage(error)}
         </Notice>
       )}
       <form onSubmit={handleSubmit(({ email }) => mutate(email))} className="mb-10 space-y-6" noValidate>
