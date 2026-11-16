@@ -1,6 +1,8 @@
 import type { Group } from "@urconnections/shared";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { useToast } from "../../../components/ui/toast/useToast";
+import { useErrorText } from "../../../i18n/errors";
+import { useT } from "../../../i18n/i18n";
 import { useDeleteGroup } from "../hooks/useDeleteGroup";
 
 interface DeleteGroupDialogProps {
@@ -19,22 +21,31 @@ interface DeleteGroupDialogProps {
 export default function DeleteGroupDialog({ group, onClose, onDeleted }: DeleteGroupDialogProps) {
   const { mutate: deleteGroup, isPending } = useDeleteGroup();
   const toast = useToast();
+  const { t } = useT();
+  const { errorMessage } = useErrorText();
 
   const confirm = () => {
     if (!group) return;
     deleteGroup(group.id, {
       onSuccess: () => {
-        toast(`"${group.title}" was deleted.`);
+        toast(t("groups.deleteDialog.deleted", { title: group.title }));
         onClose();
         onDeleted?.();
       },
-      onError: (err) => toast(err.message, "error"),
+      onError: (err) => toast(errorMessage(err), "error"),
     });
   };
 
   return (
-    <ConfirmDialog open={group !== null} title="Delete this group?" confirmLabel="Delete" busy={isPending} onConfirm={confirm} onCancel={onClose}>
-      <strong className="text-black dark:text-white">{group?.title}</strong> will be removed for everyone. This can't be undone.
+    <ConfirmDialog
+      open={group !== null}
+      title={t("groups.deleteDialog.title")}
+      confirmLabel={t("groups.deleteDialog.confirm")}
+      busy={isPending}
+      onConfirm={confirm}
+      onCancel={onClose}
+    >
+      <strong className="text-black dark:text-white">{group?.title}</strong> {t("groups.deleteDialog.body")}
     </ConfirmDialog>
   );
 }

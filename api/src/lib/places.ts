@@ -1,3 +1,4 @@
+import { VALIDATION_MESSAGES } from "@urconnections/shared";
 import { getCities } from "@urconnections/shared/cities";
 import { HttpError } from "./errors";
 
@@ -11,7 +12,7 @@ import { HttpError } from "./errors";
 export function checkCity({ country, city }: { country: string; city: string }): void {
   if (city !== "" && !getCities(country).includes(city)) {
     throw new HttpError(400, "invalid_request", "The request is invalid", [
-      { path: "city", message: "Please choose a city from the list" },
+      { path: "city", message: VALIDATION_MESSAGES.cityFromList },
     ]);
   }
 }

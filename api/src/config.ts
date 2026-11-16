@@ -5,14 +5,14 @@ import { z } from "zod";
 // In production the variables come from the real environment (Docker / the server), not a file.
 if (existsSync(".env")) process.loadEnvFile(".env");
 
+/** "KEY=" (empty) in a .env file means "not set". */
+const optionalString = z.preprocess((value) => (value === "" ? undefined : value), z.string().optional());
+
 /**
  * Every setting the API needs, validated once at startup.
  * If something is missing or malformed, the server refuses to start and says why,
  * instead of failing later with a confusing error in the middle of a request.
  */
-/** "KEY=" (empty) in a .env file means "not set". */
-const optionalString = z.preprocess((value) => (value === "" ? undefined : value), z.string().optional());
-
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000), // env values are strings; coerce turns "3000" into 3000

@@ -57,7 +57,7 @@ Check the API: http://localhost:5173/api/health → `{"ok":true,"db":"up"}`
 | `npm run lint` | ESLint for the whole repo |
 
 ## Production stack on your computer
-The same containers that will run on the server (Stage 13). Needs Docker Desktop and free ports 80 and 443.
+The same containers that run on the server. Needs Docker Desktop and free ports 80 and 443.
 
 ```bash
 npm run prod:env     # once: creates .env.prod with random secrets (gitignored, never commit it)

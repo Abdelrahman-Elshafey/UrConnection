@@ -1,14 +1,15 @@
 import { isCountry } from "../countryNames";
 import { z } from "../zod";
+import { VALIDATION_MESSAGES } from "./messages";
 
 /**
  * Editable profile fields, named like the database columns (snake_case, the API's
  * convention). Empty strings are allowed: every field is optional for the user.
  */
 export const profileFields = {
-  display_name: z.string().trim().max(100, "Name is too long."),
-  phone: z.string().trim().max(30, "Phone number is too long."),
-  country: z.string().refine((value) => value === "" || isCountry(value), "Please choose a country from the list"),
+  display_name: z.string().trim().max(100, VALIDATION_MESSAGES.nameMax),
+  phone: z.string().trim().max(30, VALIDATION_MESSAGES.phoneMax),
+  country: z.string().refine((value) => value === "" || isCountry(value), VALIDATION_MESSAGES.countryFromList),
   city: z.string().max(100),
 };
 
@@ -18,7 +19,6 @@ export const profileSchema = z.object(profileFields);
 /** PATCH /api/users/me: send only the fields that change. */
 export const profileUpdateSchema = profileSchema.partial();
 
-export type ProfileInput = z.infer<typeof profileSchema>;
 export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
 
 // ── Avatars (Stage 10) ──────────────────────────────────────────────────────

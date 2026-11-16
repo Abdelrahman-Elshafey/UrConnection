@@ -5,7 +5,7 @@ import { z } from "zod";
  * Google sign-in, OAuth 2.0 "authorization code" flow with PKCE (Stage 9).
  *
  *   1. Browser → GET /api/auth/google. We make two random values, `state` and a PKCE
- *      `codeVerifier`, keep them in short-lived httpOnly cookies, and redirect to Google.
+ *      `codeVerifier`, keep them in a short-lived httpOnly cookie, and redirect to Google.
  *   2. The user picks an account on accounts.google.com. Google redirects the browser back
  *      to /api/auth/google/callback?code=...&state=...
  *   3. We check `state` against the cookie, then send `code` + `codeVerifier` + our client

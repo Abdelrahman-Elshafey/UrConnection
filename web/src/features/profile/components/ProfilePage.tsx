@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ButtonLink } from "../../../components/ui/Button";
 import { PageHero } from "../../../components/ui/PageHero";
 import { PageSpinner } from "../../../components/ui/Spinner";
+import { useT } from "../../../i18n/i18n";
 import { pageTitle } from "../../../lib/pageTitle";
 import { useUser } from "../../auth/hooks/useUser";
 import DeleteGroupDialog from "../../groups/components/DeleteGroupDialog";
@@ -26,18 +27,19 @@ export default function ProfilePage() {
   const { data: user, isLoading } = useUser();
   const { data: groups, isLoading: isGroupsLoading } = useMyGroups(!!user);
   const [toDelete, setToDelete] = useState<Group | null>(null);
+  const { t } = useT();
 
   // The route loader guarantees a session, so `user` is only missing while loading.
   if (isLoading || !user) return <PageSpinner />;
 
   return (
     <div className="min-h-screen bg-white px-6 py-10 transition-colors duration-200 dark:bg-black">
-      <title>{pageTitle("Your profile")}</title>
+      <title>{pageTitle(t("profile.page.tabTitle"))}</title>
       <div className="mx-auto max-w-7xl">
-        <PageHero lead="Your" accent="Profile." intro="Manage your account details and view the communities you've launched." className="mb-10" />
+        <PageHero lead={t("profile.page.heroLead")} accent={t("profile.page.heroAccent")} intro={t("profile.page.intro")} className="mb-10" />
 
         <section className="mb-24 grid grid-cols-1 gap-12 lg:grid-cols-3">
-          <SectionIntro title="Account Information">Your personal details and contact information. Manage how you appear to others.</SectionIntro>
+          <SectionIntro title={t("profile.page.accountTitle")}>{t("profile.page.accountIntro")}</SectionIntro>
           <div className="space-y-10 rounded-[40px] bg-surface p-10 dark:bg-surface-dark md:p-16 lg:col-span-2">
             <div className="flex justify-center border-b border-gray-200 pb-6 dark:border-white/5">
               <ProfileAvatar user={user} />
@@ -48,8 +50,8 @@ export default function ProfilePage() {
 
         <section>
           <div className="mb-12">
-            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.5em] text-gray-400 dark:text-gray-500">Your Groups</h2>
-            <p className="text-4xl font-black tracking-tighter text-black dark:text-white md:text-5xl">Communities you lead.</p>
+            <h2 className="mb-4 text-[11px] font-bold uppercase tracking-[0.5em] text-gray-400 dark:text-gray-500">{t("profile.page.groupsTitle")}</h2>
+            <p className="text-4xl font-black tracking-tighter text-black dark:text-white md:text-5xl">{t("profile.page.groupsHeading")}</p>
           </div>
 
           {isGroupsLoading ? (
@@ -66,9 +68,9 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="rounded-[40px] bg-surface p-20 text-center dark:bg-surface-dark">
-              <p className="mb-8 text-2xl font-bold text-gray-400 dark:text-gray-600">You haven't created any groups yet.</p>
+              <p className="mb-8 text-2xl font-bold text-gray-400 dark:text-gray-600">{t("profile.page.empty")}</p>
               <ButtonLink to="/create" size="lg">
-                Launch your first channel
+                {t("profile.page.emptyCta")}
               </ButtonLink>
             </div>
           )}

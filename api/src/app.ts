@@ -32,7 +32,7 @@ export function createApp(deps: AppDeps): Express {
   app.disable("x-powered-by");
 
   // In production Caddy sits in front of the API; trust its X-Forwarded-* headers
-  // (one proxy hop) so req.ip is the real client IP, needed for rate limiting later.
+  // (one proxy hop) so req.ip is the real client IP, which the rate limits count by.
   app.set("trust proxy", 1);
 
   // SECURITY: helmet sets protective HTTP headers (nosniff, frame-ancestors, ...).

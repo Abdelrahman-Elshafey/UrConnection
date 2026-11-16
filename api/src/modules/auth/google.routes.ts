@@ -23,7 +23,7 @@ export interface GoogleDeps {
  *                                         (to `next` if the sign-in started with one, else home)
  *
  * Both are page navigations, not fetch() calls (the browser has to visit Google itself),
- * so every outcome is a redirect: home on success, /login?error=<code> otherwise.
+ * so every outcome is a redirect: to the site on success, /login?error=<code> otherwise.
  * See google.ts for the whole flow.
  */
 export function googleRouter({ sessions, oauthAccounts, google }: GoogleDeps): Router {

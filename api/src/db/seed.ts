@@ -1,7 +1,7 @@
 /**
  * CLI: npm run db:seed   (development only)
- * Wipes the tables and fills them with predictable demo data: 3 users and 60 groups
- * spread over every topic, many platforms and several countries. Same data every run.
+ * Wipes the tables and fills them with predictable demo data: 3 users and GROUP_COUNT (200)
+ * groups spread over every topic, every platform and several countries. Same data every run.
  */
 import {
   PLATFORMS,
@@ -103,7 +103,7 @@ function makeGroup(i: number): CreateGroupInput {
   };
 }
 
-// Validate every group with the SAME schema the web form and (later) the API use.
+// Validate every group with the SAME schema the web form and the API use.
 // If shared rules and database rules ever disagree, seeding fails loudly here.
 const groups = Array.from({ length: GROUP_COUNT }, (_, i) =>
   createGroupSchema.parse(makeGroup(i)),

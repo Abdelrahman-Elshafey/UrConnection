@@ -1,5 +1,7 @@
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
 import { FiChevronDown, FiEye, FiEyeOff } from "react-icons/fi";
+import { useErrorText } from "../../i18n/errors";
+import { useT } from "../../i18n/i18n";
 import { cx } from "./cx";
 
 /*
@@ -35,6 +37,8 @@ const controlClass = (invalid: boolean, onSurface = false) =>
 
 /** Label + slot + hint + error, and the ids that connect them. */
 function FieldShell({ id, label, error, hint, children }: Omit<FieldOwnProps, "onSurface"> & { id: string; children: ReactNode }) {
+  // Form-check messages arrive in English (shared schemas); show them in the visitor's language.
+  const { fieldError } = useErrorText();
   return (
     <div className="space-y-2">
       <label htmlFor={id} className="ml-1 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
@@ -48,7 +52,7 @@ function FieldShell({ id, label, error, hint, children }: Omit<FieldOwnProps, "o
       )}
       {error && (
         <p id={`${id}-error`} className="ml-1 text-xs font-bold text-red-500">
-          {error}
+          {fieldError(error)}
         </p>
       )}
     </div>
@@ -74,6 +78,7 @@ export function TextField({ label, error, hint, onSurface, className, ...input }
 export function PasswordField({ label, error, hint, onSurface, className, ...input }: Omit<ComponentProps<"input">, "type"> & FieldOwnProps) {
   const id = useId();
   const [visible, setVisible] = useState(false);
+  const { t } = useT();
   const Icon = visible ? FiEyeOff : FiEye;
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
@@ -87,7 +92,7 @@ export function PasswordField({ label, error, hint, onSurface, className, ...inp
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={t(visible ? "fields.hidePassword" : "fields.showPassword")}
           aria-pressed={visible}
           className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 transition-colors hover:text-black dark:hover:text-white"
         >

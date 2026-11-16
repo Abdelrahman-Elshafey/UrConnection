@@ -4,7 +4,7 @@
 # pg_dump writes a consistent snapshot of the whole database while the site keeps running.
 # Custom format (-Fc) is compressed and restored with pg_restore:
 #   pg_restore --clean --if-exists -d urconnections /backups/<file>.dump
-# Backups older than BACKUP_KEEP_DAYS are deleted. Stage 14 also copies them off the server
+# Backups older than BACKUP_KEEP_DAYS are deleted. offsite.sh copies them off the server
 # (a backup on the same disk doesn't survive that disk dying).
 # Connection settings come from PGHOST / PGUSER / PGPASSWORD / PGDATABASE (compose.prod.yml).
 #

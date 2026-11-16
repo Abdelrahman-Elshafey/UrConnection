@@ -1,0 +1,305 @@
+import { VALIDATION_MESSAGES, type OAuthErrorCode, type Topic, type ValidationMessageKey } from "@urconnections/shared";
+
+/**
+ * Every text on the website, in English. This file is the source of truth: add a text here
+ * first, then translate it in it.ts, de.ts and fr.ts. TypeScript refuses to build if a
+ * translation is missing a key or has one that doesn't exist here (`satisfies Messages`).
+ *
+ * Texts are grouped by where they appear (nav, footer, ...). Components read them with
+ * t("footer.allGroups"). `{name}` placeholders are filled in by t(key, { name: ... }).
+ *
+ * Only what people *see* is translated. Values stored in the database and checked by the
+ * API (topics, country names, platform keys) stay in English.
+ */
+export const en = {
+  common: {
+    returnHome: "Return Home",
+    cancel: "Cancel",
+    loading: "Loading",
+  },
+  // Form fields of the UI kit (components/ui). Pages pass their own labels.
+  fields: {
+    country: "Country",
+    city: "City",
+    optional: "{label} (optional)",
+    selectCountry: "Select country",
+    selectCity: "Select city",
+    selectCountryFirst: "Select a country first",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    email: "Email Address",
+    displayName: "Display Name",
+    phone: "Phone Number",
+    // Example values in the empty fields: a typical name and phone number for each language.
+    displayNamePlaceholder: "Jane Doe",
+    phonePlaceholder: "+1 234 567 8900",
+    emailPlaceholder: "name@example.com",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+  },
+  nav: {
+    profile: "Profile",
+    signIn: "Sign In",
+    signOut: "Sign Out",
+    goBack: "Go Back",
+    // Keep translations about this short: on a 390px phone the navbar has room for
+    // "Sign In" + this button and little more. (The footer's createGroup has more room.)
+    createGroup: "Create Group",
+    loadingPage: "Loading page",
+  },
+  footer: {
+    explore: "Explore",
+    allGroups: "All Groups",
+    createGroup: "Create a Group",
+    tagline: "A premium platform for focused communities and professional networking. Find your tribe, anywhere in the world.",
+    account: "Account",
+    profile: "Profile",
+    signIn: "Sign In",
+    signOut: "Sign Out",
+    register: "Register",
+    copyright: "Copyright © {year} UrConnections. All rights reserved.",
+    language: "Language",
+  },
+  notFound: {
+    pageTitle: "Not found",
+    heading: "Not Found",
+    noPage: "There's no page at this address.",
+  },
+  routeError: {
+    updateTitle: "Update available",
+    updateHeading: "A new version is available",
+    updateBody: "The site was updated while this page was open. Reload to get the latest version.",
+    errorTitle: "Something went wrong",
+    errorHeading: "Something went wrong",
+    errorBody: "This page hit an unexpected error. Reloading usually helps; if it doesn't, go back home.",
+    reload: "Reload page",
+  },
+  // Labels for the topic values (the values themselves stay English: URL, API, DB).
+  topics: {
+    All: "All",
+    Programming: "Programming",
+    Language: "Language",
+    Math: "Math",
+    Science: "Science",
+    Design: "Design",
+    Business: "Business",
+    Art: "Art",
+  } satisfies Record<Topic | "All", string>,
+  groups: {
+    connect: "Connect now",
+    list: {
+      pageSpinner: "Initializing Experience",
+      exploreTopic: "Explore {topic}",
+      exploreFeatured: "Explore Featured",
+      // Singular/plural pair, read with tn() (useT). {count} may be "20+".
+      available_one: "{count} group available in your network",
+      available_other: "{count} groups available in your network",
+      detecting: "Detecting Location",
+      clearAll: "Clear all",
+      retry: "Retry Connection",
+      emptyTitle: "No groups found.",
+      emptyBody: "Refine your discovery parameters or expand your search to global locations.",
+      resetFilters: "Reset Filters",
+      loadingMore: "Loading…",
+      loadMore: "Load more",
+    },
+    filters: {
+      heroLead: "Find your",
+      // Shown huge (PageHero): a translation must fit a 390px phone (about 12 characters).
+      heroAccent: "Connections.",
+      heroIntro: "Discover elite communities focused on growth, learning, and local networking.",
+      searchLabel: "Search groups",
+      searchPlaceholder: "Find your group by Interest",
+      search: "Search",
+      platform: "Platform",
+      topic: "Topic",
+      global: "Global",
+      allCities: "All Cities",
+      allPlatforms: "All Platforms",
+    },
+    card: {
+      delete: "Delete {title}",
+      edit: "Edit {title}",
+      viewDetails: "View Details",
+    },
+    detail: {
+      loading: "Loading Detail",
+      back: "Back to Explore",
+      description: "Description",
+      location: "Location",
+      global: "Global Network",
+      platform: "Access Platform",
+      edit: "Edit Group",
+      delete: "Delete Group",
+    },
+    deleteDialog: {
+      title: "Delete this group?",
+      confirm: "Delete",
+      // Shown after the group's title, which is printed in bold in front of it.
+      body: "will be removed for everyone. This can't be undone.",
+      deleted: "\"{title}\" was deleted.",
+    },
+    form: {
+      cancel: "Cancel and Return",
+      heroAccent: "Community.",
+      topic: "Field of Interest",
+      selectTopic: "Select category",
+      title: "Group Name",
+      titlePlaceholder: "e.g. Design Collective",
+      country: "Network Location",
+      city: "Specific City",
+      platform: "Meeting Platform",
+      selectPlatform: "Select platform",
+      link: "Group Link",
+      selectPlatformFirst: "Select a platform first",
+      description: "Group Description",
+      descriptionPlaceholder: "What is the objective of this connection?",
+      descriptionHint: "20 to 200 characters.",
+    },
+    create: {
+      tabTitle: "Create a group",
+      heroLead: "Launch your",
+      intro: "Design a premium environment for focused growth and meaningful connections.",
+      submit: "Launch Channel",
+      // "Resend email" must match auth.verifyBanner's button text in each language (step 5).
+      unverified: "Please confirm your email address first: open the link we emailed you (or use \"Resend email\" above), then come back.",
+    },
+    edit: {
+      notOwner: "You can only edit groups you created.",
+      tabTitle: "Edit group",
+      heroLead: "Edit your",
+      intro: "Update how your group is described. The platform and link stay as they are.",
+      submit: "Save Changes",
+      linkHint: "The link and platform can't be changed. To use another link, create a new group.",
+    },
+  },
+  profile: {
+    page: {
+      tabTitle: "Your profile",
+      heroLead: "Your",
+      heroAccent: "Profile.",
+      intro: "Manage your account details and view the communities you've launched.",
+      accountTitle: "Account Information",
+      accountIntro: "Your personal details and contact information. Manage how you appear to others.",
+      groupsTitle: "Your Groups",
+      groupsHeading: "Communities you lead.",
+      empty: "You haven't created any groups yet.",
+      emptyCta: "Launch your first channel",
+    },
+    details: {
+      location: "Location",
+      notSet: "Not set",
+      edit: "Edit Profile",
+      emailHint: "Email cannot be changed from here.",
+      saving: "Saving…",
+      save: "Save Changes",
+      updated: "Profile updated.",
+    },
+    avatar: {
+      change: "Change profile picture",
+      remove: "Remove",
+      wrongType: "Please choose a JPEG, PNG or WebP image.",
+      tooLarge: "That image is too large. The maximum is 5 MB.",
+      updated: "Picture updated.",
+      removed: "Picture removed.",
+    },
+  },
+  auth: {
+    back: "Return to Explore",
+    linkIncomplete: "This link is incomplete. Open the link from the email again.",
+    orContinueWith: "Or continue with",
+    login: {
+      tabTitle: "Sign in",
+      title: "Welcome back.",
+      subtitle: "Sign in to access your connections.",
+      forgot: "Forgot password?",
+      submit: "Sign In",
+      noAccount: "Don't have an account?",
+      signUp: "Sign up",
+    },
+    signup: {
+      tabTitle: "Create account",
+      title: "Join us.",
+      subtitle: "Create an account to build your network.",
+      submit: "Create Account",
+      haveAccount: "Already have an account?",
+      signIn: "Sign in",
+    },
+    // One per ?error= code the API sends back from Google sign-in (OAUTH_ERROR_MESSAGES).
+    oauth: {
+      google_unavailable: "Google sign-in isn't set up on this server yet.",
+      google_cancelled: "Google sign-in was cancelled.",
+      google_expired: "That Google sign-in expired or was started in another tab. Please try again.",
+      google_unverified: "Your Google account's email address isn't verified, so it can't be used to sign in here.",
+      google_too_many: "Too many sign-in attempts. Please wait a few minutes and try again.",
+      google_failed: "Google sign-in didn't work. Please try again.",
+    } satisfies Record<OAuthErrorCode, string>,
+    forgot: {
+      title: "Forgot your password?",
+      subtitle: "Enter your email and we'll send you a link to choose a new one.",
+      submit: "Send reset link",
+      back: "Back to sign in",
+      // Same text as the API's answer, which is the same whether or not the account exists.
+      sent: "If an account exists for this email, we've sent a link to reset the password.",
+    },
+    reset: {
+      title: "Choose a new password.",
+      subtitle: "At least 8 characters, with upper and lower case, a number and a symbol.",
+      requestNew: "Request a new link",
+      newPassword: "New Password",
+      confirmNew: "Confirm New Password",
+      submit: "Set new password",
+      doneTitle: "Password changed.",
+      doneSubtitle: "For your safety you've been signed out everywhere. Sign in with your new password.",
+      signIn: "Sign in",
+    },
+    verify: {
+      title: "Confirm your email.",
+      subtitle: "One click and your address is verified.",
+      submit: "Confirm my email",
+      doneTitle: "Email confirmed.",
+      doneSubtitle: "Thanks! You can now create groups.",
+      explore: "Explore groups",
+    },
+    banner: {
+      // {email} is shown in bold, wherever the language puts it.
+      text: "Please confirm your email ({email}) to create groups.",
+      // groups.create.unverified quotes this button: keep them the same.
+      resend: "Resend email",
+      sending: "Sending…",
+      sent: "New link sent. Check your inbox.",
+    },
+  },
+  // Form-check messages: English comes straight from the shared schemas' table (the same
+  // sentences the API sends). `Record<…, string>` widens the exact sentences to string so
+  // translations fit the type.
+  validation: VALIDATION_MESSAGES as Record<ValidationMessageKey, string>,
+  // API errors by their `code`. English shows the API's own message (these values document
+  // it) except http_error and network, which are ours; other languages show the translation,
+  // or the API's message for an unknown code.
+  apiErrors: {
+    invalid_credentials: "Invalid email or password.",
+    email_taken: "An account with this email already exists.",
+    invalid_token: "This link is invalid or has expired. Please request a new one.",
+    unauthenticated: "Please sign in",
+    email_not_verified: "Please confirm your email address first.",
+    not_found: "Group not found",
+    invalid_request: "The request is invalid",
+    too_many_requests: "Too many attempts. Please wait a few minutes and try again.",
+    file_too_large: "That image is too large. The maximum is 5 MB.",
+    invalid_image: "Please choose a JPEG, PNG or WebP image.",
+    invalid_upload: "Choose an image to upload.",
+    forbidden_origin: "Cross-site request blocked",
+    internal_error: "Something went wrong",
+    // Not from the API: no JSON answer (API down, proxy error) and no connection at all.
+    http_error: "The server isn't responding. Please try again shortly.",
+    network: "Can't connect. Check your network and try again.",
+  },
+};
+
+/**
+ * The shape every language must have: the same nested keys, each a string. (No `as const`
+ * above on purpose: then the values are typed `string`, not the exact English sentences,
+ * so a translation fits the type.)
+ */
+export type Messages = typeof en;
