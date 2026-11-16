@@ -65,15 +65,20 @@ const getState = () => state;
 // one may win, even if the earlier language file arrives last.
 let latestRequest = 0;
 
-/** Loads a language, makes it current, remembers it, and re-renders every component that reads texts. */
-export async function setLocale(locale: Locale): Promise<void> {
+/**
+ * Loads a language, makes it current, and re-renders every component that reads texts.
+ * `remember`: also save it for the next visit. Only the visitor's own choice in the switcher
+ * is saved; a language detected from the browser is not, so if they change their browser's
+ * language later, the site follows.
+ */
+async function setLocale(locale: Locale, { remember = false } = {}): Promise<void> {
   const request = ++latestRequest;
   const messages = await loadMessages(locale);
   if (request !== latestRequest) return; // a newer choice was made while this one loaded
   state = { locale, messages };
   // <html lang> tells screen readers which voice to use and the browser how to hyphenate.
   document.documentElement.lang = locale;
-  saveLocale(locale);
+  if (remember) saveLocale(locale);
   listeners.forEach((listener) => listener());
 }
 
@@ -84,7 +89,7 @@ export async function setLocale(locale: Locale): Promise<void> {
  * (Only when online; offline, a reload would just show the browser's error page.)
  */
 export function switchLocale(locale: Locale): void {
-  setLocale(locale).catch(() => {
+  setLocale(locale, { remember: true }).catch(() => {
     if (!navigator.onLine) return;
     saveLocale(locale);
     window.location.reload();

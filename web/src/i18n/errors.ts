@@ -1,5 +1,5 @@
 import { VALIDATION_MESSAGES, type ValidationMessageKey } from "@urconnections/shared";
-import { ApiError } from "../lib/apiClient";
+import { ApiError, NetworkError } from "../lib/apiClient";
 import { useT } from "./i18n";
 import { en } from "./messages/en";
 
@@ -40,13 +40,25 @@ export function useErrorText(): ErrorText {
     return key ? t(`validation.${key}`) : message;
   };
 
+  // The translated messages of an API error's details, one sentence each (duplicates once).
+  // Only messages from our shared table: anything else (zod's own technical wording) is left
+  // out, and an error with none of ours keeps its generic text.
+  const fieldMessages = (error: ApiError): string | undefined => {
+    const keys = new Set(error.details.flatMap(({ message }) => validationKeyByText.get(message) ?? []));
+    return keys.size > 0 ? [...keys].map((key) => t(`validation.${key}`)).join(" ") : undefined;
+  };
+
   const errorMessage: ErrorText["errorMessage"] = (error) => {
-    // fetch() itself failed (offline, DNS, server unreachable): the browser throws a TypeError
-    // with its own wording ("Failed to fetch"), so every language gets our sentence.
-    if (error instanceof TypeError) return t("apiErrors.network");
+    // No connection at all (offline, DNS, server unreachable): apiClient throws NetworkError
+    // instead of the browser's own wording ("Failed to fetch"), so every language gets our sentence.
+    if (error instanceof NetworkError) return t("apiErrors.network");
     if (error instanceof ApiError) {
       // No JSON answer (API down, proxy error): apiClient's "Request failed (502)" isn't for people.
       if (error.code === "http_error") return t("apiErrors.http_error");
+      // A field the API rejected (e.g. a city that isn't in its country's list) says *what* is
+      // wrong in `details`; that beats the generic "The request is invalid", in every language.
+      const fieldProblems = fieldMessages(error);
+      if (fieldProblems) return fieldProblems;
       // English: the API's own words (they can be more specific than our per-code text).
       if (locale === "en") return error.message;
       return isKnownCode(error.code) ? t(`apiErrors.${error.code}`) : error.message;

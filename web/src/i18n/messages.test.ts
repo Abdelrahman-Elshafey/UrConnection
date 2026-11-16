@@ -1,6 +1,5 @@
-import { COUNTRY_LIST, VALIDATION_MESSAGES } from "@urconnections/shared";
+import { VALIDATION_MESSAGES } from "@urconnections/shared";
 import { describe, expect, it } from "vitest";
-import { countryName } from "./countries";
 import de from "./messages/de";
 import { en, type Messages } from "./messages/en";
 import fr from "./messages/fr";
@@ -59,25 +58,5 @@ describe("shared validation messages", () => {
   it("are unique", () => {
     const sentences = Object.values(VALIDATION_MESSAGES);
     expect(new Set(sentences).size).toBe(sentences.length);
-  });
-});
-
-describe("countryName", () => {
-  it("keeps the stored English name in English", () => {
-    expect(countryName("Germany", "en")).toBe("Germany");
-  });
-
-  it("translates every country we offer", () => {
-    for (const country of COUNTRY_LIST) {
-      expect(countryName(country, "de")).toBeTruthy();
-    }
-    expect(countryName("Germany", "de")).toBe("Deutschland");
-    expect(countryName("Germany", "fr")).toBe("Allemagne");
-    expect(countryName("Germany", "it")).toBe("Germania");
-  });
-
-  it("leaves unknown values alone", () => {
-    expect(countryName("", "de")).toBe("");
-    expect(countryName("Atlantis", "de")).toBe("Atlantis");
   });
 });

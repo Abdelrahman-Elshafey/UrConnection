@@ -6,7 +6,6 @@ import { Button, ButtonLink } from "../../../components/ui/Button";
 import { NotFound } from "../../../components/ui/NotFound";
 import { PlatformBadge } from "../../../components/ui/PlatformBadge";
 import { PageSpinner } from "../../../components/ui/Spinner";
-import { useCountryName } from "../../../i18n/countries";
 import { useT } from "../../../i18n/i18n";
 import { isNotFound } from "../../../lib/apiClient";
 import { formatLocation, isOwner } from "../../../lib/format";
@@ -25,7 +24,6 @@ export default function GroupDetail() {
   const { data: user } = useUser();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const { t } = useT();
-  const countryName = useCountryName();
 
   if (isLoading) return <PageSpinner label={t("groups.detail.loading")} />;
   // Any other error (server down, 500) isn't "not found": the route's error page offers a reload.
@@ -68,7 +66,7 @@ export default function GroupDetail() {
             <dl className="space-y-6">
               <div className="flex flex-col gap-1">
                 <dt className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{t("groups.detail.location")}</dt>
-                <dd className="text-xl font-bold text-black dark:text-white">{formatLocation({ city, country: countryName(country) }) || t("groups.detail.global")}</dd>
+                <dd className="text-xl font-bold text-black dark:text-white">{formatLocation({ city, country }) || t("groups.detail.global")}</dd>
               </div>
               <div className="flex flex-col gap-1">
                 <dt className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{t("groups.detail.platform")}</dt>

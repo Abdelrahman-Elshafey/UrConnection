@@ -1,15 +1,54 @@
 import type { z } from "zod";
 
+/** One problem the API found in a request, e.g. { path: "city", message: "Please choose a city from the list" }. */
+export interface ApiErrorDetail {
+  path: string;
+  message: string;
+}
+
 /** An error response from our API: { error: { code, message, details? } }. */
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
     message: string,
+    /** Per-field problems of an "invalid_request" (empty for other errors). */
+    public readonly details: ApiErrorDetail[] = [],
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/**
+ * The request never got an answer (offline, DNS failure, server unreachable). fetch() reports
+ * that as a plain TypeError, the same class as an ordinary bug in our code ("cannot read
+ * properties of undefined"), so we give it its own class: only this one means "no connection".
+ */
+export class NetworkError extends Error {
+  constructor(options?: ErrorOptions) {
+    super("Network request failed", options);
+    this.name = "NetworkError";
+  }
+}
+
+/** fetch(), but a failed connection throws NetworkError (see above). */
+async function request(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(path, init);
+  } catch (error) {
+    // fetch() only rejects when there is no response at all; an AbortError (a cancelled
+    // request) is not a connection problem, so it passes through unchanged.
+    throw error instanceof TypeError ? new NetworkError({ cause: error }) : error;
+  }
+}
+
+/** Keeps the well-formed entries of an error body's `details` (it's untyped JSON). */
+function parseDetails(details: unknown): ApiErrorDetail[] {
+  if (!Array.isArray(details)) return [];
+  return details.filter(
+    (d): d is ApiErrorDetail => typeof d === "object" && d !== null && typeof d.path === "string" && typeof d.message === "string",
+  );
 }
 
 /** True for the API's 404: the thing really doesn't exist (or isn't yours, for writes). */
@@ -31,11 +70,12 @@ function buildUrl(path: string, params?: Record<string, QueryValue>): string {
 async function throwIfError(res: Response): Promise<void> {
   if (res.ok) return;
   // Fall back gracefully if the body isn't JSON (e.g. the dev proxy can't reach the API).
-  const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+  const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string; details?: unknown } } | null;
   throw new ApiError(
     res.status,
     body?.error?.code ?? "http_error",
     body?.error?.message ?? `Request failed (${res.status})`,
+    parseDetails(body?.error?.details),
   );
 }
 
@@ -53,7 +93,7 @@ export async function apiGet<S extends z.ZodType>(
   schema: S,
   params?: Record<string, QueryValue>,
 ): Promise<z.output<S>> {
-  const res = await fetch(buildUrl(path, params), {
+  const res = await request(buildUrl(path, params), {
     headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
@@ -68,7 +108,7 @@ function send(method: Method, path: string, body?: unknown): Promise<Response> {
   // include a random "boundary" that separates the parts, so the browser has to set it:
   // never set Content-Type yourself for FormData. Everything else is sent as JSON.
   const isForm = body instanceof FormData;
-  return fetch(path, {
+  return request(path, {
     method,
     headers: { Accept: "application/json", ...(body !== undefined && !isForm && { "Content-Type": "application/json" }) },
     credentials: "same-origin",
