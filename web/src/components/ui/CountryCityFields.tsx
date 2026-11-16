@@ -1,5 +1,5 @@
+import { COUNTRY_LIST } from "@urconnections/shared";
 import { useFormContext, useWatch } from "react-hook-form";
-import { useCountryOptions } from "../../i18n/countries";
 import { useT } from "../../i18n/i18n";
 import { cityOptions, useCities } from "../../lib/cities";
 import { SelectField } from "./Field";
@@ -27,8 +27,6 @@ interface CountryCity {
  */
 export function CountryCityFields({ countryLabel, cityLabel, optional = false, onSurface }: CountryCityFieldsProps) {
   const { t } = useT();
-  // Names in the visitor's language, sorted for it; each option's value stays the English name.
-  const countries = useCountryOptions();
   const { register, setValue, control, formState } = useFormContext<CountryCity>();
   const country = useWatch({ control, name: "country" });
   const city = useWatch({ control, name: "city" });
@@ -48,9 +46,10 @@ export function CountryCityFields({ countryLabel, cityLabel, optional = false, o
         <option value="" disabled={!optional}>
           {t("fields.selectCountry")}
         </option>
-        {countries.map(({ value, label }) => (
-          <option key={value} value={value}>
-            {label}
+        {/* Country names stay in English in every language (the same names the database stores). */}
+        {COUNTRY_LIST.map((c) => (
+          <option key={c} value={c}>
+            {c}
           </option>
         ))}
       </SelectField>

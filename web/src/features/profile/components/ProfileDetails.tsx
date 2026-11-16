@@ -8,7 +8,6 @@ import { CountryCityFields } from "../../../components/ui/CountryCityFields";
 import { ReadOnlyField, TextField } from "../../../components/ui/Field";
 import { Notice } from "../../../components/ui/Notice";
 import { useToast } from "../../../components/ui/toast/useToast";
-import { useCountryName } from "../../../i18n/countries";
 import { useErrorText } from "../../../i18n/errors";
 import { useT } from "../../../i18n/i18n";
 import { formatLocation } from "../../../lib/format";
@@ -25,7 +24,6 @@ export default function ProfileDetails({ user }: { user: User }) {
   const toast = useToast();
   const { t } = useT();
   const { errorMessage } = useErrorText();
-  const countryName = useCountryName();
   const form = useForm({ resolver: zodResolver(profileSchema), defaultValues: formValues(user) });
   const {
     register,
@@ -49,7 +47,7 @@ export default function ProfileDetails({ user }: { user: User }) {
             [t("fields.displayName"), user.display_name || t("profile.details.notSet")],
             [t("fields.email"), user.email],
             [t("fields.phone"), user.phone || t("profile.details.notSet")],
-            [t("profile.details.location"), formatLocation({ city: user.city, country: countryName(user.country) }) || t("profile.details.notSet")],
+            [t("profile.details.location"), formatLocation(user) || t("profile.details.notSet")],
           ].map(([label, value]) => (
             <div key={label} className="space-y-1">
               <dt className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{label}</dt>

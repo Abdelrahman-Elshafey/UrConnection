@@ -2,7 +2,6 @@ import type { Group } from "@urconnections/shared";
 import { FiEdit2, FiMapPin, FiTrash2 } from "react-icons/fi";
 import { Link } from "react-router";
 import { PlatformBadge } from "../../../components/ui/PlatformBadge";
-import { useCountryName } from "../../../i18n/countries";
 import { useT } from "../../../i18n/i18n";
 import { formatLocation, isOwner } from "../../../lib/format";
 import { useUser } from "../../auth/hooks/useUser";
@@ -21,8 +20,7 @@ export default function GroupCard({ group, onDelete }: GroupCardProps) {
   const { id, title, description, topic, platform, meeting_link, city, country } = group;
   const { data: user } = useUser();
   const { t } = useT();
-  const countryName = useCountryName();
-  const location = formatLocation({ city, country: countryName(country) });
+  const location = formatLocation({ city, country });
   const owner = isOwner(user, group);
 
   return (

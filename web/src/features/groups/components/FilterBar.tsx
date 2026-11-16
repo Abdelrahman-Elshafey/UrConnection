@@ -1,8 +1,7 @@
-import { TOPICS } from "@urconnections/shared";
+import { COUNTRY_LIST, TOPICS } from "@urconnections/shared";
 import { useRef, type ComponentProps } from "react";
 import { cx } from "../../../components/ui/cx";
 import { PageHero } from "../../../components/ui/PageHero";
-import { useCountryOptions } from "../../../i18n/countries";
 import { useT } from "../../../i18n/i18n";
 import { cityOptions, useCities } from "../../../lib/cities";
 import { PLATFORMS } from "../../../lib/platforms";
@@ -40,7 +39,6 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
   const searchRef = useRef<HTMLInputElement>(null);
   // Downloaded once a country is chosen (lib/cities.ts); until then only the current city.
   const cities = cityOptions(useCities(filters.country), filters.city);
-  const countries = useCountryOptions();
   const { t } = useT();
 
   return (
@@ -86,9 +84,9 @@ export default function FilterBar({ filters, onChange, onSearch }: FilterBarProp
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
           <FilterSelect aria-label={t("fields.country")} value={filters.country} onChange={(e) => onChange("country", e.target.value)}>
             <option value="">{t("groups.filters.global")}</option>
-            {countries.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
+            {COUNTRY_LIST.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </FilterSelect>

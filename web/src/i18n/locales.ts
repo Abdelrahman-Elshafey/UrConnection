@@ -24,7 +24,7 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 
 export const isLocale = (value: string): value is Locale => (LOCALES as readonly string[]).includes(value);
 
-/** localStorage key for the language the visitor picked in the switcher. */
+/** localStorage key for the language the visitor picked in the switcher (never a detected one). */
 const STORAGE_KEY = "locale";
 
 /**
