@@ -1,4 +1,4 @@
-import { setLocale, useT } from "../../i18n/i18n";
+import { switchLocale, useT } from "../../i18n/i18n";
 import { isLocale, LOCALE_NAMES, LOCALES } from "../../i18n/locales";
 
 /**
@@ -14,7 +14,7 @@ export default function LanguageSelect() {
       aria-label={t("footer.language")}
       value={locale}
       onChange={(e) => {
-        if (isLocale(e.target.value)) void setLocale(e.target.value);
+        if (isLocale(e.target.value)) switchLocale(e.target.value);
       }}
       className="cursor-pointer bg-transparent text-xs text-gray-400 outline-none transition-colors hover:text-white focus-visible:text-white dark:text-gray-500"
     >

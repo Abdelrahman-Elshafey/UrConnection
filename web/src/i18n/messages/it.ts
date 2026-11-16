@@ -123,7 +123,8 @@ export default {
     },
     form: {
       cancel: "Annulla e torna indietro",
-      heroAccent: "Community.",
+      // "Gruppo" (shorter than "Community", which is 1px too wide on a 360px phone).
+      heroAccent: "Gruppo.",
       topic: "Area di interesse",
       selectTopic: "Seleziona una categoria",
       title: "Nome del gruppo",
@@ -140,7 +141,7 @@ export default {
     },
     create: {
       tabTitle: "Crea un gruppo",
-      heroLead: "Lancia la tua",
+      heroLead: "Lancia il tuo",
       intro: "Crea uno spazio premium per crescere e costruire legami significativi.",
       submit: "Lancia il gruppo",
       unverified: "Conferma prima il tuo indirizzo email: apri il link che ti abbiamo inviato (oppure usa «Invia di nuovo» qui sopra), poi torna qui.",
@@ -148,7 +149,7 @@ export default {
     edit: {
       notOwner: "Puoi modificare solo i gruppi che hai creato.",
       tabTitle: "Modifica gruppo",
-      heroLead: "Modifica la tua",
+      heroLead: "Modifica il tuo",
       intro: "Aggiorna la descrizione del tuo gruppo. La piattaforma e il link restano invariati.",
       submit: "Salva modifiche",
       linkHint: "Il link e la piattaforma non si possono cambiare. Per usare un altro link, crea un nuovo gruppo.",

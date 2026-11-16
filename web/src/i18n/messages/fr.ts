@@ -127,7 +127,8 @@ export default {
     },
     form: {
       cancel: "Annuler et revenir",
-      heroAccent: "Communauté.",
+      // "Groupe", not "Communauté": that word is wider than a phone at the hero's font size.
+      heroAccent: "Groupe.",
       topic: "Domaine d'intérêt",
       selectTopic: "Choisissez une catégorie",
       title: "Nom du groupe",

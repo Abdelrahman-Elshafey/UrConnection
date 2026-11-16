@@ -61,14 +61,34 @@ function subscribe(listener: () => void) {
 
 const getState = () => state;
 
+// Counts setLocale calls: when two choices overlap (a quick double switch), only the latest
+// one may win, even if the earlier language file arrives last.
+let latestRequest = 0;
+
 /** Loads a language, makes it current, remembers it, and re-renders every component that reads texts. */
 export async function setLocale(locale: Locale): Promise<void> {
+  const request = ++latestRequest;
   const messages = await loadMessages(locale);
+  if (request !== latestRequest) return; // a newer choice was made while this one loaded
   state = { locale, messages };
   // <html lang> tells screen readers which voice to use and the browser how to hyphenate.
   document.documentElement.lang = locale;
   saveLocale(locale);
   listeners.forEach((listener) => listener());
+}
+
+/**
+ * The language switcher's action. If the language file can't be downloaded, the usual cause
+ * is a deploy since this page was opened: file names contain a hash of their content, so the
+ * old file is gone. Remember the choice and reload: the new page has the new file names.
+ * (Only when online; offline, a reload would just show the browser's error page.)
+ */
+export function switchLocale(locale: Locale): void {
+  setLocale(locale).catch(() => {
+    if (!navigator.onLine) return;
+    saveLocale(locale);
+    window.location.reload();
+  });
 }
 
 /**

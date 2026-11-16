@@ -9,7 +9,8 @@ import { en } from "./messages/en";
  * 1. Form checks (zod, shared schemas) produce an English sentence from VALIDATION_MESSAGES.
  *    We look the sentence up in that table to find its key, and translate the key.
  * 2. API errors arrive as ApiError with a stable `code` ("invalid_credentials"). We translate
- *    the code. English keeps the API's own message, exactly as before.
+ *    the code. English keeps the API's own message, except for "no connection" and "no JSON
+ *    answer", which get a clear sentence in every language.
  *
  * Anything we don't know (a new message, an unexpected error) is shown as it is: never an
  * empty box, and never a raw key.
@@ -40,11 +41,16 @@ export function useErrorText(): ErrorText {
   };
 
   const errorMessage: ErrorText["errorMessage"] = (error) => {
-    // English: the API's own words (they can be more specific than our per-code text).
-    if (locale === "en") return error.message;
-    if (error instanceof ApiError) return isKnownCode(error.code) ? t(`apiErrors.${error.code}`) : error.message;
-    // fetch() itself failed (offline, DNS, server unreachable): the browser throws a TypeError.
+    // fetch() itself failed (offline, DNS, server unreachable): the browser throws a TypeError
+    // with its own wording ("Failed to fetch"), so every language gets our sentence.
     if (error instanceof TypeError) return t("apiErrors.network");
+    if (error instanceof ApiError) {
+      // No JSON answer (API down, proxy error): apiClient's "Request failed (502)" isn't for people.
+      if (error.code === "http_error") return t("apiErrors.http_error");
+      // English: the API's own words (they can be more specific than our per-code text).
+      if (locale === "en") return error.message;
+      return isKnownCode(error.code) ? t(`apiErrors.${error.code}`) : error.message;
+    }
     // Our own errors (e.g. the avatar's file checks) are already translated.
     return error.message;
   };

@@ -127,7 +127,8 @@ export default {
     },
     form: {
       cancel: "Abbrechen und zurück",
-      heroAccent: "Community.",
+      // "Gruppe" (shorter than "Community", which is 1px too wide on a 360px phone).
+      heroAccent: "Gruppe.",
       topic: "Interessengebiet",
       selectTopic: "Kategorie auswählen",
       title: "Gruppenname",

@@ -14,7 +14,7 @@ npm run db:up       # start Postgres (127.0.0.1:5433) + Mailpit + Garage in Dock
 npm run dev         # web (Vite :5173) + api (Express :3000) together; dev:web / dev:api for one (api restarts on code or api/.env changes)
 npm run stop:dev    # stop leftover dev servers on 3000/5173/4173 (node only); `-- 3000` for one port. Vite uses strictPort, the API exits on EADDRINUSE
 npm run db:migrate  # apply new migrations; db:rollback (undo last) · db:reset (rebuild, dev only) · db:seed (demo data)
-npm test            # unit tests of every workspace (api: Vitest + Supertest, no DB needed)
+npm test            # unit tests of every workspace (api: Vitest + Supertest, no DB needed; web: Vitest checks of the translations)
 npm run test:db     # database tests in the separate urconnections_test DB (needs db:up)
 npm run typecheck   # tsc -b over web + api + packages/shared (strict)
 npm run lint        # ESLint for the whole repo (flat config at root). Keep it at 0 problems

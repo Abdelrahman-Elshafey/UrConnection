@@ -15,7 +15,9 @@ import type { Locale } from "./locales";
 // One DisplayNames object per language, made on first use (creating one is not free).
 const displayNames = new Map<Locale, Intl.DisplayNames>();
 
-function namesFor(locale: Locale): Intl.DisplayNames {
+function namesFor(locale: Locale): Intl.DisplayNames | undefined {
+  // Missing in old browsers (Safari before 14.1): they show the English names instead.
+  if (typeof Intl.DisplayNames !== "function") return undefined;
   let names = displayNames.get(locale);
   if (!names) {
     names = new Intl.DisplayNames([locale], { type: "region" });
@@ -30,7 +32,7 @@ function namesFor(locale: Locale): Intl.DisplayNames {
  */
 export function countryName(country: string, locale: Locale): string {
   if (locale === "en" || !isCountry(country)) return country;
-  return namesFor(locale).of(COUNTRY_CODES[country]) ?? country;
+  return namesFor(locale)?.of(COUNTRY_CODES[country]) ?? country;
 }
 
 /** countryName for the current language, for components: const name = useCountryName(); name("Italy"). */

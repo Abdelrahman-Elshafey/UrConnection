@@ -275,7 +275,8 @@ export const en = {
   // translations fit the type.
   validation: VALIDATION_MESSAGES as Record<ValidationMessageKey, string>,
   // API errors by their `code`. English shows the API's own message (these values document
-  // it); other languages show the translation, or the API's message for an unknown code.
+  // it) except http_error and network, which are ours; other languages show the translation,
+  // or the API's message for an unknown code.
   apiErrors: {
     invalid_credentials: "Invalid email or password.",
     email_taken: "An account with this email already exists.",
