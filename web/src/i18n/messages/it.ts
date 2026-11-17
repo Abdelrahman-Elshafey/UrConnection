@@ -32,6 +32,11 @@ export default {
     goBack: "Indietro",
     createGroup: "Crea gruppo",
     loadingPage: "Caricamento pagina",
+    menu: "Menu",
+    openMenu: "Apri il menu",
+    closeMenu: "Chiudi il menu",
+    allGroups: "Tutti i gruppi",
+    register: "Registrati",
   },
   footer: {
     explore: "Esplora",
