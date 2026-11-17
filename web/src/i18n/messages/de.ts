@@ -34,6 +34,11 @@ export default {
     // "Neue Gruppe": "Gruppe erstellen" next to "Anmelden" is too wide for a 390px phone.
     createGroup: "Neue Gruppe",
     loadingPage: "Seite wird geladen",
+    menu: "Menü",
+    openMenu: "Menü öffnen",
+    closeMenu: "Menü schließen",
+    allGroups: "Alle Gruppen",
+    register: "Registrieren",
   },
   footer: {
     // "Gruppen", not "Entdecken": the wider word overflowed 360px phones (spaced capitals).

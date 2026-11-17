@@ -46,6 +46,11 @@ export const en = {
     // "Sign In" + this button and little more. (The footer's createGroup has more room.)
     createGroup: "Create Group",
     loadingPage: "Loading page",
+    menu: "Menu",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+    allGroups: "All Groups",
+    register: "Register",
   },
   footer: {
     explore: "Explore",

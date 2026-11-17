@@ -36,6 +36,11 @@ export default {
     // The footer, which has room, keeps the full "Créer un groupe".
     createGroup: "Créer",
     loadingPage: "Chargement de la page",
+    menu: "Menu",
+    openMenu: "Ouvrir le menu",
+    closeMenu: "Fermer le menu",
+    allGroups: "Tous les groupes",
+    register: "S'inscrire",
   },
   footer: {
     explore: "Explorer",

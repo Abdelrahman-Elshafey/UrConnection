@@ -1,18 +1,29 @@
+import { useCallback, useId, useState } from "react";
 import { Link, useLocation } from "react-router";
+import { FiMenu } from "react-icons/fi";
 import { useSignOut, useUser } from "../../features/auth/hooks/useUser";
 import { useT } from "../../i18n/i18n";
 import { Avatar } from "../ui/Avatar";
 import { ButtonLink } from "../ui/Button";
 import { withNext } from "../../lib/nextPath";
+import MobileMenu from "./MobileMenu";
 
 const navText = "text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:text-black dark:text-gray-400 dark:hover:text-white";
 
-/** Sticky top bar: logo, account links, "Create Group". */
+/**
+ * Sticky top bar. From `sm` up: logo, account links, "Create Group".
+ * On phones: logo, "Create Group" and a ☰ button; the account links, sign-out and the
+ * language switch live in MobileMenu (there is no room for them in a 390px bar).
+ */
 export default function Navbar() {
   const { pathname, search } = useLocation();
   const { data: user } = useUser();
   const { mutate: signOut } = useSignOut();
   const { t } = useT();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  // Stable, so MobileMenu's matchMedia effect doesn't re-subscribe on every render.
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md transition-colors duration-300 dark:border-raised-dark dark:bg-raised-dark/80">
@@ -22,23 +33,26 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          {user ? (
-            <>
-              {/* One link for picture + label (it used to be two links to the same page, B30). */}
-              <Link to="/profile" className={`flex items-center gap-2 ${navText}`}>
-                <Avatar user={user} />
-                <span className="hidden sm:inline">{t("nav.profile")}</span>
+          {/* Desktop only: on phones these are in the menu. */}
+          <div className="hidden items-center gap-4 sm:flex">
+            {user ? (
+              <>
+                {/* One link for picture + label (it used to be two links to the same page, B30). */}
+                <Link to="/profile" className={`flex items-center gap-2 ${navText}`}>
+                  <Avatar user={user} />
+                  <span>{t("nav.profile")}</span>
+                </Link>
+                <button type="button" onClick={() => signOut()} className={navText}>
+                  {t("nav.signOut")}
+                </button>
+              </>
+            ) : (
+              // After signing in, come back to this page (e.g. the group you were looking at).
+              <Link to={withNext("/login", pathname + search)} className={navText}>
+                {t("nav.signIn")}
               </Link>
-              <button onClick={() => signOut()} className={`hidden sm:block ${navText}`}>
-                {t("nav.signOut")}
-              </button>
-            </>
-          ) : (
-            // After signing in, come back to this page (e.g. the group you were looking at).
-            <Link to={withNext("/login", pathname + search)} className={navText}>
-              {t("nav.signIn")}
-            </Link>
-          )}
+            )}
+          </div>
 
           {pathname === "/create" ? (
             <Link to="/" className="text-[13px] font-medium text-black transition-opacity hover:opacity-60 dark:text-white">
@@ -49,8 +63,23 @@ export default function Navbar() {
               {t("nav.createGroup")}
             </ButtonLink>
           )}
+
+          {/* -mr-2: the 44px tap target reaches the edge, the icon lines up with the page. */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label={t("nav.openMenu")}
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-2xl text-black transition-colors hover:bg-surface dark:text-white dark:hover:bg-surface-dark sm:hidden"
+          >
+            <FiMenu aria-hidden />
+          </button>
         </div>
       </div>
+
+      <MobileMenu id={menuId} open={menuOpen} onClose={closeMenu} />
     </nav>
   );
 }

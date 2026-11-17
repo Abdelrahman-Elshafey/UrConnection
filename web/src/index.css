@@ -39,6 +39,12 @@
     @apply border-gray-100 dark:border-raised-dark;
   }
 
+  /* While a modal <dialog> is open (phone menu, ConfirmDialog), the page behind doesn't
+     scroll: showModal() blocks clicks on it, but not scrolling. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   /* Universal interactive cursor */
   button, select, a, [role="button"], .cursor-pointer {
     @apply cursor-pointer;
