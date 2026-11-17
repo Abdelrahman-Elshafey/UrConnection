@@ -301,7 +301,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Create vs edit**: These are separate forms now (each `useForm` typed from its own schema), sharing `GroupFormFields` + `GroupFormFrame`. The old shared component needed a mode switch across two schemas. `formResolver` types the create form's empty selects (`""`) without loosening the schema.
 - **Found while testing in a real browser** (headless Chrome over the DevTools protocol): unknown groups showed a spinner for seconds, because TanStack Query retried the 404 three times. `queryClient` now never retries 4xx. React Router also warned about a missing `HydrateFallback`; the root route now has `hydrateFallbackElement`.
 - **Small visual changes** from consolidating: auth pages use the shared left-aligned layout; buttons, inputs and spinners share one size scale; footer and card text is at least 12px (A3).
-- **Not done**: A mobile nav menu. On small screens the navbar shows the avatar (→ profile, which has Sign Out) and Create Group, and the footer has every account link.
+- **Not done**: A mobile nav menu. On small screens the navbar shows the avatar (→ profile, which has Sign Out) and Create Group, and the footer has every account link. **Done 2026-11-17**, see "Notes on the mobile menu" below.
 
 ### Notes on Stage 12 (frontend performance)
 - **P1/R5 code splitting**: every page except the home page is an RR7 `lazy` route (its own chunk, 0.3–2.7 KB gzip each). Home now loads `index` + one shared vendor chunk = **166.3 KB gzip** (was 179.0; target ≤ 190). The audit's 46 KB estimate assumed zod would leave the home page, but `apiClient` validates every response with zod, so it stays (23.9 KB). What left: react-hook-form + resolvers (≈ 10.6 KB) and all non-home pages. Per-package gzip on home, measured with a temporary one-chunk-per-package build: react-dom 59.4 · react-router 31.9 · zod 23.9 · countries 13.7 · react-icons 11.1 · TanStack Query 10.8 · app ≈ 14.
@@ -333,7 +333,7 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 ### Notes on the 2026-10-26 review (after Stage 15)
 - **Scope**: every file in `api/`, `web/`, `packages/shared/`, plus Docker, Caddy, CI and deploy. The security-critical code (sessions, OAuth, ownership, uploads, CSRF) held up; fixes were B31–B37, S13, O11, O12.
 - **Stale statuses closed**: S2, S4, S6, S10, S11 (Supabase items, superseded by the v2 API + DB CHECKs), R6, H4, H6.
-- **Still open**: H9 (the web and shared packages have no tests yet), P10/P11 (for when there is real traffic), no mobile nav menu.
+- **Still open**: H9 (the web and shared packages have no tests yet), P10/P11 (for when there is real traffic), no mobile nav menu (done 2026-11-17).
 - **Tests added**: a too-long link, an unknown country and a city outside its country are refused with 400 (group create, group PATCH, register, profile PATCH); Google sign-in returns to `next` and never to another site; `safeNextPath` unit tests. API: 74 unit + 122 DB tests.
 - Home bundle unchanged (146 KB gzip measured with `gzip -9`).
 
@@ -341,5 +341,12 @@ Per-package breakdown (gzip), measured with a temporary chunk-split build:
 - **Scope**: every source file in `api/`, `web/`, `packages/shared/`, plus Docker, Caddy, CI/CD, scripts and every doc. No security problem found; the paths checked on 2026-10-26 (sessions, OAuth, ownership, uploads, CSRF, open redirects) are unchanged.
 - **Fixed**: B38 (dialog closed on a click inside it), B39 (saved search cleared in one place, also when sign-out fails offline), B40, O13 (shared exports), O14 and H12 (unneeded files), H11 (stale comments).
 - **Looked at and kept**: the interfaces that exist for tests (`Storage`, `Mailer`, `GoogleOAuth`, the repositories), `formResolver`, `useSetUser` next to `switchUser` (same user vs another user), the three toast files (React fast refresh). Each pays for itself.
-- **Still open**: H9 (no web or shared tests), P10/P11 (for when there is real traffic), R7 (theme toggle), R8 (social proof), no mobile nav menu, scheduled base-image rebuilds (MASTER_PLAN §5).
+- **Still open**: H9 (no web or shared tests), P10/P11 (for when there is real traffic), R7 (theme toggle), R8 (social proof), no mobile nav menu (done 2026-11-17), scheduled base-image rebuilds (MASTER_PLAN §5).
 - Home bundle unchanged: index 78.0 + vendor 71.2 = 149.2 KB (`gzip -9`, i.e. 145.7 KiB; the "146" of the previous review was KiB).
+
+### Notes on the mobile menu (2026-11-17)
+- **What**: below `sm` (640px) the navbar shows the logo, Create Group and a ☰ button. ☰ opens `MobileMenu`, a panel that slides in from the right with the profile card (signed in), All Groups, Create Group, Sign In + Register (signed out), the language switch and Sign Out. From `sm` up the navbar is unchanged and the menu can't be opened. Closes the B3 follow-up.
+- **How**: a native `<dialog>` opened with `showModal()`, like `ConfirmDialog`: focus moves in and stays, Escape closes, the page behind is inert, it is drawn above the sticky navbar, and focus returns to ☰. It also closes on a backdrop tap, a link tap, Sign Out, and when the window grows past `sm` (`matchMedia`). The slide is CSS only (`starting:` + `transition-discrete`), off with `prefers-reduced-motion`. `html:has(dialog[open])` stops the page scrolling behind any open modal dialog (ConfirmDialog too).
+- **Language switch** in the menu is `LanguageSelect variant="menu"` (a labelled native select), not the UI kit's `SelectField`: importing `Field.tsx` from the navbar would move it out of its lazy chunk into the home bundle (+0.7 KB gzip).
+- **Home bundle**: index 79.6 → 80.5 KB + vendor 76.1 KB gzip (Vite's figure) = 156.6 KB, under the 190 KB target.
+- **Checked in headless Chrome** at 390px, signed in and out, light and dark: open / Escape / backdrop / ✕ / link / Sign Out / language switch / resize to desktop all close or work, focus returns to ☰, no console errors; no horizontal scroll at 360px in German and French.

@@ -5,6 +5,7 @@ import { cx } from "./cx";
 // px = the largest size the picture is shown at (CSS px), for the <img> width/height below.
 const SIZES = {
   sm: { box: "h-7 w-7", text: "text-[11px]", px: 28 },
+  md: { box: "h-11 w-11", text: "text-base", px: 44 },
   lg: { box: "h-32 w-32 md:h-40 md:w-40", text: "text-5xl md:text-6xl", px: 160 },
 } as const;
 
