@@ -6,7 +6,7 @@ import { useT } from "../../i18n/i18n";
 import { Avatar } from "../ui/Avatar";
 import { ButtonLink } from "../ui/Button";
 import { withNext } from "../../lib/nextPath";
-import LanguageSelect from "./LanguageSelect";
+import LanguageMenu from "./LanguageMenu";
 import MobileMenu from "./MobileMenu";
 
 const navText = "text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:text-black dark:text-gray-400 dark:hover:text-white";
@@ -36,7 +36,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Desktop only: on phones these are in the menu. */}
           <div className="hidden items-center gap-4 sm:flex">
-            <LanguageSelect variant="nav" />
+            <LanguageMenu />
             {user ? (
               <>
                 {/* One link for picture + label (it used to be two links to the same page, B30). */}

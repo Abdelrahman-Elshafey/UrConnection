@@ -1,14 +1,10 @@
 import type { ChangeEvent } from "react";
-import { FiGlobe } from "react-icons/fi";
 import { switchLocale, useT } from "../../i18n/i18n";
 import { isLocale, LOCALE_NAMES, LOCALES } from "../../i18n/locales";
 
 interface LanguageSelectProps {
-  /**
-   * "footer": small text on the black footer. "menu": a labelled field in the phone menu.
-   * "nav": a compact globe + language code in the navbar (from `sm` up).
-   */
-  variant?: "footer" | "menu" | "nav";
+  /** "footer": small text on the black footer. "menu": a labelled field in the phone menu. (The navbar uses LanguageMenu.) */
+  variant?: "footer" | "menu";
 }
 
 /**
@@ -31,22 +27,6 @@ export default function LanguageSelect({ variant = "footer" }: LanguageSelectPro
         {LOCALE_NAMES[code]}
       </option>
     ));
-
-  if (variant === "nav") {
-    return (
-      // Our own compact label (globe + "EN") with the real <select> stretched invisibly over
-      // it: a click opens the browser's list with the full names, and keyboard and screen
-      // readers use the select as usual (its aria-label says what it is). A visible select
-      // would show the whole name ("FRANÇAIS"), too wide next to the other links at 640px.
-      <div className="relative flex h-9 items-center gap-1.5 rounded-full px-2 text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:text-black has-focus-visible:ring-2 has-focus-visible:ring-accent dark:text-gray-400 dark:hover:text-white">
-        <FiGlobe aria-hidden className="h-4 w-4" />
-        <span aria-hidden>{locale}</span>
-        <select aria-label={t("footer.language")} value={locale} onChange={onChange} className="absolute inset-0 cursor-pointer opacity-0">
-          {options()}
-        </select>
-      </div>
-    );
-  }
 
   if (variant === "menu") {
     return (
