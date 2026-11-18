@@ -129,7 +129,8 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
       layout/Navbar.tsx     # sticky bar: logo, language (globe + code), avatar + Profile (one link), Sign Out, Create Group; Sign In carries ?next= (the current page). Phones (< sm): logo, Create Group, ☰
       layout/MobileMenu.tsx # the phone menu opened by ☰: native <dialog> (showModal) sliding in from the right; account links, LanguageSelect, Sign Out
       layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup) + LanguageSelect next to the copyright
-      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → switchLocale(); variant footer | menu | nav (navbar from `sm` up: globe + code, the select invisible on top)
+      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → switchLocale(); variant footer | menu
+      layout/LanguageMenu.tsx    # the navbar's switch from `sm` up: 🌐 + code pill opening our own panel of LOCALES (disclosure pattern: aria-expanded, ↑↓ Home End, Escape, click outside / Tab away closes)
       ui/                   # the UI kit (Stage 11). Pages build on these; no raw button/input styling in pages
         cx.ts               # cx(...classes): join truthy class names
         buttonClass.ts      # buttonClass({ variant: primary|dark|outline|danger, size: xs|sm|md|lg|xl, block })
