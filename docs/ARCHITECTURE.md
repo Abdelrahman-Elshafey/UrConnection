@@ -126,10 +126,10 @@ web/                        # the React app (Vite), 100% TypeScript (allowJs off
       layout/RootLayout.tsx # <ScrollRestoration/> (React Router: top on new pages, restored on Back) + page-loading bar (useNavigation) + <Outlet/>
       layout/RouteError.tsx # errorElement: 404 response → NotFound; missing lazy chunk → "new version, reload"; anything else → "something went wrong"
       layout/MainLayout.tsx # Navbar + VerifyEmailBanner + <Outlet/> + Footer
-      layout/Navbar.tsx     # sticky bar: logo, avatar + Profile (one link), Sign Out, Create Group; Sign In carries ?next= (the current page). Phones (< sm): logo, Create Group, ☰
+      layout/Navbar.tsx     # sticky bar: logo, language (globe + code), avatar + Profile (one link), Sign Out, Create Group; Sign In carries ?next= (the current page). Phones (< sm): logo, Create Group, ☰
       layout/MobileMenu.tsx # the phone menu opened by ☰: native <dialog> (showModal) sliding in from the right; account links, LanguageSelect, Sign Out
       layout/Footer.tsx     # Explore / Account columns (Sign In, Register → /signup) + LanguageSelect next to the copyright
-      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → setLocale(); variant footer | menu
+      layout/LanguageSelect.tsx  # native <select> of LOCALES (names in their own language) → switchLocale(); variant footer | menu | nav (navbar from `sm` up: globe + code, the select invisible on top)
       ui/                   # the UI kit (Stage 11). Pages build on these; no raw button/input styling in pages
         cx.ts               # cx(...classes): join truthy class names
         buttonClass.ts      # buttonClass({ variant: primary|dark|outline|danger, size: xs|sm|md|lg|xl, block })
